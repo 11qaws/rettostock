@@ -1,0 +1,158 @@
+:root {
+  --bg-glass: rgba(20, 20, 30, 0.15); /* More transparent */
+  --border-glass: rgba(255, 255, 255, 0.15);
+  --text-main: #f0f0f0;
+  --text-muted: #a0a0b0;
+  
+  --color-up: #4ade80; /* Green */
+  --color-up-glow: rgba(74, 222, 128, 0.3);
+  
+  --color-down: #f87171; /* Red */
+  --color-down-glow: rgba(248, 113, 113, 0.3);
+  
+  --color-primary: #a855f7; /* Purple */
+}
+
+/* Theme: Cyber Neon (Cyberpunk Bar Vibe) */
+.theme-cyber-neon {
+  --bg-glass: rgba(10, 0, 20, 0.4);
+  --border-glass: #ff2a85;
+  --text-main: #fff;
+  --text-muted: #fbcfe8;
+  
+  --color-up: #39ff14; /* Neon green */
+  --color-up-glow: rgba(57, 255, 20, 0.8);
+  
+  --color-down: #ff003c; /* Neon red */
+  --color-down-glow: rgba(255, 0, 60, 0.8);
+  
+  --color-primary: #ff2a85; /* Neon pink */
+
+  --font-neon: 'Fredoka', 'Jua', sans-serif;
+  --font-neon-display: 'Fredoka', 'Jua', sans-serif;
+  --glow-pink: 0 0 5px #fff, 0 0 10px var(--color-primary), 0 0 20px var(--color-primary), 0 0 30px var(--color-primary);
+  --box-glow-pink: 0 0 10px var(--color-primary), inset 0 0 5px var(--color-primary);
+}
+
+.theme-cyber-neon .glass-card {
+  background: var(--bg-glass);
+  border: 2px solid var(--border-glass);
+  box-shadow: var(--box-glow-pink);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.theme-cyber-neon .neon-title {
+  font-family: var(--font-neon);
+  color: #fff;
+  text-shadow: var(--glow-pink);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-size: 26px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.theme-cyber-neon .neon-subtitle {
+  font-family: var(--font-neon);
+  color: var(--text-muted);
+  font-size: 14px;
+  letter-spacing: 1px;
+  margin: 4px 0 0 0;
+  font-weight: 500;
+  line-height: 1.3;
+  max-height: 2.6em;
+  overflow: hidden;
+}
+
+.theme-cyber-neon .neon-price {
+  font-family: var(--font-neon-display);
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(255,255,255,0.6), 0 0 15px var(--color-primary);
+  margin: 0;
+}
+
+.theme-cyber-neon .neon-change {
+  font-family: var(--font-neon-display);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+
+.theme-cyber-neon .text-up {
+  color: #fff;
+  text-shadow: 0 0 5px #fff, 0 0 10px var(--color-up), 0 0 20px var(--color-up);
+}
+
+.theme-cyber-neon .text-down {
+  color: #fff;
+  text-shadow: 0 0 5px #fff, 0 0 10px var(--color-down), 0 0 20px var(--color-down);
+}
+
+html, body, #root {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: transparent !important; /* Essential for OBS */
+  color: var(--text-main);
+  overflow: hidden !important; /* Prevent scrollbars in OBS */
+  min-height: 100vh;
+}
+
+/* Glassmorphism Card Style */
+.glass-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s ease;
+}
+
+/* Animations */
+@keyframes pumpShake {
+  0% { transform: translate(1px, 1px) rotate(0deg); }
+  10% { transform: translate(-1px, -2px) rotate(-1deg); }
+  20% { transform: translate(-3px, 0px) rotate(1deg); }
+  30% { transform: translate(3px, 2px) rotate(0deg); }
+  40% { transform: translate(1px, -1px) rotate(1deg); }
+  50% { transform: translate(-1px, 2px) rotate(-1deg); }
+  60% { transform: translate(-3px, 1px) rotate(0deg); }
+  70% { transform: translate(3px, 1px) rotate(-1deg); }
+  80% { transform: translate(-1px, -1px) rotate(1deg); }
+  90% { transform: translate(1px, 2px) rotate(0deg); }
+  100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+
+.anim-pump {
+  animation: pumpShake 0.5s cubic-bezier(.36,.07,.19,.97) both, pumpFlash 0.5s ease;
+}
+
+.anim-dump {
+  animation: dumpFlash 0.5s ease;
+}
+
+@keyframes pumpFlash {
+  0%, 100% { box-shadow: var(--box-glow-pink, none); border-color: var(--border-glass); }
+  50% { box-shadow: 0 0 30px var(--color-up), inset 0 0 30px var(--color-up); border-color: var(--color-up); }
+}
+
+@keyframes dumpFlash {
+  0%, 100% { box-shadow: var(--box-glow-pink, none); border-color: var(--border-glass); }
+  50% { box-shadow: 0 0 30px var(--color-down), inset 0 0 30px var(--color-down); border-color: var(--color-down); }
+}
+
+/* Utility classes */
+.text-up { color: var(--color-up); text-shadow: 0 0 10px var(--color-up-glow); }
+.text-down { color: var(--color-down); text-shadow: 0 0 10px var(--color-down-glow); }
+
+.config-bg {
+  background-color: #0f0f13; /* Solid background for configurator page */
+  min-height: 100vh;
+  overflow: auto;
+}
