@@ -111,8 +111,8 @@ html, body, #root {
   --text-main: #4e342e; /* Dark brown */
   --text-muted: #8d6e63; /* Lighter brown */
   
-  --color-up: #ff8da1; /* Darker pink */
-  --color-up-glow: rgba(255, 141, 161, 0.2);
+  --color-up: #e91e63; /* Stronger pink for visibility */
+  --color-up-glow: rgba(233, 30, 99, 0.4);
   
   --color-down: #9c27b0; /* Purple */
   --color-down-glow: rgba(156, 39, 176, 0.2);
