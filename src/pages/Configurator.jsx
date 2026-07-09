@@ -118,10 +118,15 @@ const loadConfig = () => {
   }
 };
 
+const recommendedDims = (mode, count) => {
+  if (mode === 'scroll') return { w: 1280, h: 90 };
+  if (mode === 'rotate') return { w: 300, h: 200 };
+  return { w: 300, h: Math.max(1, count) * 160 };
+};
+
 const recommendedSize = (mode, count) => {
-  if (mode === 'scroll') return '너비 1280 × 높이 90';
-  if (mode === 'rotate') return '너비 300 × 높이 200';
-  return `너비 300 × 높이 ${Math.max(1, count) * 160}`;
+  const { w, h } = recommendedDims(mode, count);
+  return `너비 ${w} × 높이 ${h}`;
 };
 
 const Configurator = () => {
@@ -427,22 +432,46 @@ const Configurator = () => {
             ))}
           </div>
 
-          <div style={{
-            width: '100%',
-            height: '600px',
-            border: '4px solid #ffb6c1',
-            borderRadius: '16px',
-            overflow: 'hidden',
-            position: 'relative',
-            boxShadow: '0 8px 16px rgba(255,182,193,0.3)',
-            ...PREVIEW_BGS.find(b => b.value === previewBg).style,
-          }}>
-            <iframe
-              src={widgetUrl}
-              style={{ width: '100%', height: '100%', border: 'none' }}
-              title="Widget Preview"
-            />
-          </div>
+          {(() => {
+            // Render the widget at the exact recommended OBS size,
+            // then scale it down to fit the preview panel
+            const PREVIEW_W = 332; // wrapper 340 - 4px border each side
+            const rec = recommendedDims(config.displayMode, symbolList.length);
+            const frameW = config.displayMode === 'scroll' ? PREVIEW_W : rec.w;
+            const frameH = rec.h;
+            const scale = Math.min(1, PREVIEW_W / frameW, 640 / frameH);
+            return (
+              <>
+                <div style={{
+                  width: '100%',
+                  height: `${Math.round(frameH * scale)}px`,
+                  border: '4px solid #ffb6c1',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  boxSizing: 'content-box',
+                  boxShadow: '0 8px 16px rgba(255,182,193,0.3)',
+                  ...PREVIEW_BGS.find(b => b.value === previewBg).style,
+                }}>
+                  <iframe
+                    src={widgetUrl}
+                    style={{
+                      width: `${frameW}px`,
+                      height: `${frameH}px`,
+                      border: 'none',
+                      transform: `scale(${scale})`,
+                      transformOrigin: 'top left',
+                      marginLeft: `${Math.max(0, Math.round((PREVIEW_W - frameW * scale) / 2))}px`,
+                    }}
+                    title="Widget Preview"
+                  />
+                </div>
+                <p style={{ fontSize: '13px', color: '#b5a39c', margin: '10px 0 0', textAlign: 'center' }}>
+                  권장 크기 {rec.w}×{rec.h} 기준 미리보기예요
+                </p>
+              </>
+            );
+          })()}
         </div>
 
       </div>
