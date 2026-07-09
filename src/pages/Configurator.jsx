@@ -3,7 +3,7 @@ import { Copy, Check, Tv2, AlertCircle, Heart } from 'lucide-react';
 
 const Configurator = () => {
   const [symbolsInput, setSymbolsInput] = useState('KORU, MUU, SNXX, SOXL');
-  const [theme, setTheme] = useState('theme-cyber-neon');
+  const [theme, setTheme] = useState('theme-amore-cute');
   const [displayMode, setDisplayMode] = useState('list');
   const [copied, setCopied] = useState(false);
   const [widgetUrl, setWidgetUrl] = useState('');
@@ -96,6 +96,7 @@ const Configurator = () => {
                 onChange={(e) => setTheme(e.target.value)}
                 style={{ width: '100%', cursor: 'pointer' }}
               >
+                <option value="theme-amore-cute">아모레 핑크 (Amore Pink)</option>
                 <option value="theme-cyber-neon">네온 바 (Neon Bar)</option>
                 <option value="default">기본 (Dark Glass)</option>
               </select>
