@@ -51,12 +51,12 @@ const Configurator = () => {
   };
 
   return (
-    <div className="config-bg" style={{ display: 'flex', minHeight: '100vh', justifyContent: 'center', alignItems: 'center', padding: '40px' }}>
+    <div className="config-bg" style={{ display: 'flex', minHeight: '100vh', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
       
-      <div className="jirai-container" style={{ display: 'flex', maxWidth: '1000px', width: '100%', gap: '40px', background: '#fffcfc' }}>
+      <div className="jirai-container config-layout">
         
         {/* Left Sidebar: Controls */}
-        <div style={{ flex: 1, paddingRight: '20px' }}>
+        <div className="config-sidebar">
           
           <div className="ribbon-container">
             <div className="ribbon-title">
@@ -87,7 +87,7 @@ const Configurator = () => {
             </div>
           </div>
           
-          <div style={{ display: 'flex', gap: '20px', marginBottom: '24px' }}>
+          <div className="config-settings-row">
             <div className="jirai-card" style={{ flex: 1 }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>💖 테마 설정</label>
               <select 
@@ -153,7 +153,7 @@ const Configurator = () => {
         </div>
 
         {/* Right Side: Preview */}
-        <div style={{ width: '340px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div className="config-preview-wrapper">
           <div className="ribbon-container">
             <div className="ribbon-title" style={{ background: '#4e342e', color: '#fff', fontSize: '18px' }}>
               미리보기 화면

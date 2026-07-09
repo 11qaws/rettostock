@@ -363,3 +363,53 @@ html, body, #root {
   padding: 20px;
   border: 1px solid rgba(255, 182, 193, 0.5);
 }
+
+/* Responsive Layout for OBS Dock */
+.config-layout {
+  display: flex;
+  max-width: 1000px;
+  width: 100%;
+  gap: 40px;
+  background: #fffcfc;
+}
+
+.config-sidebar {
+  flex: 1;
+  padding-right: 20px;
+}
+
+.config-preview-wrapper {
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.config-settings-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 800px) {
+  .config-layout {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .config-sidebar {
+    padding-right: 0;
+  }
+  .config-preview-wrapper {
+    width: 100%;
+  }
+  .config-settings-row {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .config-bg {
+    padding: 10px !important;
+  }
+  .jirai-container {
+    padding: 20px !important;
+  }
+}
