@@ -218,6 +218,21 @@ html, body, #root {
 .text-up { color: var(--color-up); text-shadow: 0 0 10px var(--color-up-glow); }
 .text-down { color: var(--color-down); text-shadow: 0 0 10px var(--color-down-glow); }
 
+/* Global Color Overrides */
+body.colors-red-blue {
+  --color-up: #ff3333 !important;
+  --color-up-glow: rgba(255, 51, 51, 0.4) !important;
+  --color-down: #3388ff !important;
+  --color-down-glow: rgba(51, 136, 255, 0.4) !important;
+}
+
+body.colors-green-red {
+  --color-up: #00ff66 !important;
+  --color-up-glow: rgba(0, 255, 102, 0.4) !important;
+  --color-down: #ff3333 !important;
+  --color-down-glow: rgba(255, 51, 51, 0.4) !important;
+}
+
 /* Jirai Kei Configurator UI */
 .config-bg {
   background-color: #fcf5f5; /* Cream white/pinkish background */

@@ -10,6 +10,7 @@ const Widget = () => {
   const location = useLocation();
   const symbolsParam = searchParams.get('symbols');
   const themeParam = searchParams.get('theme') || '';
+  const colorsParam = searchParams.get('colors') || '';
   const modeParam = searchParams.get('mode') || 'list';
   
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -24,12 +25,18 @@ const Widget = () => {
     if (themeParam) {
       document.body.classList.add(themeParam);
     }
+    if (colorsParam && colorsParam !== 'color-theme-default') {
+      document.body.classList.add(colorsParam);
+    }
     return () => {
       if (themeParam) {
         document.body.classList.remove(themeParam);
       }
+      if (colorsParam && colorsParam !== 'color-theme-default') {
+        document.body.classList.remove(colorsParam);
+      }
     };
-  }, [themeParam]);
+  }, [themeParam, colorsParam]);
 
   // Sync for both GitHub Pages (localStorage/BroadcastChannel) and Local Dev (API Polling)
   useEffect(() => {

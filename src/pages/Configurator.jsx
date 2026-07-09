@@ -5,6 +5,7 @@ const Configurator = () => {
   const [symbolsInput, setSymbolsInput] = useState('KORU, MUU, SNXX, SOXL');
   const [theme, setTheme] = useState('theme-amore-cute');
   const [displayMode, setDisplayMode] = useState('list');
+  const [colorStyle, setColorStyle] = useState('color-theme-default');
   const [copied, setCopied] = useState(false);
   const [widgetUrl, setWidgetUrl] = useState('');
 
@@ -18,6 +19,9 @@ const Configurator = () => {
     }
     if (displayMode !== 'list') {
       newUrl += `&mode=${displayMode}`;
+    }
+    if (colorStyle !== 'color-theme-default') {
+      newUrl += `&colors=${colorStyle}`;
     }
     setWidgetUrl(newUrl);
 
@@ -42,7 +46,7 @@ const Configurator = () => {
         body: JSON.stringify(syncPayload)
       }).catch(e => {});
     }
-  }, [symbolsInput, theme, displayMode]);
+  }, [symbolsInput, theme, displayMode, colorStyle]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(widgetUrl);
@@ -99,6 +103,20 @@ const Configurator = () => {
                 <option value="theme-amore-cute">아모레 핑크 (Amore Pink)</option>
                 <option value="theme-cyber-neon">네온 바 (Neon Bar)</option>
                 <option value="default">기본 (Dark Glass)</option>
+              </select>
+            </div>
+
+            <div className="jirai-card" style={{ flex: 1 }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>🎨 색상 스타일</label>
+              <select 
+                className="jirai-input"
+                value={colorStyle}
+                onChange={(e) => setColorStyle(e.target.value)}
+                style={{ width: '100%', cursor: 'pointer' }}
+              >
+                <option value="color-theme-default">테마 기본값</option>
+                <option value="color-red-blue">빨강(상승) / 파랑(하락)</option>
+                <option value="color-green-red">초록(상승) / 빨강(하락)</option>
               </select>
             </div>
 
