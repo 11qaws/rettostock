@@ -136,6 +136,7 @@ const Configurator = () => {
   const [previewBg, setPreviewBg] = useState('dark');
   const [justApplied, setJustApplied] = useState(false);
   const [matchResult, setMatchResult] = useState(null);
+  const [sceneImage, setSceneImage] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleSceneImage = async (file) => {
@@ -145,10 +146,30 @@ const Configurator = () => {
       const pick = pickThemeForScene(stats);
       setConfig(prev => ({ ...prev, theme: pick.theme }));
       setMatchResult({ ...pick, avg: stats.avg, label: THEMES.find(t => t.value === pick.theme)?.label });
+      // Use the screenshot itself as the preview backdrop
+      const url = URL.createObjectURL(file);
+      setSceneImage(prev => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
+      setPreviewBg('scene');
     } catch {
       setMatchResult({ error: true });
     }
   };
+
+  // Paste a screenshot anywhere on the page (Ctrl+V)
+  useEffect(() => {
+    const onPaste = (e) => {
+      const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+      if (item) {
+        e.preventDefault();
+        handleSceneImage(item.getAsFile());
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, []);
 
   const set = (key, value) => setConfig(prev => ({ ...prev, [key]: value }));
 
@@ -369,35 +390,6 @@ const Configurator = () => {
             </div>
 
             <div className="advanced-row">
-              <label>🖼️ 화면 색 자동 매칭</label>
-              <div
-                className="scene-drop"
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => { e.preventDefault(); handleSceneImage(e.dataTransfer.files[0]); }}
-              >
-                <ImagePlus size={18} />
-                방송 화면 스크린샷을 드롭하면 어울리는 테마를 골라드려요
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={(e) => { handleSceneImage(e.target.files[0]); e.target.value = ''; }}
-              />
-              {matchResult && !matchResult.error && (
-                <p className="match-result">
-                  <span className="match-chip" style={{ background: matchResult.avg }} />
-                  {matchResult.reason}이라 <b>{matchResult.label}</b> 테마를 골랐어요. 마음에 안 들면 위에서 바꾸면 돼요.
-                </p>
-              )}
-              {matchResult?.error && (
-                <p className="match-result">이미지를 읽지 못했어요. 다른 파일로 시도해 주세요.</p>
-              )}
-            </div>
-
-            <div className="advanced-row">
               <label>📡 원격 연결 코드</label>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <code className="room-code">{room}</code>
@@ -422,6 +414,34 @@ const Configurator = () => {
             </div>
           </div>
 
+          {/* Scene screenshot: auto-match theme + use as preview backdrop */}
+          <div
+            className="scene-drop"
+            style={{ width: '100%', boxSizing: 'border-box', marginBottom: '12px' }}
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); handleSceneImage(e.dataTransfer.files[0]); }}
+          >
+            <ImagePlus size={18} />
+            방송 화면 스크린샷을 붙여넣기(Ctrl+V)하거나 드롭해 보세요
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => { handleSceneImage(e.target.files[0]); e.target.value = ''; }}
+          />
+          {matchResult && !matchResult.error && (
+            <p className="match-result" style={{ margin: '0 0 12px' }}>
+              <span className="match-chip" style={{ background: matchResult.avg }} />
+              {matchResult.reason}이라 <b>{matchResult.label}</b> 테마를 골랐어요. 아래에서 적용된 모습을 확인하세요.
+            </p>
+          )}
+          {matchResult?.error && (
+            <p className="match-result" style={{ margin: '0 0 12px' }}>이미지를 읽지 못했어요. 다른 파일로 시도해 주세요.</p>
+          )}
+
           <div className="segmented small" style={{ marginBottom: '12px', width: '100%' }}>
             {PREVIEW_BGS.map(bg => (
               <button
@@ -430,6 +450,12 @@ const Configurator = () => {
                 onClick={() => setPreviewBg(bg.value)}
               >{bg.label}</button>
             ))}
+            {sceneImage && (
+              <button
+                className={`segment ${previewBg === 'scene' ? 'selected' : ''}`}
+                onClick={() => setPreviewBg('scene')}
+              >내 화면</button>
+            )}
           </div>
 
           {(() => {
@@ -451,7 +477,9 @@ const Configurator = () => {
                   position: 'relative',
                   boxSizing: 'content-box',
                   boxShadow: '0 8px 16px rgba(255,182,193,0.3)',
-                  ...PREVIEW_BGS.find(b => b.value === previewBg).style,
+                  ...(previewBg === 'scene' && sceneImage
+                    ? { background: `url(${sceneImage}) center / cover` }
+                    : (PREVIEW_BGS.find(b => b.value === previewBg) || PREVIEW_BGS[0]).style),
                 }}>
                   <iframe
                     src={widgetUrl}
