@@ -21,12 +21,25 @@ const Configurator = () => {
     }
     setWidgetUrl(newUrl);
 
-    // Ultra-robust sync: Use local Vite API backend to avoid any cross-origin/iframe limitations
-    const syncPayload = { url: newUrl, timestamp: Date.now() };
-    fetch('http://localhost:5173/api/sync', {
-      method: 'POST',
-      body: JSON.stringify(syncPayload)
-    }).catch(e => console.log('Sync error:', e));
+    // 1. Try BroadcastChannel (works perfectly on GitHub Pages)
+    try {
+      const channel = new BroadcastChannel('obs-widget-sync');
+      channel.postMessage(syncPayload);
+      channel.close();
+    } catch (e) {}
+
+    // 2. Try localStorage (works perfectly on GitHub Pages)
+    try {
+      localStorage.setItem('obs-widget-sync-data', JSON.stringify(syncPayload));
+    } catch (e) {}
+
+    // 3. Try Local Vite API (Fallback for local dev cross-origin issues)
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      fetch('http://localhost:5173/api/sync', {
+        method: 'POST',
+        body: JSON.stringify(syncPayload)
+      }).catch(e => {});
+    }
   }, [symbolsInput, theme, displayMode]);
 
   const handleCopy = () => {

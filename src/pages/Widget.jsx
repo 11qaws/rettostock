@@ -31,27 +31,57 @@ const Widget = () => {
     };
   }, [themeParam]);
 
-  // Ultra-robust backend polling for OBS sync
+  // Sync for both GitHub Pages (localStorage/BroadcastChannel) and Local Dev (API Polling)
   useEffect(() => {
-    let lastTimestamp = 0;
-    
-    const pollSync = async () => {
-      try {
-        const res = await fetch('http://localhost:5173/api/sync');
-        const data = await res.json();
-        if (data && data.url && data.timestamp > lastTimestamp) {
-          lastTimestamp = data.timestamp;
+    const handleSync = (data) => {
+      if (data && data.url) {
+        try {
           const newUrlObj = new URL(data.url, window.location.origin);
           if (window.location.hash !== newUrlObj.hash) {
             window.location.href = data.url;
             window.location.reload();
           }
-        }
-      } catch (e) {}
+        } catch (e) {}
+      }
     };
 
-    const interval = setInterval(pollSync, 1000);
-    return () => clearInterval(interval);
+    // 1. Storage Event Listener
+    const handleStorage = (e) => {
+      if (e.key === 'obs-widget-sync-data' && e.newValue) {
+        try { handleSync(JSON.parse(e.newValue)); } catch (err) {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // 2. BroadcastChannel Listener
+    let channel;
+    try {
+      channel = new BroadcastChannel('obs-widget-sync');
+      channel.onmessage = (e) => handleSync(e.data);
+    } catch (err) {}
+
+    // 3. Local API Polling (Only for localhost/127.0.0.1)
+    let interval;
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      let lastTimestamp = 0;
+      const pollSync = async () => {
+        try {
+          const res = await fetch('http://localhost:5173/api/sync');
+          const data = await res.json();
+          if (data && data.url && data.timestamp > lastTimestamp) {
+            lastTimestamp = data.timestamp;
+            handleSync(data);
+          }
+        } catch (e) {}
+      };
+      interval = setInterval(pollSync, 1000);
+    }
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      if (channel) channel.close();
+      if (interval) clearInterval(interval);
+    };
   }, []);
 
   // Rotation logic
