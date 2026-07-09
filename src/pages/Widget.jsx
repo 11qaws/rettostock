@@ -38,8 +38,8 @@ const Widget = () => {
         try {
           const newUrlObj = new URL(data.url, window.location.origin);
           if (window.location.hash !== newUrlObj.hash) {
-            window.location.href = data.url;
-            window.location.reload();
+            const hashPath = newUrlObj.hash.replace(/^#/, '');
+            navigate(hashPath, { replace: true });
           }
         } catch (e) {}
       }
