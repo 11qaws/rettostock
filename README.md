@@ -3,74 +3,72 @@
 
 ---
 
+<h2 id="korean">🇰🇷 한국어</h2>
+
+OBS 스튜디오 인터넷 방송인을 위한 실시간 주식/암호화폐 전광판 위젯 및 원격 제어(리모컨) 웹 서비스입니다.
+리모컨 페이지에서 설정을 바꾸면 OBS 화면의 위젯이 실시간으로 바뀝니다.
+
+### ✨ 주요 기능
+
+* **실시간 시세**: 주식·ETF(Finnhub + Yahoo), 암호화폐(BTC, Binance)를 실시간으로 표시합니다. 스파크라인 미니차트와 장중/프리장/애프터/마감 배지도 함께 나옵니다.
+* **테마 6종**: 아모레 핑크 · 파스텔 라이트 · 픽셀 레트로 · 네온 바 · LED 전광판 · 다크 글래스. 상승/하락 색은 테마 기본 / 빨강↑·파랑↓ / 초록↑·빨강↓ 중 선택할 수 있습니다.
+* **디스플레이 모드 3종**: `리스트`(세로 목록) · `로테이트`(하나씩 회전) · `마퀴`(전광판처럼 가로로 흐름).
+* **이벤트 이펙트**: 등락률이 ±5%를 넘는 순간 파티클이 터지고 카드가 빛나며 🚀/💦 배지가 붙습니다. 강도 조절/끄기 가능.
+* **원격 제어**: 리모컨에서 바꾼 설정이 OBS 위젯에 바로 반영됩니다. 같은 PC는 물론, 연결 코드 덕분에 폰이나 다른 PC에서 조작해도 됩니다.
+* **어디서나 안 잘림**: 위젯이 OBS 소스 크기에 맞춰 스스로 글자 크기와 배치를 조절합니다. 좁은 독, 낮고 넓은 띠 모두 OK.
+* **데모 모드**: 장이 닫혀 있어도 가짜 시세로 테마와 이펙트를 미리 볼 수 있습니다.
+
+### 🚀 사용 방법
+
+1. [리모컨 페이지](https://11qaws.github.io/rettostock/)에 접속해 종목·테마·모드를 고릅니다.
+2. **[복사]** 버튼으로 위젯 URL을 복사합니다.
+3. OBS에서 **브라우저(Browser) 소스**를 추가하고 URL 칸에 붙여넣습니다. (⚠️ '로컬 파일' 체크 금지)
+4. 크기는 리모컨에 표시되는 권장 크기로 맞추면 끝!
+
+이후에는 리모컨 페이지만 열어두면 됩니다. 설정을 바꾸는 즉시 OBS 위젯이 따라 바뀝니다.
+리모컨을 OBS 안에 넣고 싶다면: `도킹 가능한 UI → 사용자 지정 브라우저 독`에 리모컨 주소를 등록하세요.
+
+### 🛠️ 기술 스택
+
+* **프레임워크**: React (Vite)
+* **스타일링**: Vanilla CSS (컨테이너 쿼리 기반 반응형), Lucide React
+* **애니메이션**: Framer Motion + CSS 키프레임
+* **데이터**: Finnhub WebSocket(실시간 체결) + Yahoo Finance(등락률·차트·장 상태) + Binance WebSocket(BTC)
+* **원격 동기화**: BroadcastChannel/localStorage(같은 브라우저) + ntfy.sh 룸코드 릴레이(폰·다른 PC)
+* **배포**: GitHub Actions & GitHub Pages
+
+---
+
 <h2 id="english">🇬🇧 English</h2>
 
-A real-time stock and cryptocurrency ticker widget with a remote control web interface, designed specifically for OBS Studio and live streamers.
-Adjusting settings on the remote control website will seamlessly synchronize the OBS widget in real-time!
+A real-time stock & crypto ticker widget with a remote-control web page, built for OBS Studio streamers.
+Change settings on the remote page and the OBS widget updates live.
 
 ### ✨ Key Features
 
-* **Real-time Market Data**: Uses the Finnhub API to fetch live data for stocks (e.g., AAPL, TSLA), crypto (e.g., BINANCE:BTCUSDT), and ETFs.
-* **Remote Control**: No more manually copy-pasting URLs into OBS! Change the ticker symbols, theme, or animation mode on the remote page, and the OBS browser source **updates automatically**.
-* **Display Modes**:
-  * `Scroll`: Smooth continuous marquee animation.
-  * `Loop`: Symbols appear and disappear elegantly one by one.
-  * `Rotate`: Smooth vertical flip rotation between symbols.
-* **Custom Aesthetics**: Features a modern, premium design with `Outfit` and `Quicksand` fonts, fully supporting both Light and Dark themes.
+* **Live market data**: stocks/ETFs (Finnhub + Yahoo) and crypto (BTC via Binance), with sparkline mini-charts and market-state badges (regular/pre/after/closed).
+* **6 themes**: Amore Pink · Pastel Light · Pixel Retro · Neon Bar · LED Board · Dark Glass. Up/down colors: theme default, red-up/blue-down (KR style), or green-up/red-down.
+* **3 display modes**: `List`, `Rotate` (one at a time), `Marquee` (horizontal ticker strip).
+* **Event effects**: when a ticker crosses ±5%, particles burst, the card glows, and a 🚀/💦 badge appears. Intensity is adjustable.
+* **Remote control anywhere**: same-browser sync (BroadcastChannel/localStorage) plus a room-code relay (ntfy.sh), so even your phone can drive the OBS widget.
+* **Never clipped**: container-query responsive layout adapts to any OBS source size — narrow docks, wide strips, anything.
+* **Demo mode**: preview themes and effects with fake ticking prices while markets are closed.
 
 ### 🚀 How to Use
 
-This project is hosted on GitHub Pages and is ready to use without any local installation.
+1. Open the [Remote Control Page](https://11qaws.github.io/rettostock/) and pick symbols, theme, and mode.
+2. Copy the widget URL.
+3. In OBS, add a **Browser** source and paste the URL. (⚠️ Do NOT check "Local file")
+4. Use the recommended size shown on the remote page. Done!
 
-1. Go to the [Remote Control Page](https://11qaws.github.io/rettostock/).
-2. Add your desired ticker symbols (e.g., `AAPL`, `BINANCE:BTCUSDT`).
-3. Click the **[Copy Widget URL for OBS]** button at the bottom.
-4. Open OBS Studio, add a new **[Browser]** source.
-5. Paste the copied link into the URL field. (⚠️ Do NOT check the "Local file" option!)
-6. Keep the remote control page open on your phone or second monitor. Any changes you make will be instantly reflected on your stream!
+Keep the remote page open anywhere — every change applies to the OBS widget instantly.
+Prefer everything inside OBS? Register the remote page under `Docks → Custom Browser Docks`.
 
 ### 🛠️ Tech Stack
 
 * **Framework**: React (Vite)
-* **Styling**: Vanilla CSS, Lucide React
-* **Animation**: Framer Motion
-* **API**: Finnhub
-* **Sync**: Real-time cross-tab synchronization using `BroadcastChannel` and `localStorage` API.
+* **Styling**: Vanilla CSS (container-query responsive), Lucide React
+* **Animation**: Framer Motion + CSS keyframes
+* **Data**: Finnhub WebSocket (live trades) + Yahoo Finance (change %, chart, market state) + Binance WebSocket (BTC)
+* **Sync**: BroadcastChannel/localStorage (same browser) + ntfy.sh room-code relay (cross-device)
 * **Deployment**: GitHub Actions & GitHub Pages
-
----
-
-<h2 id="korean">🇰🇷 한국어</h2>
-
-OBS 스튜디오 인터넷 방송인을 위한 실시간 주식/암호화폐 전광판 위젯 및 원격 제어(리모컨) 웹 서비스입니다. 
-웹 브라우저에서 리모컨을 조작하면 OBS 화면의 전광판이 실시간으로 동기화되어 즉각 반영됩니다!
-
-### ✨ 주요 기능
-
-* **실시간 시세 연동**: Finnhub API를 사용하여 주식(AAPL, TSLA 등), 암호화폐(BINANCE:BTCUSDT 등), ETF 등 전 세계 금융 데이터를 실시간으로 가져옵니다.
-* **원격 제어 (리모컨)**: URL을 복사해서 OBS에 매번 다시 붙여넣을 필요가 없습니다. 리모컨 웹 페이지에서 종목, 테마, 모드를 변경하면 OBS 화면이 **실시간으로 자동 변경**됩니다.
-* **다양한 디스플레이 모드**:
-  * `Scroll`: 전광판처럼 자연스럽게 좌측으로 흐르는 애니메이션
-  * `Loop`: 종목들이 하나씩 나타났다가 사라지는 루프 애니메이션
-  * `Rotate`: 위아래로 부드럽게 회전하며 종목이 전환되는 모드
-* **커스텀 디자인**: 고급스럽고 세련된 느낌을 주는 Outfit, Quicksand 폰트가 적용되었으며 라이트 모드 / 다크 모드 테마를 완벽 지원합니다.
-
-### 🚀 사용 방법
-
-이 프로젝트는 GitHub Pages로 배포되어 있어 다운로드 없이 웹에서 바로 사용할 수 있습니다.
-
-1. [리모컨 페이지 접속하기](https://11qaws.github.io/rettostock/) 에 접속합니다.
-2. 원하는 종목 심볼(예: `AAPL`, `BINANCE:BTCUSDT` 등)을 입력하고 추가합니다.
-3. 리모컨 하단의 **[OBS용 위젯 링크 복사]** 버튼을 누릅니다.
-4. OBS Studio를 열고 **[브라우저(Browser)]** 소스를 추가합니다.
-5. 복사한 링크를 URL 칸에 붙여넣고 확인을 누릅니다. (⚠️ 절대 '로컬 파일' 옵션을 체크하지 마세요!)
-6. 이제 핸드폰이나 다른 모니터에서 리모컨 페이지를 띄워두고 조작하면, OBS 화면이 실시간으로 변하는 것을 볼 수 있습니다!
-
-### 🛠️ 기술 스택 (Tech Stack)
-
-* **프레임워크**: React (Vite)
-* **스타일링**: Vanilla CSS, Lucide React (아이콘)
-* **애니메이션**: Framer Motion
-* **API**: Finnhub 실시간 금융 API 연동
-* **통신**: `BroadcastChannel` 및 `localStorage` 이벤트를 통한 브라우저 탭 간 실시간 데이터 동기화
-* **배포**: GitHub Actions & GitHub Pages

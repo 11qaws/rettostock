@@ -1,99 +1,69 @@
 import React, { useMemo, useEffect, useState, useRef } from 'react';
-import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import TickerCard from '../components/TickerCard';
+import Sparkline from '../components/Sparkline';
 import { useStockData } from '../hooks/useStockData';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useWidgetSync } from '../hooks/useRemoteSync';
+import { AnimatePresence } from 'framer-motion';
+
+// Backwards compat: old URLs used color-red-blue / color-green-red
+const normalizeColors = (value) => {
+  if (!value || value === 'color-theme-default' || value === 'colors-theme-default') return '';
+  return value.replace(/^color-/, 'colors-');
+};
+
+const clampNum = (value, min, max, fallback) => {
+  const n = parseFloat(value);
+  if (Number.isNaN(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+};
 
 const Widget = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const symbolsParam = searchParams.get('symbols');
   const themeParam = searchParams.get('theme') || '';
-  const colorsParam = searchParams.get('colors') || '';
+  const colorsParam = normalizeColors(searchParams.get('colors'));
   const modeParam = searchParams.get('mode') || 'list';
-  
+  const roomParam = searchParams.get('room') || '';
+  const demoParam = searchParams.get('demo') === '1';
+  const fxParam = ['off', 'soft', 'full'].includes(searchParams.get('fx')) ? searchParams.get('fx') : 'full';
+  const scaleParam = clampNum(searchParams.get('scale'), 0.5, 2.5, 1);
+  const intervalParam = clampNum(searchParams.get('interval'), 3, 120, 10);
+  const opacityParam = clampNum(searchParams.get('opacity'), 0.1, 1, 1);
+
   const [currentIndex, setCurrentIndex] = useState(0);
-  
+
   const symbols = useMemo(() => {
     return symbolsParam ? symbolsParam.split(',').map(s => s.trim().toUpperCase()).filter(s => s) : [];
   }, [symbolsParam]);
 
-  const { data } = useStockData(symbols);
+  const { data } = useStockData(symbols, demoParam);
+  const pixel = themeParam === 'theme-retto-pixel';
 
   useEffect(() => {
-    if (themeParam) {
-      document.body.classList.add(themeParam);
-    }
-    if (colorsParam && colorsParam !== 'color-theme-default') {
-      document.body.classList.add(colorsParam);
-    }
+    const themeClass = themeParam && themeParam !== 'default' ? themeParam : '';
+    if (themeClass) document.body.classList.add(themeClass);
+    if (colorsParam) document.body.classList.add(colorsParam);
     return () => {
-      if (themeParam) {
-        document.body.classList.remove(themeParam);
-      }
-      if (colorsParam && colorsParam !== 'color-theme-default') {
-        document.body.classList.remove(colorsParam);
-      }
+      if (themeClass) document.body.classList.remove(themeClass);
+      if (colorsParam) document.body.classList.remove(colorsParam);
     };
   }, [themeParam, colorsParam]);
 
-  // Sync for both GitHub Pages (localStorage/BroadcastChannel) and Local Dev (API Polling)
-  useEffect(() => {
-    const handleSync = (data) => {
-      if (data && data.url) {
-        try {
-          const newUrlObj = new URL(data.url, window.location.origin);
-          if (window.location.hash !== newUrlObj.hash) {
-            const hashPath = newUrlObj.hash.replace(/^#/, '');
-            navigate(hashPath, { replace: true });
-          }
-        } catch (e) {}
-      }
-    };
-
-    // 1. Storage Event Listener
-    const handleStorage = (e) => {
-      if (e.key === 'obs-widget-sync-data' && e.newValue) {
-        try { handleSync(JSON.parse(e.newValue)); } catch (err) {}
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-
-    // 2. BroadcastChannel Listener
-    let channel;
+  // Remote control sync: BroadcastChannel/localStorage (same browser),
+  // dev API (localhost), ntfy relay (cross-device via room code)
+  useWidgetSync(roomParam, (payload) => {
     try {
-      channel = new BroadcastChannel('obs-widget-sync');
-      channel.onmessage = (e) => handleSync(e.data);
-    } catch (err) {}
-
-    // 3. Local API Polling (Only for localhost/127.0.0.1)
-    let interval;
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      let lastTimestamp = 0;
-      const pollSync = async () => {
-        try {
-          const res = await fetch('http://localhost:5173/api/sync');
-          const data = await res.json();
-          if (data && data.url && data.timestamp > lastTimestamp) {
-            lastTimestamp = data.timestamp;
-            handleSync(data);
-          }
-        } catch (e) {}
-      };
-      interval = setInterval(pollSync, 1000);
-    }
-
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      if (channel) channel.close();
-      if (interval) clearInterval(interval);
-    };
-  }, []);
+      const newUrlObj = new URL(payload.url, window.location.origin);
+      if (window.location.hash !== newUrlObj.hash) {
+        navigate(newUrlObj.hash.replace(/^#/, ''), { replace: true });
+      }
+    } catch { /* ignore */ }
+  });
 
   // Rotation logic
   const snapshotPrices = useRef({});
-  const prevIndexRef = useRef(currentIndex);
   const dataRef = useRef(data);
 
   useEffect(() => {
@@ -102,7 +72,7 @@ const Widget = () => {
 
   useEffect(() => {
     if (modeParam !== 'rotate' || symbols.length <= 1) return;
-    
+
     const interval = setInterval(() => {
       setCurrentIndex(prev => {
         // Snapshot the price of the current symbol before it disappears
@@ -112,15 +82,25 @@ const Widget = () => {
         }
         return (prev + 1) % symbols.length;
       });
-    }, 10000); // 10 seconds
-    
+    }, intervalParam * 1000);
+
     return () => clearInterval(interval);
-  }, [modeParam, symbols]);
+  }, [modeParam, symbols, intervalParam]);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [symbols.length]);
+
+  const rootClass = `widget-root mode-${modeParam} fx-${fxParam}`;
+  const rootStyle = { zoom: scaleParam, '--card-opacity': opacityParam };
 
   if (symbols.length === 0) {
     return (
-      <div style={{ color: 'white', padding: '20px', textShadow: '0 0 5px black' }}>
-        No symbols provided. Use ?symbols=AAPL,TSLA,BTC
+      <div className={rootClass} style={rootStyle}>
+        <div className="glass-card empty-card">
+          <span className="neon-title">종목이 없어요</span>
+          <p className="neon-subtitle">리모컨 페이지에서 종목을 추가해 주세요</p>
+        </div>
       </div>
     );
   }
@@ -129,13 +109,18 @@ const Widget = () => {
     const ticker = data[symbol];
     const loopPrevPrice = snapshotPrices.current[symbol];
     return (
-      <TickerCard 
+      <TickerCard
         key={symbol}
         symbol={symbol}
         price={ticker?.price}
         changePercent={ticker?.changePercent}
         name={ticker?.name || 'Loading...'}
         isCrypto={ticker?.isCrypto}
+        marketState={ticker?.marketState}
+        closes={ticker?.closes}
+        stale={ticker?.stale}
+        fx={fxParam}
+        pixel={pixel}
         loopPrevPrice={loopPrevPrice}
         initial={modeParam === 'rotate' ? { opacity: 0, y: 20 } : false}
         animate={modeParam === 'rotate' ? { opacity: 1, y: 0 } : false}
@@ -145,12 +130,58 @@ const Widget = () => {
     );
   };
 
+  // Marquee: one line, electronic-board style infinite scroll
+  if (modeParam === 'scroll') {
+    const repeat = Math.max(3, Math.ceil(24 / symbols.length));
+    const half = Array.from({ length: repeat }, (_, r) => symbols.map(s => ({ s, k: `${s}-${r}` }))).flat();
+    const duration = `${half.length * 5}s`;
+
+    const renderInline = (item, trackId) => {
+      const ticker = data[item.s];
+      const isUp = ticker?.changePercent > 0;
+      const isDown = ticker?.changePercent < 0;
+      const colorClass = isUp ? 'text-up' : (isDown ? 'text-down' : '');
+      return (
+        <div className="ticker-inline glass-card" key={`${trackId}-${item.k}`}>
+          <span className="neon-title">{item.s}</span>
+          <span className="neon-price">
+            ${typeof ticker?.price === 'number' ? ticker.price.toFixed(2) : '---'}
+          </span>
+          <span className={`neon-change ${colorClass}`}>
+            {isUp ? '▲' : isDown ? '▼' : ''}
+            {typeof ticker?.changePercent === 'number'
+              ? ` ${ticker.changePercent > 0 ? '+' : ''}${ticker.changePercent.toFixed(2)}%`
+              : ' ---'}
+          </span>
+          {ticker?.closes && ticker.closes.length > 1 && (
+            <span className={`inline-spark ${colorClass}`}>
+              <Sparkline data={ticker.closes} pixel={pixel} />
+            </span>
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <div className={rootClass} style={rootStyle}>
+        <div className="marquee-viewport">
+          <div className="marquee-track" style={{ '--marquee-dur': duration }}>
+            {half.map(item => renderInline(item, 'a'))}
+          </div>
+          <div className="marquee-track" style={{ '--marquee-dur': duration }} aria-hidden="true">
+            {half.map(item => renderInline(item, 'b'))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={themeParam} style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100vh', position: 'relative' }}>
+    <div className={rootClass} style={rootStyle}>
       <div style={{ position: 'relative', width: '100%' }}>
         {modeParam === 'rotate' ? (
           <AnimatePresence mode="popLayout">
-            {renderCard(symbols[currentIndex])}
+            {renderCard(symbols[currentIndex % symbols.length])}
           </AnimatePresence>
         ) : (
           symbols.map(symbol => renderCard(symbol))

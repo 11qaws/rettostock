@@ -1,0 +1,313 @@
+/* ============================================================
+   Themes — each theme defines the same variable contract:
+   --bg-rgb / --bg-a  : card background (rgb triplet + base alpha,
+                        combined with user --card-opacity)
+   --border-glass, --text-main, --text-muted
+   --color-up / --color-down (+ glows), --color-primary
+   --font-head / --font-num
+   Sizes come from shared --fs-* vars (index.css), so every theme
+   scales with the OBS source width automatically.
+   ============================================================ */
+
+/* ===== Default: Dark Glass ===== */
+:root {
+  --bg-rgb: 22, 22, 34;
+  --bg-a: 0.72;
+  --border-glass: rgba(255, 255, 255, 0.22);
+  --text-main: #f0f0f0;
+  --text-muted: #a8a8bd;
+
+  --color-up: #4ade80;
+  --color-up-glow: rgba(74, 222, 128, 0.35);
+  --color-down: #f87171;
+  --color-down-glow: rgba(248, 113, 113, 0.35);
+
+  --color-primary: #a855f7;
+
+  --font-head: 'Inter', 'Segoe UI', sans-serif;
+  --font-num: 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* ===== Theme: Cyber Neon (Cyberpunk Bar Vibe) ===== */
+.theme-cyber-neon {
+  --bg-rgb: 10, 0, 20;
+  --bg-a: 0.55;
+  --border-glass: #ff2a85;
+  --text-main: #fff;
+  --text-muted: #fbcfe8;
+
+  --color-up: #39ff14;
+  --color-up-glow: rgba(57, 255, 20, 0.8);
+  --color-down: #ff2e5b;
+  --color-down-glow: rgba(255, 46, 91, 0.8);
+
+  --color-primary: #ff2a85;
+
+  --font-head: 'Fredoka', 'Jua', sans-serif;
+  --font-num: 'Fredoka', 'Jua', sans-serif;
+  --glow-pink: 0 0 5px #fff, 0 0 10px var(--color-primary), 0 0 20px var(--color-primary), 0 0 30px var(--color-primary);
+  --box-glow-pink: 0 0 10px var(--color-primary), inset 0 0 5px var(--color-primary);
+}
+
+.theme-cyber-neon .glass-card {
+  border: 2px solid var(--border-glass);
+  box-shadow: var(--box-glow-pink);
+  border-radius: 12px;
+}
+
+.theme-cyber-neon .neon-title {
+  color: #fff;
+  text-shadow: var(--glow-pink);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.theme-cyber-neon .neon-price {
+  color: #fff;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.6), 0 0 15px var(--color-primary);
+  font-weight: 600;
+}
+
+.theme-cyber-neon .text-up {
+  color: #fff;
+  text-shadow: 0 0 5px #fff, 0 0 10px var(--color-up), 0 0 20px var(--color-up);
+}
+
+.theme-cyber-neon .text-down {
+  color: #fff;
+  text-shadow: 0 0 5px #fff, 0 0 10px var(--color-down), 0 0 20px var(--color-down);
+}
+
+/* ===== Theme: Amore Cute (Jirai Kei / Pastel Pink) ===== */
+.theme-amore-cute {
+  --bg-rgb: 255, 240, 243;
+  --bg-a: 0.88;
+  --border-glass: #ffb6c1;
+  --text-main: #4e342e;
+  --text-muted: #8d6e63;
+
+  --color-up: #e91e63;
+  --color-up-glow: rgba(233, 30, 99, 0.4);
+  --color-down: #7e57c2;
+  --color-down-glow: rgba(126, 87, 194, 0.35);
+
+  --color-primary: #ffb6c1;
+
+  --font-head: 'Jua', 'Fredoka', sans-serif;
+  --font-num: 'Jua', 'Fredoka', sans-serif;
+  --box-glow-pink: 0 4px 15px rgba(255, 182, 193, 0.4);
+}
+
+.theme-amore-cute .glass-card {
+  border: 2px dashed var(--border-glass);
+  box-shadow: var(--box-glow-pink);
+  border-radius: 16px;
+}
+
+.theme-amore-cute .neon-title {
+  text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.8);
+  font-weight: normal;
+  border-bottom: 2px dotted #ffb6c1;
+  padding-bottom: 4px;
+}
+
+.theme-amore-cute .neon-price {
+  font-weight: normal;
+  text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.8);
+}
+
+.theme-amore-cute .neon-change {
+  font-weight: normal;
+}
+
+/* ===== Theme: Retto Pixel — RETTO sprite palette ===== */
+.theme-retto-pixel {
+  --bg-rgb: 34, 29, 94;            /* #221D5E */
+  --bg-a: 0.9;
+  --border-glass: #331c36;         /* plum outline */
+  --text-main: #ffffff;
+  --text-muted: #cdb2da;           /* lavender shadow */
+
+  --color-up: #ed76ac;             /* iris pink */
+  --color-up-glow: rgba(237, 118, 172, 0.55);
+  --color-down: #97a5ff;           /* lifted indigo */
+  --color-down-glow: rgba(151, 165, 255, 0.55);
+
+  --color-primary: #ed76ac;
+
+  --font-head: 'Galmuri11', 'Galmuri9', 'NeoDunggeunmo', monospace;
+  --font-num: 'Galmuri11', 'Galmuri9', monospace;
+}
+
+.theme-retto-pixel .glass-card {
+  border: 3px solid var(--border-glass);
+  border-radius: 0;
+  box-shadow:
+    4px 4px 0 rgba(51, 28, 54, 0.85),
+    inset 2px 2px 0 rgba(248, 214, 239, 0.22),
+    inset -2px -2px 0 rgba(16, 20, 67, 0.6);
+  image-rendering: pixelated;
+}
+
+/* Retro titlebar stripe — homage to the RETTO frame */
+.theme-retto-pixel .tick-card::before {
+  content: '';
+  display: block;
+  height: 8px;
+  margin: calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad)) calc(var(--card-pad) * 0.7);
+  background: repeating-linear-gradient(90deg, #ed76ac 0 8px, #b05a96 8px 16px);
+  border-bottom: 3px solid var(--border-glass);
+}
+
+.theme-retto-pixel .neon-title,
+.theme-retto-pixel .neon-subtitle,
+.theme-retto-pixel .neon-price,
+.theme-retto-pixel .neon-change {
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+.theme-retto-pixel .neon-title {
+  color: #f8d6ef;                  /* hair highlight */
+  text-shadow: 2px 2px 0 #331c36;
+  letter-spacing: 1px;
+}
+
+.theme-retto-pixel .neon-price {
+  color: #ffffff;
+  text-shadow: 2px 2px 0 #331c36;
+}
+
+.theme-retto-pixel .text-up { text-shadow: 2px 2px 0 #331c36; }
+.theme-retto-pixel .text-down { text-shadow: 2px 2px 0 #331c36; }
+
+.theme-retto-pixel .market-badge { border-radius: 0; }
+.theme-retto-pixel .mini-tag { border-radius: 0; }
+
+/* ===== Theme: LED Board — brokerage ticker board ===== */
+.theme-led-board {
+  --bg-rgb: 5, 9, 13;
+  --bg-a: 0.94;
+  --border-glass: #263544;
+  --text-main: #e8f1ff;
+  --text-muted: #7d90a8;
+
+  /* Korean board convention by default: red up / blue down */
+  --color-up: #ff5252;
+  --color-up-glow: rgba(255, 82, 82, 0.75);
+  --color-down: #45aaff;
+  --color-down-glow: rgba(69, 170, 255, 0.75);
+
+  --color-primary: #ffb300;        /* amber LED */
+
+  --font-head: 'Orbitron', 'Inter', sans-serif;
+  --font-num: 'DSEG7-Classic', 'DSEG7 Classic', 'Orbitron', monospace;
+}
+
+.theme-led-board .glass-card {
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  box-shadow: inset 0 0 26px rgba(0, 0, 0, 0.85), 0 2px 10px rgba(0, 0, 0, 0.5);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 4px 4px;
+  overflow: hidden;
+}
+
+/* subtle scanlines */
+.theme-led-board .tick-card::after,
+.theme-led-board .ticker-inline::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 0, 0, 0.16) 2px 3px);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.theme-led-board .neon-title {
+  color: #fff;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(232, 241, 255, 0.5);
+}
+
+.theme-led-board .neon-price {
+  color: var(--color-primary);
+  text-shadow: 0 0 4px rgba(255, 179, 0, 0.9), 0 0 14px rgba(255, 179, 0, 0.5);
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.theme-led-board .text-up { text-shadow: 0 0 4px var(--color-up), 0 0 12px var(--color-up-glow); }
+.theme-led-board .text-down { text-shadow: 0 0 4px var(--color-down), 0 0 12px var(--color-down-glow); }
+
+/* ===== Theme: Pastel Light — for bright scenes ===== */
+.theme-pastel-light {
+  --bg-rgb: 255, 255, 255;
+  --bg-a: 0.92;
+  --border-glass: #e3d5e2;
+  --text-main: #2b1a2e;
+  --text-muted: #7a6480;
+
+  --color-up: #d6336c;
+  --color-up-glow: rgba(214, 51, 108, 0.25);
+  --color-down: #7048e8;
+  --color-down-glow: rgba(112, 72, 232, 0.25);
+
+  --color-primary: #d4589c;
+
+  --font-head: 'Fredoka', 'Jua', sans-serif;
+  --font-num: 'Fredoka', 'Jua', sans-serif;
+}
+
+.theme-pastel-light .glass-card {
+  border: 2px solid var(--border-glass);
+  border-radius: 18px;
+  box-shadow: 0 6px 20px rgba(205, 178, 218, 0.5);
+}
+
+.theme-pastel-light .neon-title {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.theme-pastel-light .neon-price {
+  font-weight: 600;
+}
+
+.theme-pastel-light .text-up { text-shadow: none; }
+.theme-pastel-light .text-down { text-shadow: none; }
+
+/* ===== Up/down color overrides (work with every theme) ===== */
+body.colors-red-blue {
+  --color-up: #ff4b4b !important;
+  --color-up-glow: rgba(255, 75, 75, 0.45) !important;
+  --color-down: #4b9dff !important;
+  --color-down-glow: rgba(75, 157, 255, 0.45) !important;
+}
+
+body.colors-green-red {
+  --color-up: #2fdd7a !important;
+  --color-up-glow: rgba(47, 221, 122, 0.45) !important;
+  --color-down: #ff4b4b !important;
+  --color-down-glow: rgba(255, 75, 75, 0.45) !important;
+}
+
+/* On light cards the bright override colors wash out — use deep variants */
+body.colors-red-blue.theme-amore-cute,
+body.colors-red-blue.theme-pastel-light {
+  --color-up: #d6336c !important;
+  --color-up-glow: rgba(214, 51, 108, 0.25) !important;
+  --color-down: #1971c2 !important;
+  --color-down-glow: rgba(25, 113, 194, 0.25) !important;
+}
+
+body.colors-green-red.theme-amore-cute,
+body.colors-green-red.theme-pastel-light {
+  --color-up: #087f5b !important;
+  --color-up-glow: rgba(8, 127, 91, 0.25) !important;
+  --color-down: #e03131 !important;
+  --color-down-glow: rgba(224, 49, 49, 0.25) !important;
+}
