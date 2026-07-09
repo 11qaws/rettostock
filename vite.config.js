@@ -33,5 +33,5 @@ function widgetSyncPlugin() {
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), widgetSyncPlugin()],
-  base: './', // Ensures relative paths for GitHub Pages
+  base: '/rettostock/', // Absolute base path for GitHub Pages
 })
