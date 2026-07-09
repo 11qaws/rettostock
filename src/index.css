@@ -394,22 +394,39 @@ html, body, #root {
 @media (max-width: 800px) {
   .config-layout {
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
   }
   .config-sidebar {
     padding-right: 0;
   }
   .config-preview-wrapper {
-    width: 100%;
+    display: none; /* Hide preview on narrow docks, they already see it in OBS */
   }
   .config-settings-row {
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
   }
   .config-bg {
     padding: 10px !important;
   }
   .jirai-container {
-    padding: 20px !important;
+    padding: 16px !important;
+    border-width: 2px;
+  }
+  .jirai-container::before {
+    top: 4px; left: 4px; right: 4px; bottom: 4px;
+    border-width: 1px;
+  }
+  .ribbon-title {
+    font-size: 16px;
+    padding: 8px 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .ribbon-title::before, .ribbon-title::after {
+    display: none; /* Hide ribbon tails on very small screens to prevent horizontal overflow */
+  }
+  .jirai-card {
+    padding: 12px;
   }
 }
