@@ -107,7 +107,7 @@ export const useStockData = (symbols, demo = false) => {
   const [data, setData] = useState(() => {
     const initial = {};
     if (symbols && Array.isArray(symbols)) {
-      symbols.forEach(s => { initial[s] = { name: s, stale: true, isCrypto: s === 'BTC' }; });
+      symbols.forEach(s => { initial[s] = { name: s, stale: true }; });
     }
     return initial;
   });
@@ -171,8 +171,8 @@ export const useStockData = (symbols, demo = false) => {
   useEffect(() => {
     if (demo || !symbols || symbols.length === 0) return;
 
-    let btcWs = null;
     let finnhubWs = null;
+    let finnhubReconnectTimer = null;
     let quoteTimer = null;
     let preMarketTimer = null;
     let enrichTimer = null;
@@ -185,29 +185,8 @@ export const useStockData = (symbols, demo = false) => {
     let usMarketState = calcNySession();
     let holidayClosed = false;
 
-    // 1. Binance WebSocket for BTC
-    const cryptoSymbols = symbols.filter(s => s.toUpperCase() === 'BTC');
-    if (cryptoSymbols.length > 0) {
-      btcWs = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
-      btcWs.onmessage = (event) => {
-        const result = JSON.parse(event.data);
-        setData(prev => ({
-          ...prev,
-          BTC: {
-            ...prev.BTC,
-            price: parseFloat(result.c),
-            changePercent: parseFloat(result.P),
-            name: 'Bitcoin (USD)',
-            isCrypto: true,
-            marketState: 'REGULAR',
-            stale: false,
-          }
-        }));
-      };
-    }
-
-    // 2. Stocks
-    const stockSymbols = symbols.filter(s => s.toUpperCase() !== 'BTC');
+    // Stocks/ETFs only (crypto support was removed to keep the data layer lean)
+    const stockSymbols = symbols;
 
     if (stockSymbols.length > 0) {
       // 2-0. Instant charts: hydrate the last-known sparkline/name from the
@@ -230,35 +209,53 @@ export const useStockData = (symbols, demo = false) => {
         }
         return next;
       });
-      // 2a. Finnhub WebSocket for live trade ticks
-      finnhubWs = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
-      finnhubWs.onopen = () => {
-        stockSymbols.forEach(symbol => {
-          finnhubWs.send(JSON.stringify({ type: 'subscribe', symbol }));
-        });
-      };
-      finnhubWs.onmessage = (event) => {
-        const response = JSON.parse(event.data);
-        if (response.type === 'trade' && response.data && response.data.length > 0) {
-          const updates = {};
-          response.data.forEach(trade => { updates[trade.s] = trade.p; });
-          setData(prev => {
-            const next = { ...prev };
-            for (const [sym, price] of Object.entries(updates)) {
-              const cur = next[sym] || {};
-              next[sym] = { 
-                ...cur, 
-                price, 
-                changePercent: cur.previousClose ? calcChange(price, cur.regularMarketPrice, cur.previousClose, cur.marketState) : cur.changePercent,
-                name: cur.name || sym, 
-                isCrypto: false, 
-                stale: false 
-              };
-            }
-            return next;
-          });
+      // 2a. Finnhub WebSocket for live trade ticks — self-reconnecting so a
+      //     network blip during a long stream never kills the live feed
+      const connectFinnhub = () => {
+        if (stopped) return;
+        try {
+          finnhubWs = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
+        } catch {
+          finnhubReconnectTimer = setTimeout(connectFinnhub, 10000);
+          return;
         }
+        finnhubWs.onopen = () => {
+          stockSymbols.forEach(symbol => {
+            try { finnhubWs.send(JSON.stringify({ type: 'subscribe', symbol })); } catch { /* ignore */ }
+          });
+        };
+        finnhubWs.onmessage = (event) => {
+          try {
+            const response = JSON.parse(event.data);
+            if (response.type === 'trade' && response.data && response.data.length > 0) {
+              const updates = {};
+              response.data.forEach(trade => { updates[trade.s] = trade.p; });
+              setData(prev => {
+                const next = { ...prev };
+                for (const [sym, price] of Object.entries(updates)) {
+                  const cur = next[sym] || {};
+                  next[sym] = {
+                    ...cur,
+                    price,
+                    changePercent: cur.previousClose ? calcChange(price, cur.regularMarketPrice, cur.previousClose, cur.marketState) : cur.changePercent,
+                    name: cur.name || sym,
+                    isCrypto: false,
+                    stale: false
+                  };
+                }
+                return next;
+              });
+            }
+          } catch { /* malformed frame: skip */ }
+        };
+        finnhubWs.onclose = () => {
+          if (!stopped) finnhubReconnectTimer = setTimeout(connectFinnhub, 8000);
+        };
+        finnhubWs.onerror = () => {
+          try { finnhubWs.close(); } catch { /* ignore */ }
+        };
       };
+      connectFinnhub();
 
       // 2b. Finnhub REST quotes — primary source for price + changePercent.
       //     Direct CORS fetch, no proxy involved, so cards fill in fast and
@@ -396,6 +393,7 @@ export const useStockData = (symbols, demo = false) => {
 
         const updates = {};
         for (const item of data.data) {
+          if (!item || !Array.isArray(item.d) || item.d.length < 7) continue; // malformed row: skip
           const [name, , preClose, preChange, postClose, postChange, desc] = item.d;
           const livePrice = session === 'PRE' ? preClose : postClose;
           const liveChange = session === 'PRE' ? preChange : postChange;
@@ -424,9 +422,12 @@ export const useStockData = (symbols, demo = false) => {
         });
       };
 
+        // Every loop swallows its own errors and always reschedules —
+        // a single bad response must never silently kill a data feed
+        // mid-stream.
         const quoteLoop = async () => {
           if (stopped) return;
-          await fetchQuotes();
+          try { await fetchQuotes(); } catch (err) { console.error('quote loop:', err); }
           if (stopped) return;
           // CLOSED: prices are frozen, so throttle way down (kept alive at
           // 10min for the overnight previous-close rollover and staleness
@@ -437,7 +438,8 @@ export const useStockData = (symbols, demo = false) => {
 
         const preMarketLoop = async () => {
           if (stopped) return;
-          await fetchPreMarket();
+          try { await fetchPreMarket(); } catch (err) { console.error('extended-hours loop:', err); }
+          if (stopped) return;
           preMarketTimer = setTimeout(preMarketLoop, 5000); // 5s for faster pre/post updates
         };
         preMarketLoop();
@@ -472,17 +474,19 @@ export const useStockData = (symbols, demo = false) => {
 
       const sessionLoop = () => {
         if (stopped) return;
-        const s = holidayClosed ? 'CLOSED' : calcNySession();
-        if (s && s !== usMarketState) {
-          usMarketState = s;
-          applySessionToData(s);
-          // Leaving CLOSED (04:00 pre-market open): resume quotes right away
-          // instead of waiting out the 10min overnight timer
-          if (s !== 'CLOSED') {
-            clearTimeout(quoteTimer);
-            quoteLoop();
+        try {
+          const s = holidayClosed ? 'CLOSED' : calcNySession();
+          if (s && s !== usMarketState) {
+            usMarketState = s;
+            applySessionToData(s);
+            // Leaving CLOSED (04:00 pre-market open): resume quotes right away
+            // instead of waiting out the 10min overnight timer
+            if (s !== 'CLOSED') {
+              clearTimeout(quoteTimer);
+              quoteLoop();
+            }
           }
-        }
+        } catch (err) { console.error('session loop:', err); }
         statusTimer = setTimeout(sessionLoop, 10000); // boundaries flip within 10s
       };
       statusTimer = setTimeout(sessionLoop, 10000);
@@ -569,7 +573,7 @@ export const useStockData = (symbols, demo = false) => {
       };
 
       const enrichLoop = async () => {
-        await fetchEnrichment();
+        try { await fetchEnrichment(); } catch (err) { console.error('enrichment loop:', err); }
         if (stopped) return;
         enrichTimer = setTimeout(enrichLoop, pickEnrichInterval(usMarketState));
       };
@@ -583,8 +587,8 @@ export const useStockData = (symbols, demo = false) => {
         if (enrichTimer) clearTimeout(enrichTimer);
         if (statusTimer) clearTimeout(statusTimer);
         if (holidayTimer) clearTimeout(holidayTimer);
-        if (btcWs) btcWs.close();
-        if (finnhubWs) finnhubWs.close();
+        if (finnhubReconnectTimer) clearTimeout(finnhubReconnectTimer);
+        try { if (finnhubWs) finnhubWs.close(); } catch { /* ignore */ }
       };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbolsKey, demo]);
@@ -593,7 +597,7 @@ export const useStockData = (symbols, demo = false) => {
   if (symbols && Array.isArray(symbols)) {
     symbols.forEach(s => {
       if (!displayData[s]) {
-        displayData[s] = { name: s, stale: true, isCrypto: s === 'BTC' };
+        displayData[s] = { name: s, stale: true };
       }
     });
   }

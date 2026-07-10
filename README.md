@@ -5,70 +5,48 @@
 
 <h2 id="korean">🇰🇷 한국어</h2>
 
-OBS 스튜디오 인터넷 방송인을 위한 실시간 주식/암호화폐 전광판 위젯 및 원격 제어(리모컨) 웹 서비스입니다.
-리모컨 페이지에서 설정을 바꾸면 OBS 화면의 위젯이 실시간으로 바뀝니다.
+인터넷 방송(OBS 스튜디오) 화면을 한층 더 전문적이고 트렌디하게 꾸며줄 **실시간 미국 주식 전광판 위젯 & 전용 리모컨**입니다. 
 
-### ✨ 주요 기능
+### ✨ 주요 특징
 
-* **실시간 시세**: 주식·ETF(Finnhub + Yahoo)를 실시간으로 표시합니다. 스파크라인 미니차트와 장중/프리장/애프터/마감 배지도 함께 나옵니다.
-* **테마 6종**: 아모레 핑크 · 파스텔 라이트 · 픽셀 레트로 · 네온 바 · LED 전광판 · 다크 글래스. 상승/하락 색은 테마 기본 / 빨강↑·파랑↓ / 초록↑·빨강↓ 중 선택할 수 있습니다.
-* **디스플레이 모드 3종**: `리스트`(세로 목록) · `로테이트`(하나씩 회전) · `마퀴`(전광판처럼 가로로 흐름).
-* **이벤트 이펙트**: 등락률이 ±5%를 넘는 순간 파티클이 터지고 카드가 빛나며 🚀/💦 배지가 붙습니다. 강도 조절/끄기 가능.
-* **브라우저-OBS 실시간 연결 (옵트인)**: 고급 설정에서 켜면 브라우저에서 바꾼 설정이 OBS 위젯에 바로 적용됩니다.
-* **어디서나 안 잘림**: 위젯이 OBS 소스 크기에 맞춰 스스로 글자 크기와 배치를 조절합니다. 좁은 독, 낮고 넓은 띠 모두 OK.
-* **데모 모드**: 장이 닫혀 있어도 가짜 시세로 테마와 이펙트를 미리 볼 수 있습니다.
+* **100% 실시간 주식 데이터**: 장중 체결되는 실시간 주식/ETF 시세는 물론, 프리장과 애프터장의 변동 가격까지 스파크라인 차트와 함께 정확하게 띄워줍니다.
+* **마법 같은 실시간 원격 제어**: 방송 도중 위젯을 수정하려고 OBS를 뒤적일 필요가 없습니다. 폰이나 듀얼 모니터에 리모컨 페이지를 띄워두고 종목이나 테마를 클릭하면, 송출 중인 화면의 위젯이 곧바로 변신합니다.
+* **방송 분위기에 맞춘 6가지 테마**: 아모레 핑크, 네온 바, 픽셀 레트로, LED 전광판 등 6개의 고퀄리티 디자인을 제공합니다. 상승/하락 색상도 한국식(빨강↑/파랑↓) 또는 미국식(초록↑/빨강↓)으로 자유롭게 변경 가능합니다.
+* **다양한 송출 레이아웃**: 세로로 쌓는 `리스트 모드`, 하나씩 깔끔하게 돌아가는 `로테이트 모드`, 뉴스 속보처럼 지나가는 `마퀴(전광판) 모드`를 지원합니다.
+* **다이내믹 폭죽 이펙트**: 주가가 ±5% 이상 급등/급락하면 🚀(로켓), 💦(눈물) 뱃지와 함께 화려한 파티클 이펙트가 터지며 방송의 재미를 더해줍니다.
+* **어떤 크기든 완벽한 비율 유지**: 좁은 구석이나 길고 넓은 띠 형태 등, OBS에서 소스 크기를 어떻게 조절하든 위젯이 스스로 글자 크기와 배치를 완벽하게 맞춰줍니다. 절대 화면 밖으로 잘리지 않습니다.
 
 ### 🚀 사용 방법
 
-1. [리모컨 페이지](https://11qaws.github.io/rettostock/)에 접속해 종목·테마·모드를 고릅니다.
-2. **[복사]** 버튼으로 위젯 URL을 복사합니다.
-3. OBS에서 **브라우저(Browser) 소스**를 추가하고 URL 칸에 붙여넣습니다. (⚠️ '로컬 파일' 체크 금지)
-4. 크기는 리모컨에 표시되는 권장 크기로 맞추면 끝!
+1. [리모컨 페이지](https://11qaws.github.io/rettostock/)에 접속하세요.
+2. 원하는 주식 종목, 테마, 모드를 클릭하며 마음대로 꾸며봅니다.
+3. 설정이 끝났다면 **[복사]** 버튼을 눌러 위젯 URL을 복사합니다.
+4. OBS Studio에서 **[브라우저(Browser)] 소스**를 추가하고 URL 칸에 붙여넣습니다. (⚠️ '로컬 파일' 체크는 해제해 주세요)
+5. 화면에 맞게 자유롭게 크기를 조절하면 세팅 끝!
 
-이후에는 리모컨 페이지만 열어두면 됩니다. 설정을 바꾸는 즉시 OBS 위젯이 따라 바뀝니다.
-리모컨을 OBS 안에 넣고 싶다면: `도킹 가능한 UI → 사용자 지정 브라우저 독`에 리모컨 주소를 등록하세요.
-
-### 🛠️ 기술 스택
-
-* **프레임워크**: React (Vite)
-* **스타일링**: Vanilla CSS (컨테이너 쿼리 기반 반응형), Lucide React
-* **애니메이션**: Framer Motion + CSS 키프레임
-* **데이터**: Finnhub WebSocket(실시간 체결) + Yahoo Finance(등락률·차트·장 상태)
-* **원격 동기화**: BroadcastChannel/localStorage(같은 브라우저) + 옵트인 ntfy.sh 릴레이(ECDSA P-256 서명 검증, 크롬↔OBS·폰)
-* **배포**: GitHub Actions & GitHub Pages
+이후에는 방송 중 언제든 리모컨 페이지만 열어서 설정을 딸깍 바꾸면 됩니다.
 
 ---
 
 <h2 id="english">🇬🇧 English</h2>
 
-A real-time stock & crypto ticker widget with a remote-control web page, built for OBS Studio streamers.
-Change settings on the remote page and the OBS widget updates live.
+A gorgeous, real-time US Stock ticker widget with a dedicated web remote control, built specifically for OBS Studio streamers.
 
 ### ✨ Key Features
 
-* **Live market data**: stocks/ETFs (Finnhub + Yahoo) with sparkline mini-charts and market-state badges (regular/pre/after/closed).
-* **6 themes**: Amore Pink · Pastel Light · Pixel Retro · Neon Bar · LED Board · Dark Glass. Up/down colors: theme default, red-up/blue-down (KR style), or green-up/red-down.
-* **3 display modes**: `List`, `Rotate` (one at a time), `Marquee` (horizontal ticker strip).
-* **Event effects**: when a ticker crosses ±5%, particles burst, the card glows, and a 🚀/💦 badge appears. Intensity is adjustable.
-* **Opt-in live browser-to-OBS link**: enable it in advanced settings and changes made in your browser apply to the OBS widget instantly.
-* **Never clipped**: container-query responsive layout adapts to any OBS source size — narrow docks, wide strips, anything.
-* **Demo mode**: preview themes and effects with fake ticking prices while markets are closed.
+* **100% Live Market Data**: Displays real-time prices for US Stocks and ETFs, along with pre-market and post-market data, market state badges, and sparkline mini-charts.
+* **Seamless Remote Control**: No need to mess with OBS properties mid-stream. Keep the remote page open on your phone or second monitor—any changes you make will instantly update the widget live on your stream.
+* **6 Premium Themes**: Choose from vibrant aesthetics like Neon Bar, Pixel Retro, LED Board, and Dark Glass. You can also customize the Up/Down color logic (e.g., Green Up / Red Down vs. Red Up / Blue Down).
+* **3 Display Modes**: Stack them vertically (`List`), show one at a time (`Rotate`), or let them scroll horizontally like a news ticker (`Marquee`).
+* **Dynamic Event Effects**: When a stock moves more than ±5%, the widget triggers a bursting particle effect and displays a 🚀 or 💦 badge to add some fun to your stream.
+* **Auto-Resizing Magic**: Drag and resize the widget in OBS however you want—narrow vertical docks, wide horizontal strips, anything. The layout and text size will automatically adapt to fit perfectly without ever clipping.
 
 ### 🚀 How to Use
 
-1. Open the [Remote Control Page](https://11qaws.github.io/rettostock/) and pick symbols, theme, and mode.
-2. Copy the widget URL.
-3. In OBS, add a **Browser** source and paste the URL. (⚠️ Do NOT check "Local file")
-4. Use the recommended size shown on the remote page. Done!
+1. Open the [Remote Control Page](https://11qaws.github.io/rettostock/).
+2. Pick your favorite stocks, theme, and display mode to customize your look.
+3. Click the **[Copy]** button to grab your unique widget URL.
+4. In OBS, add a new **Browser source** and paste the URL. (⚠️ Do NOT check "Local file")
+5. Resize the source in OBS to your liking. Done!
 
-Keep the remote page open anywhere — every change applies to the OBS widget instantly.
-Prefer everything inside OBS? Register the remote page under `Docks → Custom Browser Docks`.
-
-### 🛠️ Tech Stack
-
-* **Framework**: React (Vite)
-* **Styling**: Vanilla CSS (container-query responsive), Lucide React
-* **Animation**: Framer Motion + CSS keyframes
-* **Data**: Finnhub WebSocket (live trades) + Yahoo Finance (change %, chart, market state)
-* **Sync**: BroadcastChannel/localStorage (same browser) + opt-in ntfy.sh relay with ECDSA P-256 signature verification (cross-browser/device)
-* **Deployment**: GitHub Actions & GitHub Pages
+Keep the remote page open anywhere—whenever you want to change symbols or themes mid-stream, just click the remote and watch your OBS widget update instantly.
