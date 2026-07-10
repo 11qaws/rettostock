@@ -146,6 +146,7 @@ const Configurator = () => {
   const [showRoom, setShowRoom] = useState(false); // keep the code off-stream by default
   const [sceneImage, setSceneImage] = useState(null);
   const [sceneDims, setSceneDims] = useState(null);
+  const [customDims, setCustomDims] = useState(null);
   const [widgetPos, setWidgetPos] = useState({ x: 0.02, y: 0.03 }); // preview-only, never in the URL
   const [sceneBoxW, setSceneBoxW] = useState(0);
   const fileInputRef = useRef(null);
@@ -202,6 +203,26 @@ const Configurator = () => {
     window.addEventListener('pointerup', up);
   };
 
+  const startWidgetResize = (e, baseW, baseH, k) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const start = { px: e.clientX, py: e.clientY, w: baseW, h: baseH };
+    const move = (ev) => {
+      const dw = (ev.clientX - start.px) / k;
+      const dh = (ev.clientY - start.py) / k;
+      setCustomDims({
+        w: Math.max(100, start.w + dw),
+        h: Math.max(50, start.h + dh),
+      });
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
   // Paste a screenshot anywhere on the page (Ctrl+V)
   useEffect(() => {
     const onPaste = (e) => {
@@ -244,6 +265,7 @@ const Configurator = () => {
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch { /* ignore */ }
     publishSync({ url: widgetUrl, timestamp: Date.now() }, room);
     setJustApplied(true);
+    setCustomDims(null); // Reset custom dims when config changes significantly
     const t = setTimeout(() => setJustApplied(false), 1500);
     return () => clearTimeout(t);
   }, [widgetUrl]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -535,8 +557,9 @@ const Configurator = () => {
             // ratio, with the widget at true relative scale. Drag to try
             // positions — preview only, the widget URL never changes.
             const rec = recommendedDims(config.displayMode, symbolList.length);
+            const actualDims = customDims || rec;
             const k = sceneBoxW ? sceneBoxW / sceneDims.w : 0;
-            const frac = { w: rec.w / sceneDims.w, h: rec.h / sceneDims.h };
+            const frac = { w: actualDims.w / sceneDims.w, h: actualDims.h / sceneDims.h };
             return (
               <>
                 <div
@@ -560,8 +583,8 @@ const Configurator = () => {
                         position: 'absolute',
                         left: `${widgetPos.x * 100}%`,
                         top: `${widgetPos.y * 100}%`,
-                        width: `${rec.w * k}px`,
-                        height: `${rec.h * k}px`,
+                        width: `${actualDims.w * k}px`,
+                        height: `${actualDims.h * k}px`,
                         cursor: 'move',
                         touchAction: 'none',
                         outline: '1.5px dashed rgba(255, 182, 193, 0.9)',
@@ -571,8 +594,8 @@ const Configurator = () => {
                       <iframe
                         src={widgetUrl}
                         style={{
-                          width: `${rec.w}px`,
-                          height: `${rec.h}px`,
+                          width: `${actualDims.w}px`,
+                          height: `${actualDims.h}px`,
                           border: 'none',
                           transform: `scale(${k})`,
                           transformOrigin: 'top left',
@@ -580,12 +603,26 @@ const Configurator = () => {
                         }}
                         title="Widget Placement Preview"
                       />
+                      {/* Resize Handle */}
+                      <div
+                        onPointerDown={(e) => startWidgetResize(e, actualDims.w, actualDims.h, k)}
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          right: 0,
+                          width: '24px',
+                          height: '24px',
+                          cursor: 'nwse-resize',
+                          background: 'linear-gradient(135deg, transparent 50%, rgba(255,182,193,0.9) 50%)',
+                          zIndex: 10,
+                        }}
+                      />
                     </div>
                   )}
                 </div>
                 <p style={{ fontSize: '13px', color: '#b5a39c', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.5 }}>
-                  위젯을 드래그해서 배치해 보세요 (미리보기용 — 실제 위치는 OBS에서 소스를 옮기면 돼요)<br />
-                  OBS 배치 참고: X {Math.round(widgetPos.x * sceneDims.w)}, Y {Math.round(widgetPos.y * sceneDims.h)} · 크기 {rec.w}×{rec.h}
+                  위젯을 드래그해서 배치하거나 우측 하단을 당겨 크기를 조절해 보세요<br />
+                  OBS 배치 참고: X {Math.round(widgetPos.x * sceneDims.w)}, Y {Math.round(widgetPos.y * sceneDims.h)} · 크기 {Math.round(actualDims.w)}×{Math.round(actualDims.h)}
                 </p>
               </>
             );
