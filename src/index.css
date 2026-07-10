@@ -13,11 +13,12 @@ html, body, #root {
 }
 
 /* ============================================================
-   Widget root — sizes track the OBS source width via container
-   queries, so the widget never gets clipped in narrow docks.
+   Widget root — the widget always fills the OBS browser source,
+   so viewport units track the source size. (vw/media queries,
+   not container queries: OBS ships an older Chromium that
+   doesn't know cqw and breaks all sizes otherwise.)
    ============================================================ */
 .widget-root {
-  container-type: inline-size;
   box-sizing: border-box;
   height: 100vh;
   padding: 14px;
@@ -25,12 +26,12 @@ html, body, #root {
   flex-direction: column;
   position: relative;
 
-  --fs-title: clamp(15px, 8.5cqw, 26px);
-  --fs-sub: clamp(10px, 4.5cqw, 14px);
-  --fs-price: clamp(17px, 10cqw, 34px);
-  --fs-change: clamp(12px, 6cqw, 19px);
-  --card-pad: clamp(10px, 5cqw, 20px);
-  --card-gap: clamp(8px, 4cqw, 16px);
+  --fs-title: clamp(15px, 8.5vw, 26px);
+  --fs-sub: clamp(10px, 4.5vw, 14px);
+  --fs-price: clamp(17px, 10vw, 34px);
+  --fs-change: clamp(12px, 6vw, 19px);
+  --card-pad: clamp(10px, 5vw, 20px);
+  --card-gap: clamp(8px, 4vw, 16px);
 }
 
 /* ============================================================
@@ -131,10 +132,10 @@ html, body, #root {
 .ms-closed { color: var(--text-muted); }
 
 /* Sparkline */
-.sparkline-wrap { margin-top: clamp(6px, 2.5cqw, 10px); color: var(--text-muted); }
+.sparkline-wrap { margin-top: clamp(6px, 2.5vw, 10px); color: var(--text-muted); }
 .sparkline-wrap.text-up { color: var(--color-up); }
 .sparkline-wrap.text-down { color: var(--color-down); }
-.sparkline { display: block; width: 100%; height: clamp(14px, 9cqw, 28px); }
+.sparkline { display: block; width: 100%; height: clamp(14px, 9vw, 28px); }
 
 /* Stale data: keep showing, but visibly dimmed */
 .is-stale { opacity: 0.7; filter: saturate(0.6); }
@@ -146,17 +147,17 @@ html, body, #root {
 /* ============================================================
    Responsive card layout for narrow OBS docks / sources
    ============================================================ */
-@container (max-width: 250px) {
-  .card-row { flex-direction: column; align-items: stretch; }
-  .card-right { flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; }
-  .neon-subtitle { display: none; }
+@media (max-width: 278px) {
+  .widget-root .card-row { flex-direction: column; align-items: stretch; }
+  .widget-root .card-right { flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; }
+  .widget-root .neon-subtitle { display: none; }
 }
 
-@container (max-width: 170px) {
-  .card-right { flex-direction: column; align-items: flex-start; gap: 2px; }
-  .sparkline-wrap { display: none; }
-  .market-badge { display: none; }
-  .mini-tag { display: none; }
+@media (max-width: 198px) {
+  .widget-root .card-right { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .widget-root .sparkline-wrap { display: none; }
+  .widget-root .market-badge { display: none; }
+  .widget-root .mini-tag { display: none; }
 }
 
 /* ============================================================
@@ -213,7 +214,7 @@ html, body, #root {
   position: absolute;
   left: 50%;
   top: 50%;
-  font-size: clamp(12px, 6cqw, 18px);
+  font-size: clamp(12px, 6vw, 18px);
   pointer-events: none;
   z-index: 5;
   opacity: 0;
