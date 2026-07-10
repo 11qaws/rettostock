@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Copy, Check, AlertCircle, RefreshCw, ImagePlus } from 'lucide-react';
+import { Copy, Check, AlertCircle, Heart, RefreshCw, ImagePlus } from 'lucide-react';
 import { getOrCreateRoom, createRoom, saveRoom, publishSync } from '../hooks/useRemoteSync';
 
 // Analyze a screenshot of the broadcast scene and pick a matching theme
@@ -104,7 +104,7 @@ const defaultConfig = {
   colorStyle: 'theme',
   scale: 1,
   interval: 10,
-  opacity: 1,
+  opacity: 0.95,
   fx: 'full',
   speed: 1,
   demo: false,
@@ -113,9 +113,13 @@ const defaultConfig = {
 const loadConfig = () => {
   try {
     const saved = JSON.parse(localStorage.getItem(CONFIG_KEY));
-    return { ...defaultConfig, ...saved };
+    const merged = { ...defaultConfig, ...saved };
+    // One-time migration: opacity default changed 1 -> 0.95
+    if (!saved || saved.v !== 2) merged.opacity = 0.95;
+    merged.v = 2;
+    return merged;
   } catch {
-    return defaultConfig;
+    return { ...defaultConfig, v: 2 };
   }
 };
 
@@ -263,14 +267,21 @@ const Configurator = () => {
     <div className="config-bg" style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '20px' }}>
       <div className={`jirai-container config-layout ${sceneMode ? 'scene-expanded' : ''}`}>
 
+        {/* Full-width app header */}
+        <div className="app-header">
+          <span className="app-title">
+            <Heart size={16} fill="#ff9fb0" color="#ff9fb0" />
+            아모레또 위젯 리모컨
+          </span>
+          <span className={`header-status ${justApplied ? 'active' : ''}`}>
+            {justApplied ? '✓ 위젯에 적용됐어요' : '● 위젯 연결됨'}
+          </span>
+        </div>
+
+        <div className="config-columns">
+
         {/* Left Sidebar: Controls */}
         <div className="config-sidebar">
-
-          <div className="ribbon-container">
-            <div className="ribbon-title" style={{ background: '#4e342e', color: '#fff' }}>
-              아모레또 위젯 리모컨
-            </div>
-          </div>
 
           {/* 1. Symbols */}
           <div className="jirai-card" style={{ marginBottom: '20px' }}>
@@ -442,16 +453,18 @@ const Configurator = () => {
             </div>
 
             <div className="advanced-row">
-              <label>📡 원격 연결 코드</label>
+              <label>📡 리모컨-위젯 연결 코드</label>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <code className="room-code">{room}</code>
                 <button className="jirai-button jirai-button-outline" style={{ padding: '6px 12px', fontSize: '13px' }} onClick={handleNewRoom}>
                   <RefreshCw size={14} /> 새 코드
                 </button>
               </div>
-              <p style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0', lineHeight: 1.5 }}>
-                위젯 URL에 이 코드가 들어 있어요. 폰이나 다른 PC에서 이 페이지를 열고 조작해도 OBS에 바로 반영됩니다.
-                코드를 바꾸면 OBS의 위젯 URL도 다시 복사해 넣어야 해요.
+              <p style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0', lineHeight: 1.6 }}>
+                이 리모컨과 OBS 위젯을 짝지어 주는 코드입니다. 위젯 URL에 자동으로 포함되어 있어서,
+                같은 코드를 쓰는 리모컨이라면 <b>어느 기기에서 조작해도</b>(폰, 다른 PC 등) 그 위젯에 반영돼요.
+                평소에는 신경 쓸 필요 없고, <b>[새 코드]는 연결을 초기화하고 싶을 때만</b> 누르세요 —
+                누르면 기존 위젯과의 연결이 끊겨서 OBS에 위젯 URL을 다시 복사해 넣어야 합니다.
               </p>
             </div>
           </details>
@@ -460,11 +473,7 @@ const Configurator = () => {
 
         {/* Right Side: Preview */}
         <div className="config-preview-wrapper">
-          <div className="ribbon-container">
-            <div className="ribbon-title" style={{ background: '#4e342e', color: '#fff', fontSize: '18px' }}>
-              미리보기 화면
-            </div>
-          </div>
+          <label className="preview-label">🖥️ 미리보기</label>
 
           {/* Scene screenshot: auto-match theme + use as preview backdrop */}
           <div
@@ -614,6 +623,8 @@ const Configurator = () => {
             );
           })()}
         </div>
+
+        </div>{/* /config-columns */}
 
       </div>
     </div>

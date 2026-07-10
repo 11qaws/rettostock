@@ -313,47 +313,41 @@ html, body, #root {
   pointer-events: none;
 }
 
-.ribbon-container {
+/* Full-width app header */
+.app-header {
   display: flex;
-  justify-content: center;
-  margin-bottom: 24px;
-}
-
-.ribbon-title {
-  position: relative;
-  background: #ffb6c1;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: #4e342e;
   color: #fff;
-  text-align: center;
-  padding: 8px 30px;
-  display: inline-block;
-  font-size: 22px;
+  border-radius: 12px;
+  padding: 12px 22px;
+  margin-bottom: 28px;
   font-family: 'Jua', sans-serif;
+  box-shadow: 0 4px 10px rgba(78, 52, 46, 0.25);
+}
+.app-title {
+  font-size: 20px;
   letter-spacing: 1px;
-  border-radius: 4px;
-  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.1);
-  box-shadow: 0 4px 6px rgba(255, 182, 193, 0.4);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
+.header-status {
+  font-size: 13px;
+  color: #d7ccc8;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+.header-status.active { color: #a5d6a7; font-weight: bold; }
 
-.ribbon-title::before, .ribbon-title::after {
-  content: '';
-  position: absolute;
-  top: 10px;
-  bottom: -10px;
-  width: 20px;
-  z-index: -1;
-  background: #ff9fb0;
-}
-.ribbon-title::before {
-  left: -15px;
-  border-left: 10px solid transparent;
-  border-top: 15px solid #ff9fb0;
-  border-bottom: 15px solid #ff9fb0;
-}
-.ribbon-title::after {
-  right: -15px;
-  border-right: 10px solid transparent;
-  border-top: 15px solid #ff9fb0;
-  border-bottom: 15px solid #ff9fb0;
+.preview-label {
+  font-weight: bold;
+  color: #4e342e;
+  font-size: 15px;
+  align-self: flex-start;
+  margin-bottom: 12px;
 }
 
 .jirai-input {
@@ -569,10 +563,15 @@ html, body, #root {
 /* Responsive Layout for OBS Dock */
 .config-layout {
   display: flex;
+  flex-direction: column;
   max-width: 1000px;
   width: 100%;
-  gap: 40px;
   background: #fffcfc;
+}
+
+.config-columns {
+  display: flex;
+  gap: 40px;
 }
 
 .config-sidebar {
@@ -594,13 +593,18 @@ html, body, #root {
 .config-layout.scene-expanded .config-preview-wrapper { width: 640px; }
 
 @media (max-width: 800px) {
-  .config-layout {
+  .config-columns {
     flex-direction: column;
     gap: 16px;
   }
   .config-sidebar {
     padding-right: 0;
   }
+  .app-header {
+    padding: 10px 14px;
+    margin-bottom: 16px;
+  }
+  .app-title { font-size: 16px; }
   .config-preview-wrapper {
     /* Stack the preview below the controls instead of hiding it */
     width: 100%;
@@ -618,15 +622,6 @@ html, body, #root {
   .jirai-container::before {
     top: 4px; left: 4px; right: 4px; bottom: 4px;
     border-width: 1px;
-  }
-  .ribbon-title {
-    font-size: 16px;
-    padding: 8px 16px;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  .ribbon-title::before, .ribbon-title::after {
-    display: none; /* Hide ribbon tails to prevent horizontal overflow */
   }
   .jirai-card {
     padding: 12px;
