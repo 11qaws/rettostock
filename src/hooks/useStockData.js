@@ -476,7 +476,8 @@ export const useStockData = (symbols, demo = false) => {
 
               setData(prev => {
                 const cur = prev[symbol] || {};
-                const livePrice = rawCloses.length > 0 ? rawCloses[rawCloses.length - 1] : quote.regularMarketPrice;
+                // Use regularMarketPrice directly instead of the last chart close, as chart endpoints are often cached by proxies
+                const livePrice = quote.regularMarketPrice;
                 const newPrice = cur.price ?? livePrice;
                 const regClose = quote.regularMarketPrice;
                 return {
