@@ -22,10 +22,11 @@ const SESSION_MAP = { 'pre-market': 'PRE', regular: 'REGULAR', 'post-market': 'P
 
 const calcChange = (price, regClose, prevClose, marketState) => {
   if (typeof price !== 'number') return undefined;
-  // PRE/POST market changes are relative to the regular market close (which is yesterday's close in PRE, and today's close in POST)
-  // REGULAR market changes are relative to the previous day's close
-  const isExtended = marketState === 'PRE' || marketState === 'POST' || marketState === 'POSTPOST';
-  const baseline = (isExtended && typeof regClose === 'number' && regClose > 0) ? regClose : prevClose;
+  // PRE market changes are relative to yesterday's close (prevClose)
+  // POST market changes are relative to today's regular close (regClose)
+  // REGULAR market changes are relative to yesterday's close (prevClose)
+  const isPost = marketState === 'POST' || marketState === 'POSTPOST';
+  const baseline = (isPost && typeof regClose === 'number' && regClose > 0) ? regClose : prevClose;
   if (typeof baseline !== 'number' || baseline === 0) return undefined;
   return ((price - baseline) / baseline) * 100;
 };
@@ -249,8 +250,8 @@ export const useStockData = (symbols, demo = false) => {
               ...cur,
               price: newPrice,
               previousClose: q.pc,
-              regularMarketPrice: q.c,
-              changePercent: calcChange(newPrice, q.c, q.pc, cur.marketState) ?? cur.changePercent,
+              regularMarketPrice: cur.marketState === 'REGULAR' ? q.c : cur.regularMarketPrice,
+              changePercent: calcChange(newPrice, cur.marketState === 'REGULAR' ? q.c : cur.regularMarketPrice, q.pc, cur.marketState) ?? cur.changePercent,
               name: cur.name || symbol,
               isCrypto: false,
               stale: false,

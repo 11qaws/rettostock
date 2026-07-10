@@ -33,8 +33,8 @@ const TickerCard = ({
 
   let changeAbs = null;
   if (typeof price === 'number') {
-    const isExtended = marketState === 'PRE' || marketState === 'POST' || marketState === 'POSTPOST';
-    const baseline = (isExtended && typeof regularMarketPrice === 'number' && regularMarketPrice > 0) ? regularMarketPrice : previousClose;
+    const isPost = marketState === 'POST' || marketState === 'POSTPOST';
+    const baseline = (isPost && typeof regularMarketPrice === 'number' && regularMarketPrice > 0) ? regularMarketPrice : previousClose;
     if (typeof baseline === 'number') {
       changeAbs = price - baseline;
     } else if (typeof changePercent === 'number') {
