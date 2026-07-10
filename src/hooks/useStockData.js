@@ -159,6 +159,7 @@ export const useStockData = (symbols, demo = false) => {
     let btcWs = null;
     let finnhubWs = null;
     let quoteTimer = null;
+    let preMarketTimer = null;
     let enrichTimer = null;
     let statusTimer = null;
     let stopped = false;
@@ -377,13 +378,19 @@ export const useStockData = (symbols, demo = false) => {
         });
       };
 
-      const quoteLoop = async () => {
-        if (stopped) return;
-        await fetchQuotes();
-        await fetchPreMarket();
-        quoteTimer = setTimeout(quoteLoop, 10000);
-      };
-      quoteLoop();
+        const quoteLoop = async () => {
+          if (stopped) return;
+          await fetchQuotes();
+          quoteTimer = setTimeout(quoteLoop, 10000); // 10s to avoid Finnhub 60/min rate limit
+        };
+        quoteLoop();
+
+        const preMarketLoop = async () => {
+          if (stopped) return;
+          await fetchPreMarket();
+          preMarketTimer = setTimeout(preMarketLoop, 5000); // 5s for faster pre/post updates
+        };
+        preMarketLoop();
 
       // 2b-2. US market session (pre/regular/post/closed) — one direct
       //       Finnhub call covers every US symbol. Yahoo's chart meta has
@@ -503,14 +510,15 @@ export const useStockData = (symbols, demo = false) => {
       enrichLoop();
     }
 
-    return () => {
-      stopped = true;
-      if (quoteTimer) clearTimeout(quoteTimer);
-      if (enrichTimer) clearTimeout(enrichTimer);
-      if (statusTimer) clearTimeout(statusTimer);
-      if (btcWs) btcWs.close();
-      if (finnhubWs) finnhubWs.close();
-    };
+      return () => {
+        stopped = true;
+        if (quoteTimer) clearTimeout(quoteTimer);
+        if (preMarketTimer) clearTimeout(preMarketTimer);
+        if (enrichTimer) clearTimeout(enrichTimer);
+        if (statusTimer) clearTimeout(statusTimer);
+        if (btcWs) btcWs.close();
+        if (finnhubWs) finnhubWs.close();
+      };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbolsKey, demo]);
 
