@@ -1,4 +1,4 @@
-# 📈 Retto Stock Widget for OBS
+# 📈 Rettostock Widget for OBS
 [![English](https://img.shields.io/badge/Language-English-blue)](#english) [![Korean](https://img.shields.io/badge/Language-Korean-red)](#korean)
 
 ---
