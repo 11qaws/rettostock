@@ -32,15 +32,9 @@ const TickerCard = ({
   const prevSurgeRef = useRef(null); // null = no data seen yet
 
   let changeAbs = null;
-  if (typeof price === 'number') {
-    const isPost = marketState === 'POST' || marketState === 'POSTPOST';
-    const baseline = (isPost && typeof regularMarketPrice === 'number' && regularMarketPrice > 0) ? regularMarketPrice : previousClose;
-    if (typeof baseline === 'number') {
-      changeAbs = price - baseline;
-    } else if (typeof changePercent === 'number') {
-      const impliedBaseline = price / (1 + changePercent / 100);
-      changeAbs = price - impliedBaseline;
-    }
+  if (typeof price === 'number' && typeof changePercent === 'number') {
+    const impliedBaseline = price / (1 + changePercent / 100);
+    changeAbs = price - impliedBaseline;
   }
 
   // Tick animation on price change
