@@ -20,10 +20,12 @@ const pickEnrichInterval = (state) => {
 // Finnhub session -> our badge states
 const SESSION_MAP = { 'pre-market': 'PRE', regular: 'REGULAR', 'post-market': 'POST' };
 
-const calcChange = (price, prevClose, regClose, marketState) => {
+const calcChange = (price, regClose, prevClose, marketState) => {
   if (typeof price !== 'number') return undefined;
-  const isPost = marketState === 'POST' || marketState === 'POSTPOST';
-  const baseline = (isPost && typeof regClose === 'number' && regClose > 0) ? regClose : prevClose;
+  // PRE/POST market changes are relative to the regular market close (which is yesterday's close in PRE, and today's close in POST)
+  // REGULAR market changes are relative to the previous day's close
+  const isExtended = marketState === 'PRE' || marketState === 'POST' || marketState === 'POSTPOST';
+  const baseline = (isExtended && typeof regClose === 'number' && regClose > 0) ? regClose : prevClose;
   if (typeof baseline !== 'number' || baseline === 0) return undefined;
   return ((price - baseline) / baseline) * 100;
 };
@@ -179,7 +181,7 @@ export const useStockData = (symbols, demo = false) => {
               next[sym] = { 
                 ...cur, 
                 price, 
-                changePercent: cur.previousClose ? calcChange(price, cur.previousClose, cur.regularMarketPrice, cur.marketState) : cur.changePercent,
+                changePercent: cur.previousClose ? calcChange(price, cur.regularMarketPrice, cur.previousClose, cur.marketState) : cur.changePercent,
                 name: cur.name || sym, 
                 isCrypto: false, 
                 stale: false 
@@ -221,7 +223,7 @@ export const useStockData = (symbols, demo = false) => {
               price: newPrice,
               previousClose: q.pc,
               regularMarketPrice: q.c,
-              changePercent: calcChange(newPrice, q.pc, q.c, cur.marketState) ?? cur.changePercent,
+              changePercent: calcChange(newPrice, q.c, q.pc, cur.marketState) ?? cur.changePercent,
               name: cur.name || symbol,
               isCrypto: false,
               stale: false,
@@ -262,7 +264,7 @@ export const useStockData = (symbols, demo = false) => {
                   ...cur, 
                   marketState: usMarketState,
                   // recalculate change if market state flipped (e.g. REGULAR -> POST)
-                  changePercent: cur.previousClose ? calcChange(cur.price, cur.previousClose, cur.regularMarketPrice, usMarketState) : cur.changePercent
+                  changePercent: cur.previousClose ? calcChange(cur.price, cur.regularMarketPrice, cur.previousClose, usMarketState) : cur.changePercent
                 };
               }
             }
@@ -278,7 +280,7 @@ export const useStockData = (symbols, demo = false) => {
       const fetchEnrichment = async () => {
         for (const symbol of stockSymbols) {
           try {
-            const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=5m&range=1d&t=${Date.now()}`;
+            const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=5m&range=1d&includePrePost=true&t=${Date.now()}`;
             const result = await fetchViaProxy(targetUrl);
             if (stopped) return;
 
@@ -290,7 +292,8 @@ export const useStockData = (symbols, demo = false) => {
 
               setData(prev => {
                 const cur = prev[symbol] || {};
-                const newPrice = cur.price ?? quote.regularMarketPrice;
+                const livePrice = rawCloses.length > 0 ? rawCloses[rawCloses.length - 1] : quote.regularMarketPrice;
+                const newPrice = cur.price ?? livePrice;
                 const regClose = quote.regularMarketPrice;
                 return {
                   ...prev,
@@ -299,7 +302,7 @@ export const useStockData = (symbols, demo = false) => {
                     price: newPrice,
                     previousClose: previousClose,
                     regularMarketPrice: regClose,
-                    changePercent: calcChange(newPrice, previousClose, regClose, cur.marketState) ?? cur.changePercent,
+                    changePercent: calcChange(newPrice, regClose, previousClose, cur.marketState) ?? cur.changePercent,
                     name: quote.shortName || cur.name || symbol,
                     closes: downsample(rawCloses, MAX_SPARK_POINTS),
                     isCrypto: false,
