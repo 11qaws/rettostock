@@ -31,7 +31,15 @@ const TickerCard = ({
   const prevPriceRef = useRef(loopPrevPrice !== undefined ? loopPrevPrice : price);
   const prevSurgeRef = useRef(null); // null = no data seen yet
 
-  const changeAbs = (typeof price === 'number' && typeof previousClose === 'number') ? (price - previousClose) : null;
+  let changeAbs = null;
+  if (typeof price === 'number') {
+    if (typeof previousClose === 'number') {
+      changeAbs = price - previousClose;
+    } else if (typeof changePercent === 'number') {
+      const impliedPrevClose = price / (1 + changePercent / 100);
+      changeAbs = price - impliedPrevClose;
+    }
+  }
 
   // Tick animation on price change
   useEffect(() => {
@@ -124,7 +132,14 @@ const TickerCard = ({
         </div>
 
         <div className="card-right">
-          {market && <span className={`market-badge ${market.cls}`} style={{ marginBottom: '2px' }}>{market.text}</span>}
+          {(surged || market) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+              {surged && fx !== 'off' && (
+                <span className="surge-badge" style={{ flexShrink: 0, fontSize: '1.1em' }}>{isUp ? '🔥' : '💦'}</span>
+              )}
+              {market && <span className={`market-badge ${market.cls}`}>{market.text}</span>}
+            </div>
+          )}
           <span className={`neon-price ${priceFlash}`}>
             ${typeof price === 'number' ? price.toFixed(2) : '---'}
           </span>
@@ -144,9 +159,6 @@ const TickerCard = ({
                 <span>---</span>
               )}
             </span>
-            {surged && fx !== 'off' && (
-              <span className="surge-badge" style={{ flexShrink: 0 }}>{isUp ? '🔥' : '💦'}</span>
-            )}
           </span>
         </div>
       </div>
