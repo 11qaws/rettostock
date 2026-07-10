@@ -18,7 +18,6 @@ const UP_PARTICLES = ['🔥', '✨', '▲', '💖', '⭐'];
 const DOWN_PARTICLES = ['💧', '▼', '💦', '🫧'];
 
 let particleId = 0;
-// ... (skipping some lines for brevity in thought, I must use exact replacement)
 
 const TickerCard = ({
   symbol, price, changePercent, previousClose, regularMarketPrice, name, isCrypto, marketState, closes, stale,

@@ -43,13 +43,6 @@ const downsample = (arr, max) => {
 };
 
 // Public CORS proxies are flaky; try several in order.
-const PROXY_LIST = [
-  'https://api.allorigins.win/raw?url={url}',
-  'https://api.allorigins.win/get?url={url}',
-  'https://corsproxy.io/?{url}',
-  'https://thingproxy.freeboard.io/fetch/{url}'
-];
-
 const PROXIES = [
   (u) => ({ url: `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, unwrap: async (res) => JSON.parse((await res.json()).contents) }),
   (u) => ({ url: `https://corsproxy.io/?url=${encodeURIComponent(u)}`, unwrap: (res) => res.json() }),
@@ -59,13 +52,14 @@ const PROXIES = [
 const fetchViaProxy = async (targetUrl) => {
   // If running locally in dev mode, use Vite's built-in proxy to bypass CORS directly
   if (import.meta.env.DEV) {
+    // Vite dev proxies are mounted at the server root, not under the app base
     if (targetUrl.includes('quote.cnbc.com')) {
-      const localUrl = targetUrl.replace('https://quote.cnbc.com', '/rettostock/api/cnbc');
+      const localUrl = targetUrl.replace('https://quote.cnbc.com', '/api/cnbc');
       const res = await fetch(localUrl, { cache: 'no-store' });
       if (res.ok) return res.json();
     }
     if (targetUrl.includes('query1.finance.yahoo.com')) {
-      const localUrl = targetUrl.replace('https://query1.finance.yahoo.com', '/rettostock/api/yahoo');
+      const localUrl = targetUrl.replace('https://query1.finance.yahoo.com', '/api/yahoo');
       const res = await fetch(localUrl, { cache: 'no-store' });
       if (res.ok) return res.json();
     }
