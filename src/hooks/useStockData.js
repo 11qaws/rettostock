@@ -396,31 +396,37 @@ export const useStockData = (symbols, demo = false) => {
             );
             const s = await res.json();
             
-            let session = s && s.session ? (SESSION_MAP[s.session] || 'REGULAR') : 'CLOSED';
-            if (s && s.isOpen === false) session = 'CLOSED';
-            
-            // Finnhub's market-status API often lags by 5-10 minutes at the 9:30 AM open.
-            // We force it to REGULAR if the current NY time is between 9:30 AM and 4:00 PM.
-            if (session === 'PRE' || session === 'POST') {
+            // We use Finnhub ONLY to check if today is a holiday (isOpen).
+            // For the actual session (PRE/REGULAR/POST), we rely 100% on the New York clock
+            // because Finnhub's session string is notoriously slow to update at the open/close boundaries.
+            let session = 'CLOSED';
+            if (s && s.isOpen) {
               try {
-                const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hour12: false });
+                const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false });
                 const parts = formatter.formatToParts(new Date());
-                let h = 0, m = 0;
+                let h = 0, m = 0, weekday = '';
                 for (const p of parts) {
                   if (p.type === 'hour') h = parseInt(p.value, 10);
                   if (p.type === 'minute') m = parseInt(p.value, 10);
+                  if (p.type === 'weekday') weekday = p.value;
                 }
                 if (h === 24) h = 0;
                 const timeInMinutes = h * 60 + m;
                 
-                // 9:30 AM = 570, 4:00 PM = 960
-                if (timeInMinutes >= 570 && timeInMinutes < 960) {
-                  session = 'REGULAR';
-                } else if (timeInMinutes >= 960 && timeInMinutes < 1200) {
-                  session = 'POST';
+                // US Market Hours in NY Time: 
+                // 4:00 AM = 240, 9:30 AM = 570, 4:00 PM = 960, 8:00 PM = 1200
+                if (weekday !== 'Sat' && weekday !== 'Sun') {
+                  if (timeInMinutes >= 240 && timeInMinutes < 570) {
+                    session = 'PRE';
+                  } else if (timeInMinutes >= 570 && timeInMinutes < 960) {
+                    session = 'REGULAR';
+                  } else if (timeInMinutes >= 960 && timeInMinutes < 1200) {
+                    session = 'POST';
+                  }
                 }
               } catch (e) {
-                // Ignore formatting errors in older CEF
+                // Fallback to Finnhub if CEF browser lacks Intl.DateTimeFormat timezone support
+                session = s.session ? (SESSION_MAP[s.session] || 'REGULAR') : 'CLOSED';
               }
             }
             
