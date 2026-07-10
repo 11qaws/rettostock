@@ -385,15 +385,35 @@ export const useStockData = (symbols, demo = false) => {
       // 2b-2. US market session (pre/regular/post/closed) — one direct
       //       Finnhub call covers every US symbol. Yahoo's chart meta has
       //       no marketState field, so this is the real source.
-      const statusLoop = async () => {
-        try {
-          const res = await fetch(
-            `https://api.finnhub.io/api/v1/stock/market-status?exchange=US&token=${API_KEY}`,
-            { cache: 'no-store' }
-          );
-          const s = await res.json();
-          usMarketState = s && s.session ? (SESSION_MAP[s.session] || 'REGULAR') : 'CLOSED';
-        } catch { /* keep previous state */ }
+        const statusLoop = async () => {
+          try {
+            const res = await fetch(
+              `https://api.finnhub.io/api/v1/stock/market-status?exchange=US&token=${API_KEY}`,
+              { cache: 'no-store' }
+            );
+            const s = await res.json();
+            
+            let session = s && s.session ? (SESSION_MAP[s.session] || 'REGULAR') : 'CLOSED';
+            if (s && s.isOpen === false) session = 'CLOSED';
+            
+            // Finnhub's market-status API often lags by 5-10 minutes at the 9:30 AM open.
+            // We force it to REGULAR if the current NY time is between 9:30 AM and 4:00 PM.
+            if (session === 'PRE' || session === 'POST') {
+              const nyTime = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}));
+              const hours = nyTime.getHours();
+              const minutes = nyTime.getMinutes();
+              const timeInMinutes = hours * 60 + minutes;
+              
+              // 9:30 AM = 570, 4:00 PM = 960
+              if (timeInMinutes >= 570 && timeInMinutes < 960) {
+                session = 'REGULAR';
+              } else if (timeInMinutes >= 960 && timeInMinutes < 1200) {
+                session = 'POST';
+              }
+            }
+            
+            usMarketState = session;
+          } catch { /* keep previous state */ }
         if (stopped) return;
         if (usMarketState) {
           setData(prev => {
