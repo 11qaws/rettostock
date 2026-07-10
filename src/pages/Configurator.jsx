@@ -497,13 +497,12 @@ const Configurator = () => {
             <div className="advanced-row">
               <label className="demo-toggle">
                 <input type="checkbox" checked={!!config.remote} onChange={e => set('remote', e.target.checked)} />
-                📡 실시간 원격 반영 — 이 브라우저(크롬 등)에서 바꾼 설정이 OBS 위젯에 바로 적용돼요
+                🔗 브라우저-OBS 실시간 연결 — 이 컴퓨터의 브라우저에서 바꾼 설정이 OBS 위젯에 바로 적용돼요
               </label>
               {!config.remote && (
                 <p style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0 24px', lineHeight: 1.6 }}>
-                  크롬과 OBS는 서로 다른 브라우저라 중계 없이는 통신할 수 없어요. 꺼져 있으면
-                  위젯은 외부 서버와 일절 통신하지 않는 대신, 여기서 바꾼 설정은 <b>위젯 URL을
-                  다시 복사해 OBS에 넣어야</b> 적용됩니다. (미리보기 화면과 OBS 커스텀 독은 항상 실시간)
+                  꺼져 있으면 설정을 바꾼 뒤 <b>위젯 URL을 OBS에 다시 복사해 넣어야</b> 적용돼요.
+                  (미리보기 화면과 OBS 커스텀 독은 항상 실시간)
                 </p>
               )}
               {config.remote && (
@@ -523,10 +522,8 @@ const Configurator = () => {
                     </button>
                   </div>
                   <p style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0', lineHeight: 1.6 }}>
-                    변경 내용은 중계 서버(ntfy.sh)를 거치지만 <b>이 브라우저의 전자서명이 붙은 변경만 위젯이 받아들여요</b> —
-                    코드나 URL이 통째로 노출돼도 다른 사람이 위젯을 조작하는 건 불가능합니다.
-                    전달되는 내용은 종목·테마 같은 위젯 설정뿐이고, 코드는 방송 화면 노출 대비로 가려 둡니다.
-                    <b>켜거나 [새 코드]를 누른 뒤에는 OBS에 위젯 URL을 다시 복사해 넣어야</b> 연결됩니다.
+                    이 코드가 내 브라우저와 OBS 위젯을 짝지어 줘요.
+                    <b>켜거나 [새 코드]를 누른 뒤에는 OBS에 위젯 URL을 한 번 다시 복사해 넣으면</b> 연결 끝입니다.
                   </p>
                 </div>
               )}
