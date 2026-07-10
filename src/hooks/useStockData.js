@@ -246,9 +246,9 @@ export const useStockData = (symbols, demo = false) => {
 
           if (stopped) return;
           
-          setData(prev => {
-            const next = { ...prev };
-            for (const q of quotes) {
+          const updates = {};
+          for (const q of quotes) {
+            try {
               if (!q || !q.symbol) continue;
               const symbol = q.symbol;
               const isExt = q.curmktstatus === 'PRE_MKT' || q.curmktstatus === 'POST_MKT';
@@ -259,23 +259,37 @@ export const useStockData = (symbols, demo = false) => {
               const livePriceStr = extQuote?.last || q.last;
               const liveChangeStr = extQuote?.change_pct || q.change_pct;
               
-              const livePrice = parseFloat((livePriceStr || '').replace(/,/g, ''));
-              const liveChange = parseFloat((liveChangeStr || '0').replace('%', ''));
+              const livePrice = parseFloat(String(livePriceStr || '').replace(/,/g, ''));
+              const liveChange = parseFloat(String(liveChangeStr || '0').replace('%', ''));
 
               if (isNaN(livePrice)) continue;
 
-              const cur = next[symbol] || {};
-              next[symbol] = {
-                ...cur,
+              updates[symbol] = {
                 price: livePrice, 
                 changePercent: liveChange,
-                name: q.shortName || q.name || cur.name || symbol,
-                marketState: q.curmktstatus === 'PRE_MKT' ? 'PRE' : 'POST',
-                stale: false,
+                name: q.shortName || q.name || symbol,
+                marketState: q.curmktstatus === 'PRE_MKT' ? 'PRE' : 'POST'
               };
+            } catch (err) {
+              console.warn("Failed to parse CNBC quote for a symbol:", err);
             }
-            return next;
-          });
+          }
+
+          if (Object.keys(updates).length > 0) {
+            setData(prev => {
+              const next = { ...prev };
+              for (const [symbol, updateData] of Object.entries(updates)) {
+                const cur = next[symbol] || {};
+                next[symbol] = {
+                  ...cur,
+                  ...updateData,
+                  name: updateData.name || cur.name,
+                  stale: false,
+                };
+              }
+              return next;
+            });
+          }
         } catch (err) {
           console.warn("CNBC Pre-market fetch failed via proxy (cards will use Finnhub):", err);
         }
