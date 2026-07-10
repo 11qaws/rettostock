@@ -261,15 +261,14 @@ export const useStockData = (symbols, demo = false) => {
           return next;
         });
       };
-      // 2c. Extended Hours data via TradingView Scanner
+      // 2c. Extended Hours data via TradingView Scanner (also now provides fast 5s regular market fallback)
       const fetchPreMarket = async () => {
-        if (usMarketState === 'REGULAR') return;
         let data;
         try {
           // 1. Try TradingView Scanner API directly (works on GitHub Pages, but might be blocked by Adblock)
           const payload = {
             filter: [{ left: 'name', operation: 'in_range', right: stockSymbols }],
-            columns: ['name', 'close', 'premarket_close', 'premarket_change', 'postmarket_close', 'postmarket_change', 'description']
+            columns: ['name', 'close', 'change', 'premarket_close', 'premarket_change', 'postmarket_close', 'postmarket_change', 'description']
           };
           
           const res = await fetch('https://scanner.tradingview.com/america/scan', {
@@ -295,22 +294,25 @@ export const useStockData = (symbols, demo = false) => {
               const tvFormatData = [];
               for (const q of quotes) {
                 if (!q || !q.symbol) continue;
-                const isExt = q.curmktstatus === 'PRE_MKT' || q.curmktstatus === 'POST_MKT';
-                if (!isExt) continue;
                 
                 const extQuote = q.ExtendedMktQuote;
                 const livePriceStr = extQuote?.last || q.last;
                 const liveChangeStr = extQuote?.change_pct || q.change_pct;
+                const regPriceStr = q.last;
+                const regChangeStr = q.change_pct;
                 
                 const livePrice = parseFloat(String(livePriceStr || '').replace(/,/g, ''));
                 const liveChange = parseFloat(String(liveChangeStr || '0').replace('%', ''));
+                const regPrice = parseFloat(String(regPriceStr || '').replace(/,/g, ''));
+                const regChange = parseFloat(String(regChangeStr || '0').replace('%', ''));
                 
-                if (isNaN(livePrice)) continue;
+                if (isNaN(livePrice) && isNaN(regPrice)) continue;
                 
                 tvFormatData.push({
                   d: [
                     q.symbol, // name
-                    parseFloat(q.previous_day_closing), // close
+                    regPrice, // close
+                    regChange, // change
                     q.curmktstatus === 'PRE_MKT' ? livePrice : null, // premarket_close
                     q.curmktstatus === 'PRE_MKT' ? liveChange : null, // premarket_change
                     q.curmktstatus === 'POST_MKT' ? livePrice : null, // postmarket_close
@@ -335,23 +337,25 @@ export const useStockData = (symbols, demo = false) => {
         
         const updates = {};
         for (const item of data.data) {
-          const [name, close, preClose, preChange, postClose, postChange, desc] = item.d;
+          const [name, close, change, preClose, preChange, postClose, postChange, desc] = item.d;
           
-          let livePrice = null;
-          let liveChange = null;
+          let livePrice = close;
+          let liveChange = change;
           let marketState = 'REGULAR';
           
-          if (preClose !== null && preClose !== undefined) {
-            livePrice = preClose;
-            liveChange = preChange;
-            marketState = 'PRE';
-          } else if (postClose !== null && postClose !== undefined) {
-            livePrice = postClose;
-            liveChange = postChange;
-            marketState = 'POST';
+          if (usMarketState !== 'REGULAR') {
+            if (preClose !== null && preClose !== undefined) {
+              livePrice = preClose;
+              liveChange = preChange;
+              marketState = 'PRE';
+            } else if (postClose !== null && postClose !== undefined) {
+              livePrice = postClose;
+              liveChange = postChange;
+              marketState = 'POST';
+            }
           }
-          
-          if (marketState === 'REGULAR') continue;
+
+          if (livePrice === null || isNaN(livePrice)) continue;
 
           updates[name] = {
             price: livePrice, 
@@ -360,8 +364,6 @@ export const useStockData = (symbols, demo = false) => {
             marketState: marketState
           };
         }
-
-        if (usMarketState === 'REGULAR') return;
 
         setData(prev => {
           const next = { ...prev };
