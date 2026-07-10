@@ -10,7 +10,7 @@ OBS 스튜디오 인터넷 방송인을 위한 실시간 주식/암호화폐 전
 
 ### ✨ 주요 기능
 
-* **실시간 시세**: 주식·ETF(Finnhub + Yahoo), 암호화폐(BTC, Binance)를 실시간으로 표시합니다. 스파크라인 미니차트와 장중/프리장/애프터/마감 배지도 함께 나옵니다.
+* **실시간 시세**: 주식·ETF(Finnhub + Yahoo)를 실시간으로 표시합니다. 스파크라인 미니차트와 장중/프리장/애프터/마감 배지도 함께 나옵니다.
 * **테마 6종**: 아모레 핑크 · 파스텔 라이트 · 픽셀 레트로 · 네온 바 · LED 전광판 · 다크 글래스. 상승/하락 색은 테마 기본 / 빨강↑·파랑↓ / 초록↑·빨강↓ 중 선택할 수 있습니다.
 * **디스플레이 모드 3종**: `리스트`(세로 목록) · `로테이트`(하나씩 회전) · `마퀴`(전광판처럼 가로로 흐름).
 * **이벤트 이펙트**: 등락률이 ±5%를 넘는 순간 파티클이 터지고 카드가 빛나며 🚀/💦 배지가 붙습니다. 강도 조절/끄기 가능.
@@ -46,7 +46,7 @@ Change settings on the remote page and the OBS widget updates live.
 
 ### ✨ Key Features
 
-* **Live market data**: stocks/ETFs (Finnhub + Yahoo) and crypto (BTC via Binance), with sparkline mini-charts and market-state badges (regular/pre/after/closed).
+* **Live market data**: stocks/ETFs (Finnhub + Yahoo) with sparkline mini-charts and market-state badges (regular/pre/after/closed).
 * **6 themes**: Amore Pink · Pastel Light · Pixel Retro · Neon Bar · LED Board · Dark Glass. Up/down colors: theme default, red-up/blue-down (KR style), or green-up/red-down.
 * **3 display modes**: `List`, `Rotate` (one at a time), `Marquee` (horizontal ticker strip).
 * **Event effects**: when a ticker crosses ±5%, particles burst, the card glows, and a 🚀/💦 badge appears. Intensity is adjustable.
