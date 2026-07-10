@@ -271,6 +271,12 @@ html, body, #root {
   --card-pad: min(12px, 12vh);
 }
 
+.mode-scroll.theme-led-board {
+  --fs-title: min(18px, 26vh);
+  --fs-price: min(20px, 30vh);
+  --fs-change: min(14px, 22vh);
+}
+
 .ticker-inline {
   display: inline-flex;
   align-items: center;

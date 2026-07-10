@@ -206,6 +206,12 @@
 
   --font-head: 'Orbitron', 'Inter', sans-serif;
   --font-num: 'DSEG7-Classic', 'DSEG7 Classic', 'Orbitron', monospace;
+
+  /* Scale down base fonts to account for wide Orbitron/DSEG7 glyphs */
+  --fs-title: clamp(13px, 7vw, 21px);
+  --fs-sub: clamp(9px, 4vw, 12px);
+  --fs-price: clamp(15px, 8vw, 27px);
+  --fs-change: clamp(10px, 5vw, 15px);
 }
 
 .theme-led-board .glass-card {
