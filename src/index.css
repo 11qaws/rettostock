@@ -279,6 +279,33 @@ html, body, #root {
 }
 .sign-flip { animation: signFlip 0.55s ease; }
 
+/* Session record (신고가/신저가) pop — floats up from the card center */
+.hilo-pop {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: rgba(var(--bg-rgb), 0.85);
+  pointer-events: none;
+  z-index: 6;
+  animation: hiloPop 1.6s ease-out forwards;
+}
+.hilo-high { color: var(--color-up); }
+.hilo-low { color: var(--color-down); }
+@keyframes hiloPop {
+  0% { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.8); }
+  15% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.06); }
+  70% { opacity: 1; transform: translateX(-50%) translateY(-4px) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(1); }
+}
+
 /* fx intensity: soft = no shake/particles, off = no animations at all */
 .fx-soft .anim-pump { animation: pumpFlash 0.5s ease; }
 .fx-soft .fx-particle { display: none; }
@@ -289,6 +316,7 @@ html, body, #root {
 .fx-off .fx-particle { display: none; }
 .fx-off .cross-wipe { display: none; }
 .fx-off .sign-flip { animation: none; }
+.fx-off .hilo-pop { display: none; }
 
 /* ============================================================
    Marquee (scroll) mode — electronic board strip

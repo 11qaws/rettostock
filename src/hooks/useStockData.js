@@ -122,6 +122,7 @@ export const useStockData = (symbols, demo = false) => {
         next[sym] = {
           price: s.price,
           changePercent: s.changePercent,
+          previousClose: s.base, // sparkline baseline in demo too
           name: `${sym} (데모)`,
           isCrypto: false,
           marketState: 'REGULAR',

@@ -159,7 +159,7 @@ const Widget = () => {
           </span>
           {ticker?.closes && ticker.closes.length > 1 && (
             <span className={`inline-spark ${colorClass}`}>
-              <Sparkline data={ticker.closes} pixel={pixel} />
+              <Sparkline data={ticker.closes} baseline={ticker?.previousClose} pixel={pixel} />
             </span>
           )}
         </div>
