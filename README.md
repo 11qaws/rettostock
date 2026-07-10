@@ -33,7 +33,7 @@ OBS 스튜디오 인터넷 방송인을 위한 실시간 주식/암호화폐 전
 * **프레임워크**: React (Vite)
 * **스타일링**: Vanilla CSS (컨테이너 쿼리 기반 반응형), Lucide React
 * **애니메이션**: Framer Motion + CSS 키프레임
-* **데이터**: Finnhub WebSocket(실시간 체결) + Yahoo Finance(등락률·차트·장 상태) + Binance WebSocket(BTC)
+* **데이터**: Finnhub WebSocket(실시간 체결) + Yahoo Finance(등락률·차트·장 상태)
 * **원격 동기화**: BroadcastChannel/localStorage(같은 브라우저) + 옵트인 ntfy.sh 릴레이(ECDSA P-256 서명 검증, 크롬↔OBS·폰)
 * **배포**: GitHub Actions & GitHub Pages
 
@@ -69,6 +69,6 @@ Prefer everything inside OBS? Register the remote page under `Docks → Custom B
 * **Framework**: React (Vite)
 * **Styling**: Vanilla CSS (container-query responsive), Lucide React
 * **Animation**: Framer Motion + CSS keyframes
-* **Data**: Finnhub WebSocket (live trades) + Yahoo Finance (change %, chart, market state) + Binance WebSocket (BTC)
+* **Data**: Finnhub WebSocket (live trades) + Yahoo Finance (change %, chart, market state)
 * **Sync**: BroadcastChannel/localStorage (same browser) + opt-in ntfy.sh relay with ECDSA P-256 signature verification (cross-browser/device)
 * **Deployment**: GitHub Actions & GitHub Pages
