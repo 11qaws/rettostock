@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Copy, Check, AlertCircle, Heart, RefreshCw, ImagePlus } from 'lucide-react';
+import { Copy, Check, AlertCircle, RefreshCw, ImagePlus } from 'lucide-react';
 import { getOrCreateRoom, createRoom, saveRoom, publishSync } from '../hooks/useRemoteSync';
 
 // Analyze a screenshot of the broadcast scene and pick a matching theme
@@ -267,10 +267,8 @@ const Configurator = () => {
         <div className="config-sidebar">
 
           <div className="ribbon-container">
-            <div className="ribbon-title">
-              <Heart size={18} fill="#fff" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />
+            <div className="ribbon-title" style={{ background: '#4e342e', color: '#fff' }}>
               아모레또 위젯 리모컨
-              <Heart size={18} fill="#fff" style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: '6px' }} />
             </div>
           </div>
 
