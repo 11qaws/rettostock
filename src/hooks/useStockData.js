@@ -360,6 +360,8 @@ export const useStockData = (symbols, demo = false) => {
           };
         }
 
+        if (usMarketState === 'REGULAR') return;
+
         setData(prev => {
           const next = { ...prev };
           let changed = false;
