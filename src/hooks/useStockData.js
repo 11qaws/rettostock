@@ -39,6 +39,13 @@ const downsample = (arr, max) => {
 };
 
 // Public CORS proxies are flaky; try several in order.
+const PROXY_LIST = [
+  'https://api.allorigins.win/raw?url={url}',
+  'https://api.allorigins.win/get?url={url}',
+  'https://corsproxy.io/?{url}',
+  'https://thingproxy.freeboard.io/fetch/{url}'
+];
+
 const PROXIES = [
   (u) => ({ url: `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, unwrap: async (res) => JSON.parse((await res.json()).contents) }),
   (u) => ({ url: `https://corsproxy.io/?url=${encodeURIComponent(u)}`, unwrap: (res) => res.json() }),
@@ -46,6 +53,20 @@ const PROXIES = [
 ];
 
 const fetchViaProxy = async (targetUrl) => {
+  // If running locally in dev mode, use Vite's built-in proxy to bypass CORS directly
+  if (import.meta.env.DEV) {
+    if (targetUrl.includes('quote.cnbc.com')) {
+      const localUrl = targetUrl.replace('https://quote.cnbc.com', '/rettostock/api/cnbc');
+      const res = await fetch(localUrl, { cache: 'no-store' });
+      if (res.ok) return res.json();
+    }
+    if (targetUrl.includes('query1.finance.yahoo.com')) {
+      const localUrl = targetUrl.replace('https://query1.finance.yahoo.com', '/rettostock/api/yahoo');
+      const res = await fetch(localUrl, { cache: 'no-store' });
+      if (res.ok) return res.json();
+    }
+  }
+
   let lastErr;
   for (const make of PROXIES) {
     try {
@@ -232,67 +253,118 @@ export const useStockData = (symbols, demo = false) => {
           return next;
         });
       };
-
-      // 2c. CNBC Pre-market data (via Proxy)
-      //     Because Finnhub free tier lacks pre-market data, we try to fetch it from CNBC.
-      //     If proxies fail, cards still render via Finnhub REST above.
+      // 2c. Extended Hours data via TradingView Scanner
       const fetchPreMarket = async () => {
+        let data;
         try {
-          const targetUrl = `https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols=${stockSymbols.join(',')}&requestMethod=itv&noform=1&fund=1&exthrs=1&output=json`;
-          const data = await fetchViaProxy(targetUrl);
+          // 1. Try TradingView Scanner API directly (works on GitHub Pages, but might be blocked by Adblock)
+          const payload = {
+            filter: [{ left: 'name', operation: 'in_range', right: stockSymbols }],
+            columns: ['name', 'close', 'premarket_close', 'premarket_change', 'postmarket_close', 'postmarket_change', 'description']
+          };
           
-          let quotes = data?.FormattedQuoteResult?.FormattedQuote || [];
-          if (!Array.isArray(quotes)) quotes = [quotes]; 
-
-          if (stopped) return;
+          const res = await fetch('https://scanner.tradingview.com/america/scan', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
           
-          const updates = {};
-          for (const q of quotes) {
+          if (!res.ok) throw new Error(`TradingView returned ${res.status}`);
+          data = await res.json();
+          
+        } catch (tvErr) {
+          // 2. Fallback to CNBC via Vite proxy (works locally, bypasses Adblock)
+          if (import.meta.env.DEV) {
             try {
-              if (!q || !q.symbol) continue;
-              const symbol = q.symbol;
-              const isExt = q.curmktstatus === 'PRE_MKT' || q.curmktstatus === 'POST_MKT';
-              const extQuote = q.ExtendedMktQuote;
+              const targetUrl = `/api/cnbc/quote-html-webservice/restQuote/symbolType/symbol?symbols=${stockSymbols.join('|')}&requestMethod=itv&noform=1&fund=1&exthrs=1&output=json`;
+              const res = await fetch(targetUrl);
+              if (!res.ok) throw new Error(`CNBC proxy returned ${res.status}`);
+              const cnbcData = await res.json();
               
-              if (!isExt) continue; // Only overwrite if extended hours
+              let quotes = cnbcData?.FormattedQuoteResult?.FormattedQuote || [];
+              if (!Array.isArray(quotes)) quotes = [quotes]; 
               
-              const livePriceStr = extQuote?.last || q.last;
-              const liveChangeStr = extQuote?.change_pct || q.change_pct;
-              
-              const livePrice = parseFloat(String(livePriceStr || '').replace(/,/g, ''));
-              const liveChange = parseFloat(String(liveChangeStr || '0').replace('%', ''));
-
-              if (isNaN(livePrice)) continue;
-
-              updates[symbol] = {
-                price: livePrice, 
-                changePercent: liveChange,
-                name: q.shortName || q.name || symbol,
-                marketState: q.curmktstatus === 'PRE_MKT' ? 'PRE' : 'POST'
-              };
-            } catch (err) {
-              console.warn("Failed to parse CNBC quote for a symbol:", err);
-            }
-          }
-
-          if (Object.keys(updates).length > 0) {
-            setData(prev => {
-              const next = { ...prev };
-              for (const [symbol, updateData] of Object.entries(updates)) {
-                const cur = next[symbol] || {};
-                next[symbol] = {
-                  ...cur,
-                  ...updateData,
-                  name: updateData.name || cur.name,
-                  stale: false,
-                };
+              const tvFormatData = [];
+              for (const q of quotes) {
+                if (!q || !q.symbol) continue;
+                const isExt = q.curmktstatus === 'PRE_MKT' || q.curmktstatus === 'POST_MKT';
+                if (!isExt) continue;
+                
+                const extQuote = q.ExtendedMktQuote;
+                const livePriceStr = extQuote?.last || q.last;
+                const liveChangeStr = extQuote?.change_pct || q.change_pct;
+                
+                const livePrice = parseFloat(String(livePriceStr || '').replace(/,/g, ''));
+                const liveChange = parseFloat(String(liveChangeStr || '0').replace('%', ''));
+                
+                if (isNaN(livePrice)) continue;
+                
+                tvFormatData.push({
+                  d: [
+                    q.symbol, // name
+                    parseFloat(q.previous_day_closing), // close
+                    q.curmktstatus === 'PRE_MKT' ? livePrice : null, // premarket_close
+                    q.curmktstatus === 'PRE_MKT' ? liveChange : null, // premarket_change
+                    q.curmktstatus === 'POST_MKT' ? livePrice : null, // postmarket_close
+                    q.curmktstatus === 'POST_MKT' ? liveChange : null, // postmarket_change
+                    q.shortName || q.name || q.symbol // description
+                  ]
+                });
               }
-              return next;
-            });
+              data = { data: tvFormatData };
+            } catch (cnbcErr) {
+              console.warn("Both TradingView and CNBC Proxy failed", cnbcErr);
+              return;
+            }
+          } else {
+            console.warn("TradingView fetch failed in PROD (cards will use Finnhub):", tvErr);
+            return;
           }
-        } catch (err) {
-          console.warn("CNBC Pre-market fetch failed via proxy (cards will use Finnhub):", err);
         }
+
+        if (stopped) return;
+        if (!data || !data.data || data.data.length === 0) return;
+        
+        const updates = {};
+        for (const item of data.data) {
+          const [name, close, preClose, preChange, postClose, postChange, desc] = item.d;
+          
+          let livePrice = null;
+          let liveChange = null;
+          let marketState = 'REGULAR';
+          
+          if (preClose !== null && preClose !== undefined) {
+            livePrice = preClose;
+            liveChange = preChange;
+            marketState = 'PRE';
+          } else if (postClose !== null && postClose !== undefined) {
+            livePrice = postClose;
+            liveChange = postChange;
+            marketState = 'POST';
+          }
+          
+          if (marketState === 'REGULAR') continue;
+
+          updates[name] = {
+            price: livePrice, 
+            changePercent: liveChange,
+            name: desc || name,
+            marketState: marketState
+          };
+        }
+
+        setData(prev => {
+          const next = { ...prev };
+          let changed = false;
+          for (const [symbol, updateData] of Object.entries(updates)) {
+            const cur = next[symbol] || {};
+            next[symbol] = {
+              ...cur,
+              ...updateData,
+            };
+            changed = true;
+          }
+          return changed ? next : prev;
+        });
       };
 
       const quoteLoop = async () => {
@@ -320,8 +392,8 @@ export const useStockData = (symbols, demo = false) => {
           setData(prev => {
             const next = { ...prev };
             for (const sym of stockSymbols) {
-              if (next[sym]?.marketState !== usMarketState) {
-                const cur = next[sym];
+              const cur = next[sym] || {};
+              if (cur.marketState !== usMarketState) {
                 next[sym] = { 
                   ...cur, 
                   marketState: usMarketState,

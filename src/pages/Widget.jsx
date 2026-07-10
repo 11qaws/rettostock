@@ -123,10 +123,10 @@ const Widget = () => {
         fx={fxParam}
         pixel={pixel}
         loopPrevPrice={loopPrevPrice}
-        initial={modeParam === 'rotate' ? { opacity: 0, y: 20 } : false}
-        animate={modeParam === 'rotate' ? { opacity: 1, y: 0 } : false}
+        initial={modeParam === 'rotate' ? { opacity: 0, y: 20 } : undefined}
+        animate={{ opacity: 1, y: 0 }}
         exit={modeParam === 'rotate' ? { opacity: 0, y: -20, position: 'absolute', top: 0, left: 0, width: '100%' } : undefined}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
       />
     );
   };
