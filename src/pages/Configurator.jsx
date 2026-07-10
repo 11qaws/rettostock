@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Copy, Check, AlertCircle, Heart, RefreshCw, ImagePlus } from 'lucide-react';
+import { Copy, Check, AlertCircle, Heart, RefreshCw, ImagePlus, Eye, EyeOff } from 'lucide-react';
 import { getOrCreateRoom, createRoom, saveRoom, publishSync } from '../hooks/useRemoteSync';
 
 // Analyze a screenshot of the broadcast scene and pick a matching theme
@@ -143,6 +143,7 @@ const Configurator = () => {
   const [previewBg, setPreviewBg] = useState('dark');
   const [justApplied, setJustApplied] = useState(false);
   const [matchResult, setMatchResult] = useState(null);
+  const [showRoom, setShowRoom] = useState(false); // keep the code off-stream by default
   const [sceneImage, setSceneImage] = useState(null);
   const [sceneDims, setSceneDims] = useState(null);
   const [widgetPos, setWidgetPos] = useState({ x: 0.02, y: 0.03 }); // preview-only, never in the URL
@@ -374,7 +375,8 @@ const Configurator = () => {
                 type="text"
                 readOnly
                 className="jirai-input"
-                value={widgetUrl}
+                value={showRoom ? widgetUrl : widgetUrl.replace(`room=${room}`, 'room=●●●●●●●●')}
+                title="복사 버튼을 누르면 실제 주소가 복사돼요"
                 style={{ flex: 1, minWidth: 0 }}
               />
               <button onClick={handleCopy} className="jirai-button" style={{ minWidth: '100px' }}>
@@ -455,7 +457,15 @@ const Configurator = () => {
             <div className="advanced-row">
               <label>📡 리모컨-위젯 연결 코드</label>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <code className="room-code">{room}</code>
+                <code className="room-code">{showRoom ? room : '●●●●●●●●'}</code>
+                <button
+                  className="jirai-button jirai-button-outline"
+                  style={{ padding: '6px 12px', fontSize: '13px' }}
+                  onClick={() => setShowRoom(v => !v)}
+                  aria-label={showRoom ? '코드 가리기' : '코드 보기'}
+                >
+                  {showRoom ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
                 <button className="jirai-button jirai-button-outline" style={{ padding: '6px 12px', fontSize: '13px' }} onClick={handleNewRoom}>
                   <RefreshCw size={14} /> 새 코드
                 </button>
@@ -463,8 +473,9 @@ const Configurator = () => {
               <p style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0', lineHeight: 1.6 }}>
                 이 리모컨과 OBS 위젯을 짝지어 주는 코드입니다. 위젯 URL에 자동으로 포함되어 있어서,
                 같은 코드를 쓰는 리모컨이라면 <b>어느 기기에서 조작해도</b>(폰, 다른 PC 등) 그 위젯에 반영돼요.
-                평소에는 신경 쓸 필요 없고, <b>[새 코드]는 연결을 초기화하고 싶을 때만</b> 누르세요 —
-                누르면 기존 위젯과의 연결이 끊겨서 OBS에 위젯 URL을 다시 복사해 넣어야 합니다.
+                코드를 아는 사람은 누구나 위젯을 조작할 수 있으니 <b>방송 화면에 노출되지 않게 기본으로 가려 둡니다</b>.
+                <b>[새 코드]는 연결을 초기화하고 싶을 때만</b> 누르세요 — 누르면 기존 위젯과의 연결이 끊겨서
+                OBS에 위젯 URL을 다시 복사해 넣어야 합니다.
               </p>
             </div>
           </details>
