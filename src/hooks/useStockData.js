@@ -49,19 +49,26 @@ const PROXIES = [
   (u) => ({ url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, unwrap: (res) => res.json() }),
 ];
 
+// A hung proxy must fail fast so the next one gets its turn
+const fetchWithTimeout = (url, ms) => {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { cache: 'no-store', signal: ctrl.signal }).finally(() => clearTimeout(timer));
+};
+
 const fetchViaProxy = async (targetUrl) => {
   // If running locally in dev mode, use Vite's built-in proxy to bypass CORS directly
   if (import.meta.env.DEV) {
     // Vite dev proxies are mounted at the server root, not under the app base
     if (targetUrl.includes('quote.cnbc.com')) {
       const localUrl = targetUrl.replace('https://quote.cnbc.com', '/api/cnbc');
-      const res = await fetch(localUrl, { cache: 'no-store' });
-      if (res.ok) return res.json();
+      const res = await fetchWithTimeout(localUrl, 4000).catch(() => null);
+      if (res && res.ok) return res.json();
     }
     if (targetUrl.includes('query1.finance.yahoo.com')) {
       const localUrl = targetUrl.replace('https://query1.finance.yahoo.com', '/api/yahoo');
-      const res = await fetch(localUrl, { cache: 'no-store' });
-      if (res.ok) return res.json();
+      const res = await fetchWithTimeout(localUrl, 4000).catch(() => null);
+      if (res && res.ok) return res.json();
     }
   }
 
@@ -69,7 +76,7 @@ const fetchViaProxy = async (targetUrl) => {
   for (const make of PROXIES) {
     try {
       const { url, unwrap } = make(targetUrl);
-      const res = await fetch(url, { cache: 'no-store' });
+      const res = await fetchWithTimeout(url, 5000);
       if (!res.ok) throw new Error(`proxy ${res.status}`);
       return await unwrap(res);
     } catch (err) {
@@ -77,6 +84,16 @@ const fetchViaProxy = async (targetUrl) => {
     }
   }
   throw lastErr;
+};
+
+// Last-known sparkline cache: the chart shows up with the first paint
+// and gets replaced by fresh data within one enrichment round.
+const SPARK_CACHE_PREFIX = 'spark-cache-';
+const readSparkCache = (symbol) => {
+  try { return JSON.parse(localStorage.getItem(SPARK_CACHE_PREFIX + symbol)); } catch { return null; }
+};
+const writeSparkCache = (symbol, entry) => {
+  try { localStorage.setItem(SPARK_CACHE_PREFIX + symbol, JSON.stringify(entry)); } catch { /* ignore */ }
 };
 
 // Deterministic tiny hash for demo prices
@@ -193,6 +210,26 @@ export const useStockData = (symbols, demo = false) => {
     const stockSymbols = symbols.filter(s => s.toUpperCase() !== 'BTC');
 
     if (stockSymbols.length > 0) {
+      // 2-0. Instant charts: hydrate the last-known sparkline/name from the
+      //      local cache so charts appear with the first paint instead of
+      //      waiting for the slow public proxies; fresh data replaces them
+      //      within one enrichment round.
+      setData(prev => {
+        const next = { ...prev };
+        for (const sym of stockSymbols) {
+          const cached = readSparkCache(sym);
+          if (!cached || !Array.isArray(cached.closes) || cached.closes.length < 2) continue;
+          const cur = next[sym] || {};
+          next[sym] = {
+            ...cur,
+            closes: cur.closes || cached.closes,
+            name: cur.name && cur.name !== sym ? cur.name : (cached.name || sym),
+            previousClose: cur.previousClose ?? cached.previousClose,
+            isCrypto: false,
+          };
+        }
+        return next;
+      });
       // 2a. Finnhub WebSocket for live trade ticks
       finnhubWs = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
       finnhubWs.onopen = () => {
@@ -390,7 +427,11 @@ export const useStockData = (symbols, demo = false) => {
         const quoteLoop = async () => {
           if (stopped) return;
           await fetchQuotes();
-          quoteTimer = setTimeout(quoteLoop, 10000); // 10s to avoid Finnhub 60/min rate limit
+          if (stopped) return;
+          // CLOSED: prices are frozen, so throttle way down (kept alive at
+          // 10min for the overnight previous-close rollover and staleness
+          // detection). Session changes kick an immediate fetch below.
+          quoteTimer = setTimeout(quoteLoop, usMarketState === 'CLOSED' ? 600000 : 10000);
         };
         quoteLoop();
 
@@ -435,24 +476,36 @@ export const useStockData = (symbols, demo = false) => {
         if (s && s !== usMarketState) {
           usMarketState = s;
           applySessionToData(s);
+          // Leaving CLOSED (04:00 pre-market open): resume quotes right away
+          // instead of waiting out the 10min overnight timer
+          if (s !== 'CLOSED') {
+            clearTimeout(quoteTimer);
+            quoteLoop();
+          }
         }
         statusTimer = setTimeout(sessionLoop, 10000); // boundaries flip within 10s
       };
       statusTimer = setTimeout(sessionLoop, 10000);
 
       const holidayLoop = async () => {
-        try {
-          const res = await fetch(
-            `https://api.finnhub.io/api/v1/stock/market-status?exchange=US&token=${API_KEY}`,
-            { cache: 'no-store' }
-          );
-          const s = await res.json();
-          if (s && typeof s.isOpen === 'boolean') {
-            // Only meaningful while the clock says the regular session should
-            // be running: isOpen=false then means a holiday / early close.
-            holidayClosed = calcNySession() === 'REGULAR' && !s.isOpen;
-          }
-        } catch { /* keep previous verdict */ }
+        // The verdict only matters while the clock says the regular session
+        // should be running — skip the network call entirely on weekends
+        // and overnight, when the clock already decides CLOSED by itself.
+        if (calcNySession() === 'REGULAR') {
+          try {
+            const res = await fetch(
+              `https://api.finnhub.io/api/v1/stock/market-status?exchange=US&token=${API_KEY}`,
+              { cache: 'no-store' }
+            );
+            const s = await res.json();
+            if (s && typeof s.isOpen === 'boolean') {
+              // isOpen=false during regular hours means a holiday / early close
+              holidayClosed = !s.isOpen;
+            }
+          } catch { /* keep previous verdict */ }
+        } else {
+          holidayClosed = false;
+        }
         if (stopped) return;
         holidayTimer = setTimeout(holidayLoop, 300000);
       };
@@ -461,7 +514,9 @@ export const useStockData = (symbols, demo = false) => {
       // 2c. Yahoo enrichment via public proxies (slow, non-critical):
       //     company name, market state badge, sparkline closes.
       const fetchEnrichment = async () => {
-        for (const symbol of stockSymbols) {
+        // All symbols in parallel: chart latency = one proxy round-trip,
+        // not one round-trip per symbol stacked end to end
+        await Promise.allSettled(stockSymbols.map(async (symbol) => {
           try {
             const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=5m&range=1d&includePrePost=true&t=${Date.now()}`;
             const result = await fetchViaProxy(targetUrl);
@@ -472,6 +527,15 @@ export const useStockData = (symbols, demo = false) => {
               const quote = chart.meta;
               const rawCloses = (chart.indicators?.quote?.[0]?.close || []).filter(v => v !== null && v !== undefined);
               const previousClose = quote.chartPreviousClose;
+
+              if (rawCloses.length > 1) {
+                writeSparkCache(symbol, {
+                  closes: downsample(rawCloses, MAX_SPARK_POINTS),
+                  name: quote.shortName || symbol,
+                  previousClose,
+                  t: Date.now(),
+                });
+              }
 
               setData(prev => {
                 const cur = prev[symbol] || {};
@@ -501,7 +565,7 @@ export const useStockData = (symbols, demo = false) => {
           } catch (err) {
             console.error(`Enrichment failed for ${symbol}:`, err);
           }
-        }
+        }));
       };
 
       const enrichLoop = async () => {
