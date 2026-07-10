@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Copy, Check, AlertCircle, RefreshCw, ImagePlus, Eye, EyeOff } from 'lucide-react';
-import { getOrCreateRoom, createRoom, saveRoom, publishSync } from '../hooks/useRemoteSync';
+import { getOrCreateRoom, createRoom, saveRoom, publishSync, getOrCreateSigningKeys, resetSigningKeys } from '../hooks/useRemoteSync';
 
 // Analyze a screenshot of the broadcast scene and pick a matching theme
 const analyzeSceneImage = (file) => new Promise((resolve, reject) => {
@@ -108,6 +108,7 @@ const defaultConfig = {
   fx: 'full',
   speed: 1,
   demo: false,
+  remote: false, // cross-device relay is opt-in
 };
 
 const loadConfig = () => {
@@ -139,6 +140,14 @@ const recommendedSize = (mode, count) => {
 const Configurator = () => {
   const [config, setConfig] = useState(loadConfig);
   const [room, setRoom] = useState(() => getOrCreateRoom());
+  const [signingKeys, setSigningKeys] = useState(null);
+
+  // Key pair exists only in this browser; created lazily when remote is on
+  useEffect(() => {
+    if (config.remote && !signingKeys) {
+      getOrCreateSigningKeys().then(setSigningKeys).catch(() => {});
+    }
+  }, [config.remote, signingKeys]);
   const [copied, setCopied] = useState(false);
   const [previewBg, setPreviewBg] = useState('dark');
   const [justApplied, setJustApplied] = useState(false);
@@ -256,14 +265,20 @@ const Configurator = () => {
     if (config.opacity !== 1) params.set('opacity', config.opacity);
     if (config.fx !== 'full') params.set('fx', config.fx);
     if (config.demo) params.set('demo', '1');
-    params.set('room', room);
+    // Relay params only when opted in: room = channel, k = this browser's
+    // public key. The widget only accepts changes signed by the matching
+    // private key, which never leaves this browser.
+    if (config.remote && signingKeys) {
+      params.set('room', room);
+      params.set('k', signingKeys.publicKeyB64);
+    }
     return `${baseUrl}#/widget?${params.toString()}`;
-  }, [config, symbolList, room]);
+  }, [config, symbolList, room, signingKeys]);
 
   // Persist settings + push to widget (same-browser channels + ntfy relay)
   useEffect(() => {
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch { /* ignore */ }
-    publishSync({ url: widgetUrl, timestamp: Date.now() }, room);
+    publishSync({ url: widgetUrl, timestamp: Date.now() }, config.remote && signingKeys ? room : null, signingKeys?.privateKey);
     setJustApplied(true);
     setCustomDims(null); // Reset custom dims when config changes significantly
     const t = setTimeout(() => setJustApplied(false), 1500);
@@ -277,9 +292,12 @@ const Configurator = () => {
   };
 
   const handleNewRoom = () => {
+    // Full re-pairing: fresh channel AND fresh key pair
     const newRoom = createRoom();
     saveRoom(newRoom);
     setRoom(newRoom);
+    resetSigningKeys();
+    setSigningKeys(null); // effect regenerates
   };
 
   const removeSymbol = (target) => {
@@ -477,28 +495,41 @@ const Configurator = () => {
             </div>
 
             <div className="advanced-row">
-              <label>📡 리모컨-위젯 연결 코드</label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <code className="room-code">{showRoom ? room : '●●●●●●●●'}</code>
-                <button
-                  className="jirai-button jirai-button-outline"
-                  style={{ padding: '6px 12px', fontSize: '13px' }}
-                  onClick={() => setShowRoom(v => !v)}
-                  aria-label={showRoom ? '코드 가리기' : '코드 보기'}
-                >
-                  {showRoom ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-                <button className="jirai-button jirai-button-outline" style={{ padding: '6px 12px', fontSize: '13px' }} onClick={handleNewRoom}>
-                  <RefreshCw size={14} /> 새 코드
-                </button>
-              </div>
-              <p style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0', lineHeight: 1.6 }}>
-                이 리모컨과 OBS 위젯을 짝지어 주는 코드입니다. 위젯 URL에 자동으로 포함되어 있어서,
-                같은 코드를 쓰는 리모컨이라면 <b>어느 기기에서 조작해도</b>(폰, 다른 PC 등) 그 위젯에 반영돼요.
-                코드를 아는 사람은 누구나 위젯을 조작할 수 있으니 <b>방송 화면에 노출되지 않게 기본으로 가려 둡니다</b>.
-                <b>[새 코드]는 연결을 초기화하고 싶을 때만</b> 누르세요 — 누르면 기존 위젯과의 연결이 끊겨서
-                OBS에 위젯 URL을 다시 복사해 넣어야 합니다.
-              </p>
+              <label className="demo-toggle">
+                <input type="checkbox" checked={!!config.remote} onChange={e => set('remote', e.target.checked)} />
+                📡 실시간 원격 반영 — 이 브라우저(크롬 등)에서 바꾼 설정이 OBS 위젯에 바로 적용돼요
+              </label>
+              {!config.remote && (
+                <p style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0 24px', lineHeight: 1.6 }}>
+                  크롬과 OBS는 서로 다른 브라우저라 중계 없이는 통신할 수 없어요. 꺼져 있으면
+                  위젯은 외부 서버와 일절 통신하지 않는 대신, 여기서 바꾼 설정은 <b>위젯 URL을
+                  다시 복사해 OBS에 넣어야</b> 적용됩니다. (미리보기 화면과 OBS 커스텀 독은 항상 실시간)
+                </p>
+              )}
+              {config.remote && (
+                <div style={{ margin: '10px 0 0 24px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <code className="room-code">{showRoom ? room : '●●●●●●●●'}</code>
+                    <button
+                      className="jirai-button jirai-button-outline"
+                      style={{ padding: '6px 12px', fontSize: '13px' }}
+                      onClick={() => setShowRoom(v => !v)}
+                      aria-label={showRoom ? '코드 가리기' : '코드 보기'}
+                    >
+                      {showRoom ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                    <button className="jirai-button jirai-button-outline" style={{ padding: '6px 12px', fontSize: '13px' }} onClick={handleNewRoom}>
+                      <RefreshCw size={14} /> 새 코드
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0', lineHeight: 1.6 }}>
+                    변경 내용은 중계 서버(ntfy.sh)를 거치지만 <b>이 브라우저의 전자서명이 붙은 변경만 위젯이 받아들여요</b> —
+                    코드나 URL이 통째로 노출돼도 다른 사람이 위젯을 조작하는 건 불가능합니다.
+                    전달되는 내용은 종목·테마 같은 위젯 설정뿐이고, 코드는 방송 화면 노출 대비로 가려 둡니다.
+                    <b>켜거나 [새 코드]를 누른 뒤에는 OBS에 위젯 URL을 다시 복사해 넣어야</b> 연결됩니다.
+                  </p>
+                </div>
+              )}
             </div>
           </details>
 

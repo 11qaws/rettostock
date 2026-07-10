@@ -26,6 +26,7 @@ const Widget = () => {
   const colorsParam = normalizeColors(searchParams.get('colors'));
   const modeParam = searchParams.get('mode') || 'list';
   const roomParam = searchParams.get('room') || '';
+  const keyParam = searchParams.get('k') || ''; // remote's public key (relay is signature-gated)
   const demoParam = searchParams.get('demo') === '1';
   const fxParam = ['off', 'soft', 'full'].includes(searchParams.get('fx')) ? searchParams.get('fx') : 'full';
   const scaleParam = clampNum(searchParams.get('scale'), 0.5, 2.5, 1);
@@ -54,7 +55,7 @@ const Widget = () => {
 
   // Remote control sync: BroadcastChannel/localStorage (same browser),
   // dev API (localhost), ntfy relay (cross-device via room code)
-  useWidgetSync(roomParam, (payload) => {
+  useWidgetSync(roomParam, keyParam, (payload) => {
     try {
       const newUrlObj = new URL(payload.url, window.location.origin);
       if (window.location.hash !== newUrlObj.hash) {
