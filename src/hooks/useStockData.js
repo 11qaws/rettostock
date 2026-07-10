@@ -17,8 +17,32 @@ const pickEnrichInterval = (state) => {
   return ENRICH_INTERVALS.CLOSED;
 };
 
-// Finnhub session -> our badge states
-const SESSION_MAP = { 'pre-market': 'PRE', regular: 'REGULAR', 'post-market': 'POST' };
+// Session by the New York clock — drives badges and baselines.
+// Finnhub's session string lags minutes behind the open/close boundaries,
+// so the clock decides; Finnhub is only consulted for holiday closures.
+const calcNySession = () => {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false,
+    });
+    const parts = formatter.formatToParts(new Date());
+    let h = 0, m = 0, weekday = '';
+    for (const p of parts) {
+      if (p.type === 'hour') h = parseInt(p.value, 10);
+      if (p.type === 'minute') m = parseInt(p.value, 10);
+      if (p.type === 'weekday') weekday = p.value;
+    }
+    if (h === 24) h = 0;
+    const t = h * 60 + m;
+    if (weekday === 'Sat' || weekday === 'Sun') return 'CLOSED';
+    if (t >= 240 && t < 570) return 'PRE';      // 04:00–09:30
+    if (t >= 570 && t < 960) return 'REGULAR';  // 09:30–16:00
+    if (t >= 960 && t < 1200) return 'POST';    // 16:00–20:00
+    return 'CLOSED';
+  } catch {
+    return null; // very old CEF without Intl timezone support
+  }
+};
 
 const calcChange = (price, regClose, prevClose, marketState) => {
   if (typeof price !== 'number') return undefined;
@@ -162,9 +186,13 @@ export const useStockData = (symbols, demo = false) => {
     let preMarketTimer = null;
     let enrichTimer = null;
     let statusTimer = null;
+    let holidayTimer = null;
     let stopped = false;
     const failCounts = {};
-    let usMarketState = null;
+    // Known synchronously from the very first tick — no network round-trip
+    // needed before the widget knows which session it is in.
+    let usMarketState = calcNySession();
+    let holidayClosed = false;
 
     // 1. Binance WebSocket for BTC
     const cryptoSymbols = symbols.filter(s => s.toUpperCase() === 'BTC');
@@ -246,26 +274,42 @@ export const useStockData = (symbols, demo = false) => {
             }
             failCounts[symbol] = 0;
             const cur = next[symbol] || {};
-            // Always use the latest quote from Finnhub REST, even if WebSocket provided a price.
-            // This ensures stocks/ETFs without WebSocket support (like SOXL) don't get stuck forever.
-            const newPrice = q.c;
-            next[symbol] = {
-              ...cur,
-              price: newPrice,
-              previousClose: q.pc,
-              regularMarketPrice: cur.marketState === 'REGULAR' ? q.c : cur.regularMarketPrice,
-              changePercent: calcChange(newPrice, cur.marketState === 'REGULAR' ? q.c : cur.regularMarketPrice, q.pc, cur.marketState) ?? cur.changePercent,
-              name: cur.name || symbol,
-              isCrypto: false,
-              stale: false,
-            };
+            const session = usMarketState;
+            const common = { ...cur, previousClose: q.pc, name: cur.name || symbol, isCrypto: false, stale: false };
+
+            if (session === 'REGULAR') {
+              // Overwrite unconditionally: ETFs missing from the websocket
+              // (e.g. SOXL) must refresh here, and q.c is live in regular hours.
+              next[symbol] = {
+                ...common,
+                price: q.c,
+                regularMarketPrice: q.c,
+                changePercent: calcChange(q.c, q.c, q.pc, 'REGULAR') ?? cur.changePercent,
+              };
+            } else if (typeof cur.price !== 'number') {
+              // First paint before TradingView lands (or when it's blocked).
+              next[symbol] = {
+                ...common,
+                price: q.c,
+                changePercent: calcChange(q.c, cur.regularMarketPrice, q.pc, session) ?? cur.changePercent,
+              };
+            } else {
+              // PRE/POST/CLOSED with a price already on screen: q.c is the
+              // stale regular-session price here — never let it clobber the
+              // extended-hours price (this caused the "182 on load" flash
+              // and a 10s/5s price ping-pong against TradingView).
+              next[symbol] = common;
+            }
           }
           return next;
         });
       };
       // 2c. Extended Hours data via TradingView Scanner
       const fetchPreMarket = async () => {
-        if (usMarketState === 'REGULAR') return;
+        // Price authority only during PRE/POST. Never during REGULAR
+        // (15-min-delay policy) and never during CLOSED (stale columns
+        // would re-awaken frozen prices and badges overnight/weekends).
+        if (usMarketState !== 'PRE' && usMarketState !== 'POST') return;
         let data;
         try {
           // 1. Try TradingView Scanner API directly (works on GitHub Pages, but might be blocked by Adblock)
@@ -332,32 +376,25 @@ export const useStockData = (symbols, demo = false) => {
 
         if (stopped) return;
         if (!data || !data.data || data.data.length === 0) return;
-        
+
+        // Pick the column that matches the clock session — never infer the
+        // session from which column happens to be non-null (stale pre/post
+        // columns linger for hours and used to flip badges the wrong way).
+        const session = usMarketState;
+        if (session !== 'PRE' && session !== 'POST') return;
+
         const updates = {};
         for (const item of data.data) {
-          const [name, close, preClose, preChange, postClose, postChange, desc] = item.d;
-          
-          let livePrice = null;
-          let liveChange = null;
-          let marketState = 'REGULAR';
-          
-          if (preClose !== null && preClose !== undefined) {
-            livePrice = preClose;
-            liveChange = preChange;
-            marketState = 'PRE';
-          } else if (postClose !== null && postClose !== undefined) {
-            livePrice = postClose;
-            liveChange = postChange;
-            marketState = 'POST';
-          }
-          
-          if (marketState === 'REGULAR') continue;
+          const [name, , preClose, preChange, postClose, postChange, desc] = item.d;
+          const livePrice = session === 'PRE' ? preClose : postClose;
+          const liveChange = session === 'PRE' ? preChange : postChange;
+          if (livePrice === null || livePrice === undefined) continue;
 
           updates[name] = {
-            price: livePrice, 
+            price: livePrice,
             changePercent: liveChange,
             name: desc || name,
-            marketState: marketState
+            // no marketState here — badges belong to the clock (sessionLoop)
           };
         }
 
@@ -390,74 +427,62 @@ export const useStockData = (symbols, demo = false) => {
         };
         preMarketLoop();
 
-      // 2b-2. US market session (pre/regular/post/closed) — one direct
-      //       Finnhub call covers every US symbol. Yahoo's chart meta has
-      //       no marketState field, so this is the real source.
-        const statusLoop = async () => {
-          try {
-            const res = await fetch(
-              `https://api.finnhub.io/api/v1/stock/market-status?exchange=US&token=${API_KEY}`,
-              { cache: 'no-store' }
-            );
-            const s = await res.json();
-            
-            // We use Finnhub ONLY to check if today is a holiday (isOpen).
-            // For the actual session (PRE/REGULAR/POST), we rely 100% on the New York clock
-            // because Finnhub's session string is notoriously slow to update at the open/close boundaries.
-            let session = 'CLOSED';
-            if (s && s.isOpen) {
-              try {
-                const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false });
-                const parts = formatter.formatToParts(new Date());
-                let h = 0, m = 0, weekday = '';
-                for (const p of parts) {
-                  if (p.type === 'hour') h = parseInt(p.value, 10);
-                  if (p.type === 'minute') m = parseInt(p.value, 10);
-                  if (p.type === 'weekday') weekday = p.value;
-                }
-                if (h === 24) h = 0;
-                const timeInMinutes = h * 60 + m;
-                
-                // US Market Hours in NY Time: 
-                // 4:00 AM = 240, 9:30 AM = 570, 4:00 PM = 960, 8:00 PM = 1200
-                if (weekday !== 'Sat' && weekday !== 'Sun') {
-                  if (timeInMinutes >= 240 && timeInMinutes < 570) {
-                    session = 'PRE';
-                  } else if (timeInMinutes >= 570 && timeInMinutes < 960) {
-                    session = 'REGULAR';
-                  } else if (timeInMinutes >= 960 && timeInMinutes < 1200) {
-                    session = 'POST';
-                  }
-                }
-              } catch (e) {
-                // Fallback to Finnhub if CEF browser lacks Intl.DateTimeFormat timezone support
-                session = s.session ? (SESSION_MAP[s.session] || 'REGULAR') : 'CLOSED';
-              }
+      // 2b-2. Session handling — the NY clock is the single authority for
+      //       PRE/REGULAR/POST/CLOSED (badges AND baselines). Finnhub is
+      //       consulted separately, low-frequency, only for holiday closures
+      //       (its isOpen is false during normal pre/after hours too, so it
+      //       must never drive the session by itself).
+      const applySessionToData = (session) => {
+        if (!session) return;
+        setData(prev => {
+          const next = { ...prev };
+          for (const sym of stockSymbols) {
+            const cur = next[sym] || {};
+            if (cur.marketState === session) continue;
+            const updated = { ...cur, marketState: session };
+            // Baseline rules on live transitions ("최근 정규장 종가" 기준):
+            //   -> PRE / REGULAR : vs previous regular close (continuous at 09:30)
+            //   -> POST          : vs today's regular close (resets to ~0% at 16:00)
+            //   -> CLOSED        : freeze what is displayed (no jump at 20:00)
+            if (session !== 'CLOSED' && typeof cur.price === 'number' && cur.previousClose) {
+              updated.changePercent =
+                calcChange(cur.price, cur.regularMarketPrice, cur.previousClose, session) ?? cur.changePercent;
             }
-            
-            usMarketState = session;
-          } catch { /* keep previous state */ }
-        if (stopped) return;
-        if (usMarketState) {
-          setData(prev => {
-            const next = { ...prev };
-            for (const sym of stockSymbols) {
-              const cur = next[sym] || {};
-              if (cur.marketState !== usMarketState) {
-                next[sym] = { 
-                  ...cur, 
-                  marketState: usMarketState,
-                  // recalculate change if market state flipped (e.g. REGULAR -> POST)
-                  changePercent: cur.previousClose ? calcChange(cur.price, cur.regularMarketPrice, cur.previousClose, usMarketState) : cur.changePercent
-                };
-              }
-            }
-            return next;
-          });
-        }
-        statusTimer = setTimeout(statusLoop, 60000);
+            next[sym] = updated;
+          }
+          return next;
+        });
       };
-      statusLoop();
+      applySessionToData(usMarketState); // badge correct from the first paint
+
+      const sessionLoop = () => {
+        if (stopped) return;
+        const s = holidayClosed ? 'CLOSED' : calcNySession();
+        if (s && s !== usMarketState) {
+          usMarketState = s;
+          applySessionToData(s);
+        }
+        statusTimer = setTimeout(sessionLoop, 10000); // boundaries flip within 10s
+      };
+      statusTimer = setTimeout(sessionLoop, 10000);
+
+      const holidayLoop = async () => {
+        try {
+          const res = await fetch(
+            `https://api.finnhub.io/api/v1/stock/market-status?exchange=US&token=${API_KEY}`,
+            { cache: 'no-store' }
+          );
+          const s = await res.json();
+          if (s && typeof s.isOpen === 'boolean') {
+            // Only meaningful while the clock says the regular session should
+            // be running: isOpen=false then means a holiday / early close.
+            holidayClosed = calcNySession() === 'REGULAR' && !s.isOpen;
+          }
+        } catch { /* keep previous verdict */ }
+        if (stopped) return;
+        holidayTimer = setTimeout(holidayLoop, 300000);
+      };
+      holidayLoop();
 
       // 2c. Yahoo enrichment via public proxies (slow, non-critical):
       //     company name, market state badge, sparkline closes.
@@ -487,7 +512,11 @@ export const useStockData = (symbols, demo = false) => {
                     price: newPrice,
                     previousClose: previousClose,
                     regularMarketPrice: regClose,
-                    changePercent: calcChange(newPrice, regClose, previousClose, cur.marketState) ?? cur.changePercent,
+                    // CLOSED stays frozen — a slow proxy response must not
+                    // re-baseline the after-hours change overnight
+                    changePercent: cur.marketState === 'CLOSED'
+                      ? cur.changePercent
+                      : (calcChange(newPrice, regClose, previousClose, cur.marketState) ?? cur.changePercent),
                     name: quote.shortName || cur.name || symbol,
                     closes: downsample(rawCloses, MAX_SPARK_POINTS),
                     isCrypto: false,
@@ -515,6 +544,7 @@ export const useStockData = (symbols, demo = false) => {
         if (preMarketTimer) clearTimeout(preMarketTimer);
         if (enrichTimer) clearTimeout(enrichTimer);
         if (statusTimer) clearTimeout(statusTimer);
+        if (holidayTimer) clearTimeout(holidayTimer);
         if (btcWs) btcWs.close();
         if (finnhubWs) finnhubWs.close();
       };
