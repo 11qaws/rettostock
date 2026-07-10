@@ -286,8 +286,10 @@ html, body, #root {
     radial-gradient(#ffc0cb 1px, transparent 1px);
   background-size: 20px 20px;
   background-position: 0 0, 10px 10px;
-  min-height: 100vh;
-  overflow: auto;
+  /* body is overflow:hidden for OBS, so this element owns the scrollbar */
+  height: 100vh;
+  box-sizing: border-box;
+  overflow-y: auto;
   color: #4e342e;
   font-family: 'Jua', 'Fredoka', sans-serif;
 }
@@ -583,7 +585,12 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   align-items: center;
+  transition: width 0.25s ease;
 }
+
+/* Placement preview: widen the panel so the full screenshot is workable */
+.config-layout.scene-expanded { max-width: 1280px; }
+.config-layout.scene-expanded .config-preview-wrapper { width: 640px; }
 
 @media (max-width: 800px) {
   .config-layout {

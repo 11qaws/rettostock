@@ -40,7 +40,7 @@ const analyzeSceneImage = (file) => new Promise((resolve, reject) => {
     const domHue = domBucket * 30 + 15;
     const avg = `rgb(${Math.round(rSum / n)}, ${Math.round(gSum / n)}, ${Math.round(bSum / n)})`;
     URL.revokeObjectURL(img.src);
-    resolve({ lum, sat, domHue, avg });
+    resolve({ lum, sat, domHue, avg, width: img.naturalWidth, height: img.naturalHeight });
   };
   img.onerror = reject;
   img.src = URL.createObjectURL(file);
@@ -137,7 +137,11 @@ const Configurator = () => {
   const [justApplied, setJustApplied] = useState(false);
   const [matchResult, setMatchResult] = useState(null);
   const [sceneImage, setSceneImage] = useState(null);
+  const [sceneDims, setSceneDims] = useState(null);
+  const [widgetPos, setWidgetPos] = useState({ x: 0.02, y: 0.03 }); // preview-only, never in the URL
+  const [sceneBoxW, setSceneBoxW] = useState(0);
   const fileInputRef = useRef(null);
+  const sceneBoxRef = useRef(null);
 
   const handleSceneImage = async (file) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -152,10 +156,42 @@ const Configurator = () => {
         if (prev) URL.revokeObjectURL(prev);
         return url;
       });
+      setSceneDims({ w: stats.width, h: stats.height });
       setPreviewBg('scene');
     } catch {
       setMatchResult({ error: true });
     }
+  };
+
+  const sceneMode = previewBg === 'scene' && sceneImage && sceneDims;
+
+  // Keep the placement math in sync with the rendered scene box width
+  useEffect(() => {
+    const measure = () => setSceneBoxW(sceneBoxRef.current?.offsetWidth || 0);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [sceneMode]);
+
+  const startWidgetDrag = (e, frac) => {
+    e.preventDefault();
+    const box = sceneBoxRef.current?.getBoundingClientRect();
+    if (!box) return;
+    const start = { px: e.clientX, py: e.clientY, x: widgetPos.x, y: widgetPos.y };
+    const move = (ev) => {
+      const nx = start.x + (ev.clientX - start.px) / box.width;
+      const ny = start.y + (ev.clientY - start.py) / box.height;
+      setWidgetPos({
+        x: Math.min(Math.max(nx, 0), Math.max(0, 1 - frac.w)),
+        y: Math.min(Math.max(ny, 0), Math.max(0, 1 - frac.h)),
+      });
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
   };
 
   // Paste a screenshot anywhere on the page (Ctrl+V)
@@ -220,8 +256,8 @@ const Configurator = () => {
   };
 
   return (
-    <div className="config-bg" style={{ display: 'flex', minHeight: '100vh', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
-      <div className="jirai-container config-layout">
+    <div className="config-bg" style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '20px' }}>
+      <div className={`jirai-container config-layout ${sceneMode ? 'scene-expanded' : ''}`}>
 
         {/* Left Sidebar: Controls */}
         <div className="config-sidebar">
@@ -458,7 +494,66 @@ const Configurator = () => {
             )}
           </div>
 
-          {(() => {
+          {sceneMode ? (() => {
+            // Placement preview: the whole screenshot at its real aspect
+            // ratio, with the widget at true relative scale. Drag to try
+            // positions — preview only, the widget URL never changes.
+            const rec = recommendedDims(config.displayMode, symbolList.length);
+            const k = sceneBoxW ? sceneBoxW / sceneDims.w : 0;
+            const frac = { w: rec.w / sceneDims.w, h: rec.h / sceneDims.h };
+            return (
+              <>
+                <div
+                  ref={sceneBoxRef}
+                  style={{
+                    width: '100%',
+                    aspectRatio: `${sceneDims.w} / ${sceneDims.h}`,
+                    background: `url(${sceneImage}) center / cover`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    border: '4px solid #ffb6c1',
+                    borderRadius: '12px',
+                    boxSizing: 'content-box',
+                    boxShadow: '0 8px 16px rgba(255,182,193,0.3)',
+                  }}
+                >
+                  {k > 0 && (
+                    <div
+                      onPointerDown={(e) => startWidgetDrag(e, frac)}
+                      style={{
+                        position: 'absolute',
+                        left: `${widgetPos.x * 100}%`,
+                        top: `${widgetPos.y * 100}%`,
+                        width: `${rec.w * k}px`,
+                        height: `${rec.h * k}px`,
+                        cursor: 'move',
+                        touchAction: 'none',
+                        outline: '1.5px dashed rgba(255, 182, 193, 0.9)',
+                        outlineOffset: '2px',
+                      }}
+                    >
+                      <iframe
+                        src={widgetUrl}
+                        style={{
+                          width: `${rec.w}px`,
+                          height: `${rec.h}px`,
+                          border: 'none',
+                          transform: `scale(${k})`,
+                          transformOrigin: 'top left',
+                          pointerEvents: 'none',
+                        }}
+                        title="Widget Placement Preview"
+                      />
+                    </div>
+                  )}
+                </div>
+                <p style={{ fontSize: '13px', color: '#b5a39c', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.5 }}>
+                  위젯을 드래그해서 배치해 보세요 (미리보기용 — 실제 위치는 OBS에서 소스를 옮기면 돼요)<br />
+                  OBS 배치 참고: X {Math.round(widgetPos.x * sceneDims.w)}, Y {Math.round(widgetPos.y * sceneDims.h)} · 크기 {rec.w}×{rec.h}
+                </p>
+              </>
+            );
+          })() : (() => {
             // Render the widget at the exact recommended OBS size,
             // then scale it down to fit the preview panel
             const PREVIEW_W = 332; // wrapper 340 - 4px border each side
