@@ -601,7 +601,11 @@ html, body, #root {
     padding-right: 0;
   }
   .config-preview-wrapper {
-    display: none; /* Hide preview on narrow docks, they already see it in OBS */
+    /* Stack the preview below the controls instead of hiding it */
+    width: 100%;
+  }
+  .config-layout.scene-expanded .config-preview-wrapper {
+    width: 100%;
   }
   .config-bg {
     padding: 10px !important;

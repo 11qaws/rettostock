@@ -582,7 +582,9 @@ const Configurator = () => {
             return (
               <>
                 <div style={{
-                  width: '100%',
+                  width: `${PREVIEW_W}px`,
+                  maxWidth: '100%',
+                  margin: '0 auto',
                   height: `${Math.round(frameH * scale)}px`,
                   border: '4px solid #ffb6c1',
                   borderRadius: '16px',
