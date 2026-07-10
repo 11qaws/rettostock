@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Copy, Check, AlertCircle, Heart, RefreshCw, ImagePlus, Eye, EyeOff } from 'lucide-react';
 import { getOrCreateRoom, createRoom, saveRoom, publishSync } from '../hooks/useRemoteSync';
 
@@ -293,7 +293,7 @@ const Configurator = () => {
         {/* Full-width app header */}
         <div className="app-header">
           <span className="app-title">
-            <Heart size={16} fill="#ff9fb0" color="#ff9fb0" />
+            🍸 💝
             아모레또 위젯 리모컨
           </span>
           <span className={`header-status ${justApplied ? 'active' : ''}`}>
@@ -680,3 +680,4 @@ const Configurator = () => {
 };
 
 export default Configurator;
+

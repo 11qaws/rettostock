@@ -272,9 +272,10 @@ html, body, #root {
 }
 
 .mode-scroll.theme-led-board {
-  --fs-title: min(18px, 26vh);
-  --fs-price: min(20px, 30vh);
-  --fs-change: min(14px, 22vh);
+  --fs-title: min(13px, 18vh);
+  --fs-price: min(15px, 20vh);
+  --fs-change: min(11px, 15vh);
+  --card-pad: min(6px, 8vh) min(10px, 14vh);
 }
 
 .ticker-inline {

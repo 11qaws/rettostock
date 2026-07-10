@@ -89,7 +89,13 @@ const hashCode = (str) => {
 };
 
 export const useStockData = (symbols, demo = false) => {
-  const [data, setData] = useState({});
+  const [data, setData] = useState(() => {
+    const initial = {};
+    if (symbols && Array.isArray(symbols)) {
+      symbols.forEach(s => { initial[s] = { name: s, stale: true, isCrypto: s === 'BTC' }; });
+    }
+    return initial;
+  });
   const [error] = useState(null);
   const symbolsKey = symbols.join(',');
 
@@ -371,7 +377,7 @@ export const useStockData = (symbols, demo = false) => {
         if (stopped) return;
         await fetchQuotes();
         await fetchPreMarket();
-        quoteTimer = setTimeout(quoteLoop, 8000);
+        quoteTimer = setTimeout(quoteLoop, 10000);
       };
       quoteLoop();
 

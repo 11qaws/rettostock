@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Sparkline from './Sparkline';
@@ -14,10 +14,11 @@ const MARKET_LABELS = {
   CLOSED: { text: '마감', cls: 'ms-closed' },
 };
 
-const UP_PARTICLES = ['🚀', '✨', '▲', '💖', '⭐'];
+const UP_PARTICLES = ['🔥', '✨', '▲', '💖', '⭐'];
 const DOWN_PARTICLES = ['💧', '▼', '💦', '🫧'];
 
 let particleId = 0;
+// ... (skipping some lines for brevity in thought, I must use exact replacement)
 
 const TickerCard = ({
   symbol, price, changePercent, name, isCrypto, marketState, closes, stale,
@@ -131,7 +132,7 @@ const TickerCard = ({
               ? `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%`
               : '---'}
             {surged && fx !== 'off' && (
-              <span className="surge-badge">{isUp ? '🚀' : '💦'}</span>
+              <span className="surge-badge">{isUp ? '🔥' : '💦'}</span>
             )}
           </span>
         </div>
@@ -148,3 +149,4 @@ const TickerCard = ({
 };
 
 export default TickerCard;
+
