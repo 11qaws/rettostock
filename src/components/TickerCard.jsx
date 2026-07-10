@@ -21,7 +21,7 @@ let particleId = 0;
 // ... (skipping some lines for brevity in thought, I must use exact replacement)
 
 const TickerCard = ({
-  symbol, price, changePercent, previousClose, name, isCrypto, marketState, closes, stale,
+  symbol, price, changePercent, previousClose, regularMarketPrice, name, isCrypto, marketState, closes, stale,
   fx = 'full', pixel = false, showSparkline = true, loopPrevPrice,
   ...motionProps
 }) => {
@@ -33,11 +33,13 @@ const TickerCard = ({
 
   let changeAbs = null;
   if (typeof price === 'number') {
-    if (typeof previousClose === 'number') {
-      changeAbs = price - previousClose;
+    const isExtended = marketState === 'PRE' || marketState === 'POST' || marketState === 'POSTPOST';
+    const baseline = (isExtended && typeof regularMarketPrice === 'number' && regularMarketPrice > 0) ? regularMarketPrice : previousClose;
+    if (typeof baseline === 'number') {
+      changeAbs = price - baseline;
     } else if (typeof changePercent === 'number') {
-      const impliedPrevClose = price / (1 + changePercent / 100);
-      changeAbs = price - impliedPrevClose;
+      const impliedBaseline = price / (1 + changePercent / 100);
+      changeAbs = price - impliedBaseline;
     }
   }
 
