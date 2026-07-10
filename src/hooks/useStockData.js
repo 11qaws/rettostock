@@ -262,6 +262,7 @@ export const useStockData = (symbols, demo = false) => {
       };
       // 2c. Extended Hours data via TradingView Scanner
       const fetchPreMarket = async () => {
+        if (usMarketState === 'REGULAR') return;
         let data;
         try {
           // 1. Try TradingView Scanner API directly (works on GitHub Pages, but might be blocked by Adblock)
@@ -399,16 +400,25 @@ export const useStockData = (symbols, demo = false) => {
             // Finnhub's market-status API often lags by 5-10 minutes at the 9:30 AM open.
             // We force it to REGULAR if the current NY time is between 9:30 AM and 4:00 PM.
             if (session === 'PRE' || session === 'POST') {
-              const nyTime = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}));
-              const hours = nyTime.getHours();
-              const minutes = nyTime.getMinutes();
-              const timeInMinutes = hours * 60 + minutes;
-              
-              // 9:30 AM = 570, 4:00 PM = 960
-              if (timeInMinutes >= 570 && timeInMinutes < 960) {
-                session = 'REGULAR';
-              } else if (timeInMinutes >= 960 && timeInMinutes < 1200) {
-                session = 'POST';
+              try {
+                const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hour12: false });
+                const parts = formatter.formatToParts(new Date());
+                let h = 0, m = 0;
+                for (const p of parts) {
+                  if (p.type === 'hour') h = parseInt(p.value, 10);
+                  if (p.type === 'minute') m = parseInt(p.value, 10);
+                }
+                if (h === 24) h = 0;
+                const timeInMinutes = h * 60 + m;
+                
+                // 9:30 AM = 570, 4:00 PM = 960
+                if (timeInMinutes >= 570 && timeInMinutes < 960) {
+                  session = 'REGULAR';
+                } else if (timeInMinutes >= 960 && timeInMinutes < 1200) {
+                  session = 'POST';
+                }
+              } catch (e) {
+                // Ignore formatting errors in older CEF
               }
             }
             
