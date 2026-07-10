@@ -168,23 +168,34 @@ html, body, #root {
 /* ============================================================
    Tick & event effects
    ============================================================ */
+/* Tick effects scale with the move: --fx-i (0.15..1) is set per card
+   from the size of the latest price change, so big jumps shake and glow
+   hard while tiny wiggles barely register. */
+.tick-card { --fx-i: 1; --fx-amp: calc(4px * var(--fx-i)); }
+
 @keyframes pumpShake {
-  0% { transform: translate(1px, 1px) rotate(0deg); }
-  20% { transform: translate(-3px, 0px) rotate(1deg); }
-  40% { transform: translate(1px, -1px) rotate(1deg); }
-  60% { transform: translate(-3px, 1px) rotate(0deg); }
-  80% { transform: translate(-1px, -1px) rotate(1deg); }
-  100% { transform: translate(1px, -2px) rotate(-1deg); }
+  0% { transform: translate(calc(var(--fx-amp) * 0.25), calc(var(--fx-amp) * 0.25)) rotate(0deg); }
+  20% { transform: translate(calc(var(--fx-amp) * -0.75), 0px) rotate(calc(1deg * var(--fx-i))); }
+  40% { transform: translate(calc(var(--fx-amp) * 0.25), calc(var(--fx-amp) * -0.25)) rotate(calc(1deg * var(--fx-i))); }
+  60% { transform: translate(calc(var(--fx-amp) * -0.75), calc(var(--fx-amp) * 0.25)) rotate(0deg); }
+  80% { transform: translate(calc(var(--fx-amp) * -0.25), calc(var(--fx-amp) * -0.25)) rotate(calc(1deg * var(--fx-i))); }
+  100% { transform: translate(calc(var(--fx-amp) * 0.25), calc(var(--fx-amp) * -0.5)) rotate(calc(-1deg * var(--fx-i))); }
 }
 
 @keyframes pumpFlash {
   0%, 100% { border-color: var(--border-glass); }
-  50% { box-shadow: 0 0 30px var(--color-up), inset 0 0 30px var(--color-up-glow); border-color: var(--color-up); }
+  50% {
+    box-shadow: 0 0 calc(30px * var(--fx-i)) var(--color-up), inset 0 0 calc(30px * var(--fx-i)) var(--color-up-glow);
+    border-color: var(--color-up);
+  }
 }
 
 @keyframes dumpFlash {
   0%, 100% { border-color: var(--border-glass); }
-  50% { box-shadow: 0 0 30px var(--color-down), inset 0 0 30px var(--color-down-glow); border-color: var(--color-down); }
+  50% {
+    box-shadow: 0 0 calc(30px * var(--fx-i)) var(--color-down), inset 0 0 calc(30px * var(--fx-i)) var(--color-down-glow);
+    border-color: var(--color-down);
+  }
 }
 
 .anim-pump { animation: pumpShake 0.5s cubic-bezier(.36, .07, .19, .97) both, pumpFlash 0.5s ease; }
@@ -231,6 +242,43 @@ html, body, #root {
   100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.15) rotate(var(--rot)); opacity: 0; }
 }
 
+/* Zero-cross (양전/음전): a colored sweep across the card + the change
+   number flipping over. Distinct from the ±5% particle burst on purpose. */
+.cross-wipe {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  border-radius: inherit;
+  overflow: hidden;
+}
+.cross-wipe::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 60%;
+  transform: translateX(-120%) skewX(-12deg);
+  animation: crossWipe 0.9s ease-out forwards;
+}
+.wipe-up::before {
+  background: linear-gradient(105deg, transparent, var(--color-up-glow), var(--color-up-glow), transparent);
+}
+.wipe-down::before {
+  background: linear-gradient(105deg, transparent, var(--color-down-glow), var(--color-down-glow), transparent);
+}
+@keyframes crossWipe {
+  to { transform: translateX(300%) skewX(-12deg); }
+}
+
+@keyframes signFlip {
+  0% { transform: rotateX(0); }
+  45% { transform: rotateX(92deg); }
+  100% { transform: rotateX(0); }
+}
+.sign-flip { animation: signFlip 0.55s ease; }
+
 /* fx intensity: soft = no shake/particles, off = no animations at all */
 .fx-soft .anim-pump { animation: pumpFlash 0.5s ease; }
 .fx-soft .fx-particle { display: none; }
@@ -239,6 +287,8 @@ html, body, #root {
 .fx-off .is-surge-up, .fx-off .is-surge-down { animation: none; filter: none; }
 .fx-off .surge-badge { animation: none; }
 .fx-off .fx-particle { display: none; }
+.fx-off .cross-wipe { display: none; }
+.fx-off .sign-flip { animation: none; }
 
 /* ============================================================
    Marquee (scroll) mode — electronic board strip

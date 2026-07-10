@@ -27,8 +27,12 @@ const TickerCard = ({
   const [animClass, setAnimClass] = useState('');
   const [priceFlash, setPriceFlash] = useState('');
   const [particles, setParticles] = useState([]);
+  const [crossFx, setCrossFx] = useState(null); // 'up' (양전) | 'down' (음전)
+  const [fxIntensity, setFxIntensity] = useState(1); // tick effect strength ∝ move size
   const prevPriceRef = useRef(loopPrevPrice !== undefined ? loopPrevPrice : price);
   const prevSurgeRef = useRef(null); // null = no data seen yet
+  const prevSignRef = useRef(null);
+  const lastCrossRef = useRef(0);
 
   let changeAbs = null;
   if (typeof price === 'number' && typeof changePercent === 'number') {
@@ -41,6 +45,14 @@ const TickerCard = ({
     if (price === undefined || prevPriceRef.current === undefined) {
       prevPriceRef.current = price;
       return;
+    }
+
+    // Effect strength follows the size of this tick's move:
+    // a 0.02% wiggle barely nudges, a 0.4%+ jump hits full strength
+    const prev = prevPriceRef.current;
+    if (price !== prev && prev > 0) {
+      const movePct = (Math.abs(price - prev) / prev) * 100;
+      setFxIntensity(Math.min(1, Math.max(0.15, movePct / 0.4)));
     }
 
     if (price > prevPriceRef.current) {
@@ -90,6 +102,27 @@ const TickerCard = ({
     prevSurgeRef.current = surged;
   }, [changePercent, fx]);
 
+  // Zero-cross (양전/음전): color wipe + sign flip the moment the change
+  // flips sign. Tiny values never commit a sign (hysteresis) and a
+  // cooldown stops noise around 0% from spamming the effect.
+  useEffect(() => {
+    if (typeof changePercent !== 'number') return;
+    if (Math.abs(changePercent) < 0.05) return; // too small to count as a sign
+    const sign = changePercent > 0 ? 1 : -1;
+    const prev = prevSignRef.current;
+    prevSignRef.current = sign;
+    if (prev === null || prev === sign) return;
+
+    if (fx === 'off') return;
+    const now = Date.now();
+    if (now - lastCrossRef.current < 10000) return;
+    lastCrossRef.current = now;
+
+    setCrossFx(sign > 0 ? 'up' : 'down');
+    const timer = setTimeout(() => setCrossFx(null), 1100);
+    return () => clearTimeout(timer);
+  }, [changePercent, fx]);
+
   const isUp = changePercent > 0;
   const isDown = changePercent < 0;
   const Icon = isUp ? TrendingUp : (isDown ? TrendingDown : Minus);
@@ -104,7 +137,7 @@ const TickerCard = ({
   return (
     <motion.div
       className={`glass-card tick-card ${animClass} ${surgeClass} ${stale ? 'is-stale' : ''}`}
-      style={{ ...motionProps.style }}
+      style={{ '--fx-i': fxIntensity, ...motionProps.style }}
       {...motionProps}
     >
       {particles.map(p => (
@@ -116,6 +149,9 @@ const TickerCard = ({
           {p.char}
         </span>
       ))}
+
+      {/* Zero-cross color wipe (full fx only) */}
+      {crossFx && fx === 'full' && <span className={`cross-wipe wipe-${crossFx}`} aria-hidden="true" />}
 
       <div className="card-row">
         <div className="card-left">
@@ -138,7 +174,7 @@ const TickerCard = ({
           <span className={`neon-price ${priceFlash}`}>
             ${typeof price === 'number' ? price.toFixed(2) : '---'}
           </span>
-          <span className={`neon-change ${colorClass}`} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
+          <span className={`neon-change ${colorClass} ${crossFx ? 'sign-flip' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
             {Icon && <Icon size={14} className="change-icon" style={{ flexShrink: 0 }} />}
             <span style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
               {typeof changeAbs === 'number' && (
