@@ -116,9 +116,11 @@ const TickerCard = ({
           <div className="card-symbol-row">
             <h3 className="neon-title">{symbol}</h3>
             {isCrypto && <span className="mini-tag">CRYPTO</span>}
-            {market && <span className={`market-badge ${market.cls}`}>{market.text}</span>}
           </div>
-          <p className="neon-subtitle">{name}</p>
+          <p className="neon-subtitle">
+            {market && <span className={`market-badge ${market.cls}`}>{market.text}</span>}
+            {name}
+          </p>
         </div>
 
         <div className="card-right">
@@ -137,9 +139,10 @@ const TickerCard = ({
         </div>
       </div>
 
-      {showSparkline && closes && closes.length > 1 && (
+      {/* Space is always reserved so cards never change height as data loads */}
+      {showSparkline && (
         <div className={`sparkline-wrap ${colorClass}`}>
-          <Sparkline data={closes} pixel={pixel} />
+          {closes && closes.length > 1 && <Sparkline data={closes} pixel={pixel} />}
         </div>
       )}
     </motion.div>

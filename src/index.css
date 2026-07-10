@@ -103,7 +103,8 @@ html, body, #root {
   gap: 8px;
 }
 .card-left { display: flex; flex-direction: column; min-width: 0; }
-.card-symbol-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card-symbol-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+.card-symbol-row .neon-title { white-space: nowrap; }
 .card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
 
 .mini-tag {
@@ -118,24 +119,30 @@ html, body, #root {
 }
 
 .market-badge {
+  /* Inline at the start of the (fixed two-line) name row:
+     flows with text, so it can never overlap or change card height */
+  display: inline-block;
+  margin-right: 6px;
   font-size: 10px;
-  padding: 1px 7px;
+  line-height: 1.3;
+  padding: 0 6px;
   border-radius: 999px;
   border: 1px solid currentColor;
   font-weight: 700;
   letter-spacing: 1px;
   opacity: 0.9;
   white-space: nowrap;
+  vertical-align: text-bottom;
 }
 .ms-open { color: var(--color-up); }
 .ms-pre, .ms-post { color: var(--color-primary); }
 .ms-closed { color: var(--text-muted); }
 
-/* Sparkline */
-.sparkline-wrap { margin-top: clamp(6px, 2.5vw, 10px); color: var(--text-muted); }
+/* Sparkline — wrap keeps its height even before data arrives */
+.sparkline-wrap { margin-top: clamp(6px, 2.5vw, 10px); height: clamp(14px, 9vw, 28px); color: var(--text-muted); }
 .sparkline-wrap.text-up { color: var(--color-up); }
 .sparkline-wrap.text-down { color: var(--color-down); }
-.sparkline { display: block; width: 100%; height: clamp(14px, 9vw, 28px); }
+.sparkline { display: block; width: 100%; height: 100%; }
 
 /* Stale data: keep showing, but visibly dimmed */
 .is-stale { opacity: 0.7; filter: saturate(0.6); }

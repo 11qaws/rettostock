@@ -3,21 +3,22 @@ import { useState, useEffect } from 'react';
 const API_KEY = 'd97qbr1r01qng2np5cigd97qbr1r01qng2np5cj0';
 const MAX_SPARK_POINTS = 48;
 
-// Polling interval by market state (ms)
-const POLL_INTERVALS = {
-  REGULAR: 8000,
-  PRE: 30000,
-  PREPRE: 30000,
-  POST: 30000,
-  POSTPOST: 30000,
-  CLOSED: 120000,
+// Yahoo enrichment (name, market state, sparkline) polling interval by market state (ms).
+// Prices come from Finnhub directly, so this can stay slow and proxy-friendly.
+const ENRICH_INTERVALS = {
+  REGULAR: 60000,
+  EXTENDED: 120000,
+  CLOSED: 300000,
 };
 
-const pickPollInterval = (states) => {
-  if (states.some(s => s === 'REGULAR')) return POLL_INTERVALS.REGULAR;
-  if (states.some(s => s && s !== 'CLOSED')) return POLL_INTERVALS.PRE;
-  return POLL_INTERVALS.CLOSED;
+const pickEnrichInterval = (state) => {
+  if (state === 'REGULAR') return ENRICH_INTERVALS.REGULAR;
+  if (state && state !== 'CLOSED') return ENRICH_INTERVALS.EXTENDED;
+  return ENRICH_INTERVALS.CLOSED;
 };
+
+// Finnhub session -> our badge states
+const SESSION_MAP = { 'pre-market': 'PRE', regular: 'REGULAR', 'post-market': 'POST' };
 
 const downsample = (arr, max) => {
   if (arr.length <= max) return arr;
@@ -27,16 +28,26 @@ const downsample = (arr, max) => {
   return out;
 };
 
+// Public CORS proxies are flaky; try several in order.
+const PROXIES = [
+  (u) => ({ url: `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, unwrap: async (res) => JSON.parse((await res.json()).contents) }),
+  (u) => ({ url: `https://corsproxy.io/?url=${encodeURIComponent(u)}`, unwrap: (res) => res.json() }),
+  (u) => ({ url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, unwrap: (res) => res.json() }),
+];
+
 const fetchViaProxy = async (targetUrl) => {
-  // Primary: allorigins. Fallback: corsproxy.io
-  try {
-    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`, { cache: 'no-store' });
-    const proxyData = await res.json();
-    return JSON.parse(proxyData.contents);
-  } catch {
-    const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`, { cache: 'no-store' });
-    return await res.json();
+  let lastErr;
+  for (const make of PROXIES) {
+    try {
+      const { url, unwrap } = make(targetUrl);
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`proxy ${res.status}`);
+      return await unwrap(res);
+    } catch (err) {
+      lastErr = err;
+    }
   }
+  throw lastErr;
 };
 
 // Deterministic tiny hash for demo prices
@@ -109,10 +120,12 @@ export const useStockData = (symbols, demo = false) => {
 
     let btcWs = null;
     let finnhubWs = null;
-    let pollTimer = null;
+    let quoteTimer = null;
+    let enrichTimer = null;
+    let statusTimer = null;
     let stopped = false;
     const failCounts = {};
-    const marketStates = {};
+    let usMarketState = null;
 
     // 1. Binance WebSocket for BTC
     const cryptoSymbols = symbols.filter(s => s.toUpperCase() === 'BTC');
@@ -139,7 +152,7 @@ export const useStockData = (symbols, demo = false) => {
     const stockSymbols = symbols.filter(s => s.toUpperCase() !== 'BTC');
 
     if (stockSymbols.length > 0) {
-      // Finnhub WebSocket for live trade prices
+      // 2a. Finnhub WebSocket for live trade ticks
       finnhubWs = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
       finnhubWs.onopen = () => {
         stockSymbols.forEach(symbol => {
@@ -161,73 +174,130 @@ export const useStockData = (symbols, demo = false) => {
         }
       };
 
-      // Yahoo polling: names, changePercent, marketState, sparkline closes
-      const fetchStocks = async () => {
-        const fetchedUpdates = {};
-        for (const symbol of stockSymbols) {
-          try {
-            const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=5m&range=1d&t=${Date.now()}`;
-            const result = await fetchViaProxy(targetUrl);
-
-            if (result.chart?.result?.length > 0) {
-              const chart = result.chart.result[0];
-              const quote = chart.meta;
-              const currentPrice = quote.regularMarketPrice;
-              const previousClose = quote.chartPreviousClose;
-              const changePercent = previousClose ? ((currentPrice - previousClose) / previousClose) * 100 : 0;
-              const rawCloses = (chart.indicators?.quote?.[0]?.close || []).filter(v => v !== null && v !== undefined);
-
-              fetchedUpdates[symbol] = {
-                price: currentPrice,
-                changePercent,
-                name: quote.shortName || symbol,
-                marketState: quote.marketState || 'REGULAR',
-                closes: downsample(rawCloses, MAX_SPARK_POINTS),
-              };
-              failCounts[symbol] = 0;
-              marketStates[symbol] = quote.marketState;
-            }
-          } catch (err) {
-            failCounts[symbol] = (failCounts[symbol] || 0) + 1;
-            console.error(`Error fetching data for ${symbol}:`, err);
-          }
-        }
+      // 2b. Finnhub REST quotes — primary source for price + changePercent.
+      //     Direct CORS fetch, no proxy involved, so cards fill in fast and
+      //     keep working even when every public proxy is down.
+      const fetchQuotes = async () => {
+        const results = await Promise.allSettled(stockSymbols.map(async (symbol) => {
+          const res = await fetch(
+            `https://api.finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${API_KEY}`,
+            { cache: 'no-store' }
+          );
+          if (!res.ok) throw new Error(`quote ${res.status}`);
+          return { symbol, q: await res.json() };
+        }));
         if (stopped) return;
         setData(prev => {
           const next = { ...prev };
-          for (const [sym, update] of Object.entries(fetchedUpdates)) {
-            next[sym] = {
-              // Finnhub live price wins if already streaming
-              price: next[sym]?.price ?? update.price,
-              changePercent: update.changePercent,
-              name: update.name,
+          for (const r of results) {
+            if (r.status !== 'fulfilled') continue;
+            const { symbol, q } = r.value;
+            if (!q || typeof q.c !== 'number' || q.c <= 0) {
+              failCounts[symbol] = (failCounts[symbol] || 0) + 1;
+              if (failCounts[symbol] >= 3 && next[symbol]) next[symbol] = { ...next[symbol], stale: true };
+              continue;
+            }
+            failCounts[symbol] = 0;
+            next[symbol] = {
+              ...next[symbol],
+              price: q.c,
+              changePercent: typeof q.dp === 'number' && q.dp !== null ? q.dp : next[symbol]?.changePercent,
+              name: next[symbol]?.name || symbol,
               isCrypto: false,
-              marketState: update.marketState,
-              closes: update.closes,
               stale: false,
             };
-            // Outside regular hours Finnhub is silent; trust Yahoo price
-            if (update.marketState !== 'REGULAR') next[sym].price = update.price;
-          }
-          // Mark repeatedly-failing symbols as stale (keep last data visible)
-          for (const sym of stockSymbols) {
-            if ((failCounts[sym] || 0) >= 3 && next[sym]) next[sym] = { ...next[sym], stale: true };
           }
           return next;
         });
       };
 
-      const loop = async () => {
-        await fetchStocks();
+      const quoteLoop = async () => {
+        await fetchQuotes();
         if (stopped) return;
-        pollTimer = setTimeout(loop, pickPollInterval(Object.values(marketStates)));
+        // Stay well under Finnhub's 60 calls/min free limit
+        quoteTimer = setTimeout(quoteLoop, Math.max(8000, stockSymbols.length * 1500));
       };
-      loop();
+      quoteLoop();
+
+      // 2b-2. US market session (pre/regular/post/closed) — one direct
+      //       Finnhub call covers every US symbol. Yahoo's chart meta has
+      //       no marketState field, so this is the real source.
+      const statusLoop = async () => {
+        try {
+          const res = await fetch(
+            `https://api.finnhub.io/api/v1/stock/market-status?exchange=US&token=${API_KEY}`,
+            { cache: 'no-store' }
+          );
+          const s = await res.json();
+          usMarketState = s && s.session ? (SESSION_MAP[s.session] || 'REGULAR') : 'CLOSED';
+        } catch { /* keep previous state */ }
+        if (stopped) return;
+        if (usMarketState) {
+          setData(prev => {
+            const next = { ...prev };
+            for (const sym of stockSymbols) {
+              if (next[sym]?.marketState !== usMarketState) {
+                next[sym] = { ...next[sym], marketState: usMarketState };
+              }
+            }
+            return next;
+          });
+        }
+        statusTimer = setTimeout(statusLoop, 60000);
+      };
+      statusLoop();
+
+      // 2c. Yahoo enrichment via public proxies (slow, non-critical):
+      //     company name, market state badge, sparkline closes.
+      const fetchEnrichment = async () => {
+        for (const symbol of stockSymbols) {
+          try {
+            const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=5m&range=1d&t=${Date.now()}`;
+            const result = await fetchViaProxy(targetUrl);
+            if (stopped) return;
+
+            if (result.chart?.result?.length > 0) {
+              const chart = result.chart.result[0];
+              const quote = chart.meta;
+              const rawCloses = (chart.indicators?.quote?.[0]?.close || []).filter(v => v !== null && v !== undefined);
+              const previousClose = quote.chartPreviousClose;
+
+              setData(prev => {
+                const cur = prev[symbol] || {};
+                return {
+                  ...prev,
+                  [symbol]: {
+                    ...cur,
+                    price: cur.price ?? quote.regularMarketPrice,
+                    changePercent: cur.changePercent ?? (previousClose
+                      ? ((quote.regularMarketPrice - previousClose) / previousClose) * 100
+                      : undefined),
+                    name: quote.shortName || cur.name || symbol,
+                    closes: downsample(rawCloses, MAX_SPARK_POINTS),
+                    isCrypto: false,
+                  },
+                };
+              });
+            }
+          } catch (err) {
+            console.error(`Enrichment failed for ${symbol}:`, err);
+          }
+        }
+      };
+
+      const enrichLoop = async () => {
+        await fetchEnrichment();
+        if (stopped) return;
+        enrichTimer = setTimeout(enrichLoop, pickEnrichInterval(usMarketState));
+      };
+      enrichLoop();
     }
 
     return () => {
       stopped = true;
-      if (pollTimer) clearTimeout(pollTimer);
+      if (quoteTimer) clearTimeout(quoteTimer);
+      if (enrichTimer) clearTimeout(enrichTimer);
+      if (statusTimer) clearTimeout(statusTimer);
       if (btcWs) btcWs.close();
       if (finnhubWs) finnhubWs.close();
     };
