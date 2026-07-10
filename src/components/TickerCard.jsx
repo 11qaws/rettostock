@@ -132,12 +132,12 @@ const TickerCard = ({
             {Icon && <Icon size={14} className="change-icon" style={{ flexShrink: 0 }} />}
             <span style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
               {typeof changeAbs === 'number' && (
-                <span className="change-abs" style={{ opacity: 0.9, fontWeight: 500 }}>
+                <span className="change-abs" style={{ fontSize: '0.92em', opacity: 0.9, fontWeight: 500 }}>
                   {changeAbs > 0 ? '+' : ''}{changeAbs.toFixed(2)}
                 </span>
               )}
               {typeof changePercent === 'number' ? (
-                <span className="change-pct" style={{ fontSize: '0.85em', opacity: 0.7 }}>
+                <span className="change-pct" style={{ fontSize: '0.78em', opacity: 0.7 }}>
                   ({changePercent > 0 ? '+' : ''}{changePercent.toFixed(2)}%)
                 </span>
               ) : (
