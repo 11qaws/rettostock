@@ -7,8 +7,8 @@ const SURGE_THRESHOLD = 5; // |changePercent| >= 5% triggers surge state
 
 const MARKET_LABELS = {
   REGULAR: { text: '장중', cls: 'ms-open' },
-  PRE: { text: '프리장', cls: 'ms-pre' },
-  PREPRE: { text: '프리장', cls: 'ms-pre' },
+  PRE: { text: '프리', cls: 'ms-pre' },
+  PREPRE: { text: '프리', cls: 'ms-pre' },
   POST: { text: '애프터', cls: 'ms-post' },
   POSTPOST: { text: '애프터', cls: 'ms-post' },
   CLOSED: { text: '마감', cls: 'ms-closed' },
@@ -115,13 +115,13 @@ const TickerCard = ({
         <div className="card-left">
           <div className="card-symbol-row">
             <h3 className="neon-title">{symbol}</h3>
-            {market && <span className={`market-badge ${market.cls}`}>{market.text}</span>}
             {isCrypto && <span className="mini-tag">CRYPTO</span>}
           </div>
           <p className="neon-subtitle">{name}</p>
         </div>
 
         <div className="card-right">
+          {market && <span className={`market-badge ${market.cls}`} style={{ marginBottom: '2px' }}>{market.text}</span>}
           <span className={`neon-price ${priceFlash}`}>
             ${typeof price === 'number' ? price.toFixed(2) : '---'}
           </span>
