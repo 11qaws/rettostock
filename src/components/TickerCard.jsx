@@ -21,7 +21,7 @@ let particleId = 0;
 // ... (skipping some lines for brevity in thought, I must use exact replacement)
 
 const TickerCard = ({
-  symbol, price, changePercent, name, isCrypto, marketState, closes, stale,
+  symbol, price, changePercent, previousClose, name, isCrypto, marketState, closes, stale,
   fx = 'full', pixel = false, showSparkline = true, loopPrevPrice,
   ...motionProps
 }) => {
@@ -30,6 +30,8 @@ const TickerCard = ({
   const [particles, setParticles] = useState([]);
   const prevPriceRef = useRef(loopPrevPrice !== undefined ? loopPrevPrice : price);
   const prevSurgeRef = useRef(null); // null = no data seen yet
+
+  const changeAbs = (typeof price === 'number' && typeof previousClose === 'number') ? (price - previousClose) : null;
 
   // Tick animation on price change
   useEffect(() => {
@@ -126,13 +128,24 @@ const TickerCard = ({
           <span className={`neon-price ${priceFlash}`}>
             ${typeof price === 'number' ? price.toFixed(2) : '---'}
           </span>
-          <span className={`neon-change ${colorClass}`}>
-            {Icon && <Icon size={14} className="change-icon" />}
-            {typeof changePercent === 'number'
-              ? `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%`
-              : '---'}
+          <span className={`neon-change ${colorClass}`} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
+            {Icon && <Icon size={14} className="change-icon" style={{ flexShrink: 0 }} />}
+            <span style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
+              {typeof changeAbs === 'number' && (
+                <span className="change-abs" style={{ opacity: 0.9, fontWeight: 500 }}>
+                  {changeAbs > 0 ? '+' : ''}{changeAbs.toFixed(2)}
+                </span>
+              )}
+              {typeof changePercent === 'number' ? (
+                <span className="change-pct" style={{ fontSize: '0.85em', opacity: 0.7 }}>
+                  ({changePercent > 0 ? '+' : ''}{changePercent.toFixed(2)}%)
+                </span>
+              ) : (
+                <span>---</span>
+              )}
+            </span>
             {surged && fx !== 'off' && (
-              <span className="surge-badge">{isUp ? '🔥' : '💦'}</span>
+              <span className="surge-badge" style={{ flexShrink: 0 }}>{isUp ? '🔥' : '💦'}</span>
             )}
           </span>
         </div>
