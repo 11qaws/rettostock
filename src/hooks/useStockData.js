@@ -18,31 +18,10 @@ const pickEnrichInterval = (state) => {
 };
 
 // Session by the New York clock — drives badges and baselines.
-// Finnhub's session string lags minutes behind the open/close boundaries,
-// so the clock decides; Finnhub is only consulted for holiday closures.
-const calcNySession = () => {
-  try {
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false,
-    });
-    const parts = formatter.formatToParts(new Date());
-    let h = 0, m = 0, weekday = '';
-    for (const p of parts) {
-      if (p.type === 'hour') h = parseInt(p.value, 10);
-      if (p.type === 'minute') m = parseInt(p.value, 10);
-      if (p.type === 'weekday') weekday = p.value;
-    }
-    if (h === 24) h = 0;
-    const t = h * 60 + m;
-    if (weekday === 'Sat' || weekday === 'Sun') return 'CLOSED';
-    if (t >= 240 && t < 570) return 'PRE';      // 04:00–09:30
-    if (t >= 570 && t < 960) return 'REGULAR';  // 09:30–16:00
-    if (t >= 960 && t < 1200) return 'POST';    // 16:00–20:00
-    return 'CLOSED';
-  } catch {
-    return null; // very old CEF without Intl timezone support
-  }
-};
+// marketCalendar knows weekends, NYSE holidays (with substitute rules)
+// and 13:00 half days; Finnhub remains only as a backstop for ad-hoc
+// closures no calendar can predict (mourning days, disasters).
+import { calcNySession } from '../utils/marketCalendar';
 
 const calcChange = (price, regClose, prevClose, marketState) => {
   if (typeof price !== 'number') return undefined;
