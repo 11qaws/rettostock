@@ -31,6 +31,7 @@ const Widget = () => {
   const scaleParam = clampNum(searchParams.get('scale'), 0.5, 2.5, 1);
   const intervalParam = clampNum(searchParams.get('interval'), 3, 120, 10);
   const opacityParam = clampNum(searchParams.get('opacity'), 0.1, 1, 1);
+  const speedParam = clampNum(searchParams.get('speed'), 0.25, 3, 1);
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -134,7 +135,7 @@ const Widget = () => {
   if (modeParam === 'scroll') {
     const repeat = Math.max(3, Math.ceil(24 / symbols.length));
     const half = Array.from({ length: repeat }, (_, r) => symbols.map(s => ({ s, k: `${s}-${r}` }))).flat();
-    const duration = `${half.length * 5}s`;
+    const duration = `${(half.length * 5) / speedParam}s`;
 
     const renderInline = (item, trackId) => {
       const ticker = data[item.s];

@@ -106,6 +106,7 @@ const defaultConfig = {
   interval: 10,
   opacity: 1,
   fx: 'full',
+  speed: 1,
   demo: false,
 };
 
@@ -119,7 +120,9 @@ const loadConfig = () => {
 };
 
 const recommendedDims = (mode, count) => {
-  if (mode === 'scroll') return { w: 1280, h: 90 };
+  // Marquee: full canvas width so OBS never has to upscale it
+  // (upscaling magnifies per-frame movement and looks choppy)
+  if (mode === 'scroll') return { w: 1920, h: 100 };
   if (mode === 'rotate') return { w: 300, h: 200 };
   return { w: 300, h: Math.max(1, count) * 160 };
 };
@@ -223,6 +226,7 @@ const Configurator = () => {
     if (config.colorStyle !== 'theme') params.set('colors', config.colorStyle);
     if (config.scale !== 1) params.set('scale', config.scale);
     if (config.displayMode === 'rotate' && config.interval !== 10) params.set('interval', config.interval);
+    if (config.displayMode === 'scroll' && config.speed !== 1) params.set('speed', config.speed);
     if (config.opacity !== 1) params.set('opacity', config.opacity);
     if (config.fx !== 'full') params.set('fx', config.fx);
     if (config.demo) params.set('demo', '1');
@@ -345,6 +349,12 @@ const Configurator = () => {
               <li>복사한 주소를 URL 칸에 붙여넣기 합니다.</li>
               <li>크기는 <b>{recommendedSize(config.displayMode, symbolList.length)}</b>로 맞추면 끝!</li>
             </ol>
+            {config.displayMode === 'scroll' && (
+              <p style={{ fontSize: '13px', color: '#8d6e63', margin: '10px 0 0', lineHeight: 1.6 }}>
+                💡 흐름이 뚝뚝 끊겨 보이면: 소스를 늘려서 키우지 말고 처음부터 위 크기로 만들어 주세요.
+                그래도 끊기면 브라우저 소스 속성에서 <b>사용자 지정 프레임 속도</b>를 체크하고 <b>60</b>으로 설정하면 부드러워져요.
+              </p>
+            )}
           </div>
 
           {/* 5. Widget URL */}
@@ -409,6 +419,14 @@ const Configurator = () => {
                 <label>⏱️ 종목 전환 간격 <b>{config.interval}초</b></label>
                 <input type="range" min="3" max="60" step="1" value={config.interval}
                   onChange={e => set('interval', parseInt(e.target.value, 10))} />
+              </div>
+            )}
+
+            {config.displayMode === 'scroll' && (
+              <div className="advanced-row">
+                <label>🎢 마퀴 속도 <b>{Number(config.speed).toFixed(2)}×</b> <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#8d6e63' }}>(느릴수록 부드러워요)</span></label>
+                <input type="range" min="0.5" max="2" step="0.05" value={config.speed}
+                  onChange={e => set('speed', parseFloat(e.target.value))} />
               </div>
             )}
 
