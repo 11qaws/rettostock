@@ -128,7 +128,7 @@ const recommendedDims = (mode, count) => {
   // (upscaling magnifies per-frame movement and looks choppy)
   if (mode === 'scroll') return { w: 1920, h: 100 };
   if (mode === 'rotate') return { w: 300, h: 200 };
-  return { w: 300, h: Math.max(1, count) * 160 };
+  return { w: 300, h: Math.max(1, count) * 165 };
 };
 
 const recommendedSize = (mode, count) => {
