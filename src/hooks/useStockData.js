@@ -20,6 +20,14 @@ const pickEnrichInterval = (state) => {
 // Finnhub session -> our badge states
 const SESSION_MAP = { 'pre-market': 'PRE', regular: 'REGULAR', 'post-market': 'POST' };
 
+const calcChange = (price, prevClose, regClose, marketState) => {
+  if (typeof price !== 'number') return undefined;
+  const isPost = marketState === 'POST' || marketState === 'POSTPOST';
+  const baseline = (isPost && typeof regClose === 'number' && regClose > 0) ? regClose : prevClose;
+  if (typeof baseline !== 'number' || baseline === 0) return undefined;
+  return ((price - baseline) / baseline) * 100;
+};
+
 const downsample = (arr, max) => {
   if (arr.length <= max) return arr;
   const step = arr.length / max;
@@ -167,7 +175,15 @@ export const useStockData = (symbols, demo = false) => {
           setData(prev => {
             const next = { ...prev };
             for (const [sym, price] of Object.entries(updates)) {
-              next[sym] = { ...next[sym], price, name: next[sym]?.name || sym, isCrypto: false, stale: false };
+              const cur = next[sym] || {};
+              next[sym] = { 
+                ...cur, 
+                price, 
+                changePercent: cur.previousClose ? calcChange(price, cur.previousClose, cur.regularMarketPrice, cur.marketState) : cur.changePercent,
+                name: cur.name || sym, 
+                isCrypto: false, 
+                stale: false 
+              };
             }
             return next;
           });
@@ -198,11 +214,15 @@ export const useStockData = (symbols, demo = false) => {
               continue;
             }
             failCounts[symbol] = 0;
+            const cur = next[symbol] || {};
+            const newPrice = cur.price ?? q.c; // keep live price if available, else fallback to quote
             next[symbol] = {
-              ...next[symbol],
-              price: q.c,
-              changePercent: typeof q.dp === 'number' && q.dp !== null ? q.dp : next[symbol]?.changePercent,
-              name: next[symbol]?.name || symbol,
+              ...cur,
+              price: newPrice,
+              previousClose: q.pc,
+              regularMarketPrice: q.c,
+              changePercent: calcChange(newPrice, q.pc, q.c, cur.marketState) ?? cur.changePercent,
+              name: cur.name || symbol,
               isCrypto: false,
               stale: false,
             };
@@ -237,7 +257,13 @@ export const useStockData = (symbols, demo = false) => {
             const next = { ...prev };
             for (const sym of stockSymbols) {
               if (next[sym]?.marketState !== usMarketState) {
-                next[sym] = { ...next[sym], marketState: usMarketState };
+                const cur = next[sym];
+                next[sym] = { 
+                  ...cur, 
+                  marketState: usMarketState,
+                  // recalculate change if market state flipped (e.g. REGULAR -> POST)
+                  changePercent: cur.previousClose ? calcChange(cur.price, cur.previousClose, cur.regularMarketPrice, usMarketState) : cur.changePercent
+                };
               }
             }
             return next;
@@ -264,14 +290,16 @@ export const useStockData = (symbols, demo = false) => {
 
               setData(prev => {
                 const cur = prev[symbol] || {};
+                const newPrice = cur.price ?? quote.regularMarketPrice;
+                const regClose = quote.regularMarketPrice;
                 return {
                   ...prev,
                   [symbol]: {
                     ...cur,
-                    price: cur.price ?? quote.regularMarketPrice,
-                    changePercent: cur.changePercent ?? (previousClose
-                      ? ((quote.regularMarketPrice - previousClose) / previousClose) * 100
-                      : undefined),
+                    price: newPrice,
+                    previousClose: previousClose,
+                    regularMarketPrice: regClose,
+                    changePercent: calcChange(newPrice, previousClose, regClose, cur.marketState) ?? cur.changePercent,
                     name: quote.shortName || cur.name || symbol,
                     closes: downsample(rawCloses, MAX_SPARK_POINTS),
                     isCrypto: false,
