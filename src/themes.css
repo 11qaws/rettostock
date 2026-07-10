@@ -23,6 +23,7 @@
   --color-down-glow: rgba(248, 113, 113, 0.35);
 
   --color-primary: #a855f7;
+  --badge-ext: #fbbf24; /* pre/after-hours badge: amber, per-theme contrast */
 
   --font-head: 'Inter', 'Segoe UI', sans-serif;
   --font-num: 'Inter', 'Segoe UI', sans-serif;
@@ -42,6 +43,7 @@
   --color-down-glow: rgba(255, 46, 91, 0.8);
 
   --color-primary: #ff2a85;
+  --badge-ext: #ffd60a;
 
   --font-head: 'Fredoka', 'Jua', sans-serif;
   --font-num: 'Fredoka', 'Jua', sans-serif;
@@ -93,6 +95,7 @@
   --color-down-glow: rgba(126, 87, 194, 0.35);
 
   --color-primary: #ffb6c1;
+  --badge-ext: #c77800; /* dark amber, readable on the cream card */
 
   --font-head: 'Jua', 'Fredoka', sans-serif;
   --font-num: 'Jua', 'Fredoka', sans-serif;
@@ -108,8 +111,6 @@
 .theme-amore-cute .neon-title {
   text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.8);
   font-weight: normal;
-  border-bottom: 2px dotted #ffb6c1;
-  padding-bottom: 4px;
 }
 
 .theme-amore-cute .neon-price {
@@ -135,6 +136,7 @@
   --color-down-glow: rgba(151, 165, 255, 0.55);
 
   --color-primary: #ed76ac;
+  --badge-ext: #ffcf5c;
 
   --font-head: 'Galmuri11', 'Galmuri9', 'NeoDunggeunmo', monospace;
   --font-num: 'Galmuri11', 'Galmuri9', monospace;
@@ -200,6 +202,7 @@
   --color-down-glow: rgba(69, 170, 255, 0.75);
 
   --color-primary: #ffb300;        /* amber LED */
+  --badge-ext: #ffb300;
 
   --font-head: 'Orbitron', 'Inter', sans-serif;
   --font-num: 'DSEG7-Classic', 'DSEG7 Classic', 'Orbitron', monospace;
@@ -257,6 +260,7 @@
   --color-down-glow: rgba(112, 72, 232, 0.25);
 
   --color-primary: #d4589c;
+  --badge-ext: #b26a00; /* dark amber for the white card */
 
   --font-head: 'Fredoka', 'Jua', sans-serif;
   --font-num: 'Fredoka', 'Jua', sans-serif;

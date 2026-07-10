@@ -115,12 +115,10 @@ const TickerCard = ({
         <div className="card-left">
           <div className="card-symbol-row">
             <h3 className="neon-title">{symbol}</h3>
+            {market && <span className={`market-badge ${market.cls}`}>{market.text}</span>}
             {isCrypto && <span className="mini-tag">CRYPTO</span>}
           </div>
-          <p className="neon-subtitle">
-            {market && <span className={`market-badge ${market.cls}`}>{market.text}</span>}
-            {name}
-          </p>
+          <p className="neon-subtitle">{name}</p>
         </div>
 
         <div className="card-right">
