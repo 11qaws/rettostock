@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Copy, Check, AlertCircle, Heart, RefreshCw, ImagePlus, Eye, EyeOff } from 'lucide-react';
 import { getOrCreateRoom, createRoom, saveRoom, publishSync } from '../hooks/useRemoteSync';
 
