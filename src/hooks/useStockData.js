@@ -475,5 +475,14 @@ export const useStockData = (symbols, demo = false) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbolsKey, demo]);
 
-  return { data, error };
+  const displayData = { ...data };
+  if (symbols && Array.isArray(symbols)) {
+    symbols.forEach(s => {
+      if (!displayData[s]) {
+        displayData[s] = { name: s, stale: true, isCrypto: s === 'BTC' };
+      }
+    });
+  }
+
+  return { data: displayData, error };
 };
