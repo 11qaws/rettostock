@@ -192,19 +192,57 @@ export const useStockData = (symbols, demo = false) => {
         }
       };
 
-      // 2b. CNBC REST quotes — primary source for price + changePercent during pre/post market.
-      //     Finnhub free tier does NOT provide pre-market data. CNBC is live and highly reliable.
+      // 2b. Finnhub REST quotes — primary source for price + changePercent.
+      //     Direct CORS fetch, no proxy involved, so cards fill in fast and
+      //     keep working even when every public proxy is down.
       const fetchQuotes = async () => {
-        try {
+        const results = await Promise.allSettled(stockSymbols.map(async (symbol) => {
           const res = await fetch(
-            `https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols=${stockSymbols.join(',')}&requestMethod=itv&noform=1&fund=1&exthrs=1&output=json`,
+            `https://api.finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${API_KEY}`,
             { cache: 'no-store' }
           );
           if (!res.ok) throw new Error(`quote ${res.status}`);
-          const data = await res.json();
+          return { symbol, q: await res.json() };
+        }));
+        if (stopped) return;
+        setData(prev => {
+          const next = { ...prev };
+          for (const r of results) {
+            if (r.status !== 'fulfilled') continue;
+            const { symbol, q } = r.value;
+            if (!q || typeof q.c !== 'number' || q.c <= 0) {
+              failCounts[symbol] = (failCounts[symbol] || 0) + 1;
+              if (failCounts[symbol] >= 3 && next[symbol]) next[symbol] = { ...next[symbol], stale: true };
+              continue;
+            }
+            failCounts[symbol] = 0;
+            const cur = next[symbol] || {};
+            const newPrice = cur.price ?? q.c; // keep live price if available, else fallback to quote
+            next[symbol] = {
+              ...cur,
+              price: newPrice,
+              previousClose: q.pc,
+              regularMarketPrice: q.c,
+              changePercent: calcChange(newPrice, q.c, q.pc, cur.marketState) ?? cur.changePercent,
+              name: cur.name || symbol,
+              isCrypto: false,
+              stale: false,
+            };
+          }
+          return next;
+        });
+      };
+
+      // 2c. CNBC Pre-market data (via Proxy)
+      //     Because Finnhub free tier lacks pre-market data, we try to fetch it from CNBC.
+      //     If proxies fail, cards still render via Finnhub REST above.
+      const fetchPreMarket = async () => {
+        try {
+          const targetUrl = `https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols=${stockSymbols.join(',')}&requestMethod=itv&noform=1&fund=1&exthrs=1&output=json`;
+          const data = await fetchViaProxy(targetUrl);
           
           let quotes = data?.FormattedQuoteResult?.FormattedQuote || [];
-          if (!Array.isArray(quotes)) quotes = [quotes]; // CNBC returns an object if only 1 symbol
+          if (!Array.isArray(quotes)) quotes = [quotes]; 
 
           if (stopped) return;
           
@@ -216,46 +254,38 @@ export const useStockData = (symbols, demo = false) => {
               const isExt = q.curmktstatus === 'PRE_MKT' || q.curmktstatus === 'POST_MKT';
               const extQuote = q.ExtendedMktQuote;
               
-              const livePriceStr = (isExt && extQuote && extQuote.last) ? extQuote.last : q.last;
-              const liveChangeStr = (isExt && extQuote && extQuote.change_pct) ? extQuote.change_pct : q.change_pct;
+              if (!isExt) continue; // Only overwrite if extended hours
+              
+              const livePriceStr = extQuote?.last || q.last;
+              const liveChangeStr = extQuote?.change_pct || q.change_pct;
               
               const livePrice = parseFloat((livePriceStr || '').replace(/,/g, ''));
               const liveChange = parseFloat((liveChangeStr || '0').replace('%', ''));
 
               if (isNaN(livePrice)) continue;
 
-              failCounts[symbol] = 0;
               const cur = next[symbol] || {};
-              
               next[symbol] = {
                 ...cur,
-                price: livePrice, // CNBC updates often enough, use it directly to ensure pre-market tracks
-                previousClose: parseFloat(q.previous_day_closing || '0'),
-                regularMarketPrice: parseFloat(q.last || '0'),
+                price: livePrice, 
                 changePercent: liveChange,
-                name: q.shortName || q.name || symbol,
-                isCrypto: false,
+                name: q.shortName || q.name || cur.name || symbol,
+                marketState: q.curmktstatus === 'PRE_MKT' ? 'PRE' : 'POST',
                 stale: false,
               };
             }
             return next;
           });
         } catch (err) {
-          console.error("CNBC Quote fetch failed:", err);
-          stockSymbols.forEach(symbol => {
-            failCounts[symbol] = (failCounts[symbol] || 0) + 1;
-            if (failCounts[symbol] >= 3) {
-              setData(prev => ({ ...prev, [symbol]: { ...prev[symbol], stale: true } }));
-            }
-          });
+          console.warn("CNBC Pre-market fetch failed via proxy (cards will use Finnhub):", err);
         }
       };
 
       const quoteLoop = async () => {
-        await fetchQuotes();
         if (stopped) return;
-        // Stay well under Finnhub's 60 calls/min free limit
-        quoteTimer = setTimeout(quoteLoop, Math.max(8000, stockSymbols.length * 1500));
+        await fetchQuotes();
+        await fetchPreMarket();
+        quoteTimer = setTimeout(quoteLoop, 8000);
       };
       quoteLoop();
 
