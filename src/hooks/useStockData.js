@@ -246,7 +246,9 @@ export const useStockData = (symbols, demo = false) => {
             }
             failCounts[symbol] = 0;
             const cur = next[symbol] || {};
-            const newPrice = cur.price ?? q.c; // keep live price if available, else fallback to quote
+            // Always use the latest quote from Finnhub REST, even if WebSocket provided a price.
+            // This ensures stocks/ETFs without WebSocket support (like SOXL) don't get stuck forever.
+            const newPrice = q.c;
             next[symbol] = {
               ...cur,
               price: newPrice,
