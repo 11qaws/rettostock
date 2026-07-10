@@ -191,8 +191,8 @@ const Configurator = () => {
       const nx = start.x + (ev.clientX - start.px) / box.width;
       const ny = start.y + (ev.clientY - start.py) / box.height;
       setWidgetPos({
-        x: Math.min(Math.max(nx, 0), Math.max(0, 1 - frac.w)),
-        y: Math.min(Math.max(ny, 0), Math.max(0, 1 - frac.h)),
+        x: Math.min(Math.max(nx, -frac.w + 0.05), 0.95),
+        y: Math.min(Math.max(ny, -frac.h + 0.05), 0.95),
       });
     };
     const up = () => {
