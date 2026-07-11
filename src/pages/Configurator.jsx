@@ -368,6 +368,7 @@ const Configurator = () => {
   });
   const [namingPreset, setNamingPreset] = useState(false);
   const [presetName, setPresetName] = useState('');
+  const [activeTargetSymbol, setActiveTargetSymbol] = useState(null);
 
   const persistPresets = (next) => {
     setPresets(next);
@@ -416,33 +417,49 @@ const Configurator = () => {
               style={{ width: '100%', boxSizing: 'border-box' }}
             />
             <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {symbolList.map((s) => (
-                <div key={s} className="jirai-tag" style={{ paddingRight: config.useTargets ? '6px' : undefined }}>
-                  {s}
-                  {config.useTargets && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', background: 'rgba(255,255,255,0.3)', padding: '4px 6px', borderRadius: '6px' }}>
-                      🎯
-                      <input
-                        type="number"
-                        min="0"
-                        step="any"
-                        style={{ width: '75px', background: '#fff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: '#333', fontSize: '14px', marginLeft: '4px', outline: 'none', padding: '2px 6px' }}
-                        placeholder="목표가"
-                        value={config.targets?.[s] ?? ''}
-                        onChange={e => set('targets', { ...(config.targets || {}), [s]: e.target.value })}
-                      />
-                    </span>
-                  )}
-                  <button onClick={() => removeSymbol(s)} aria-label={`${s} 제거`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px', lineHeight: 1, marginLeft: '8px', marginRight: config.useTargets ? '4px' : '0' }}>✕</button>
-                </div>
-              ))}
-            </div>
-            
-            <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px dashed #e0e0e0' }}>
-              <label className="demo-toggle" style={{ fontSize: '14px', color: '#4e342e' }}>
-                <input type="checkbox" checked={config.useTargets} onChange={e => set('useTargets', e.target.checked)} />
-                🎯 각 종목마다 목표가 알림 설정하기 (돌파 시 축하 배너)
-              </label>
+              {symbolList.map((s) => {
+                const isActive = config.useTargets && activeTargetSymbol === s;
+                return (
+                  <div 
+                    key={s} 
+                    className="jirai-tag" 
+                    style={{ 
+                      paddingRight: isActive ? '6px' : undefined,
+                      cursor: config.useTargets ? 'pointer' : 'default',
+                      border: isActive ? '2px solid rgba(255,105,180,0.5)' : undefined 
+                    }}
+                    onClick={() => {
+                      if (config.useTargets) {
+                        setActiveTargetSymbol(isActive ? null : s);
+                      }
+                    }}
+                  >
+                    {s}
+                    {isActive && (
+                      <span 
+                        style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', background: 'rgba(255,255,255,0.3)', padding: '4px 6px', borderRadius: '6px' }}
+                        onClick={e => e.stopPropagation()} // Prevent toggling when clicking input
+                      >
+                        🎯
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          style={{ width: '75px', background: '#fff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: '#333', fontSize: '14px', marginLeft: '4px', outline: 'none', padding: '2px 6px', fontFamily: 'inherit' }}
+                          placeholder="목표가"
+                          value={config.targets?.[s] ?? ''}
+                          onChange={e => set('targets', { ...(config.targets || {}), [s]: e.target.value })}
+                        />
+                      </span>
+                    )}
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); removeSymbol(s); }} 
+                      aria-label={`${s} 제거`} 
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px', lineHeight: 1, marginLeft: '8px', marginRight: isActive ? '4px' : '0' }}
+                    >✕</button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
