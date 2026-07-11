@@ -418,24 +418,25 @@ const Configurator = () => {
             />
             <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {symbolList.map((s) => {
-                const isActive = config.useTargets && activeTargetSymbol === s;
+                const hasTarget = config.targets?.[s] !== undefined && config.targets?.[s] !== '';
+                const isExpanded = config.useTargets && (activeTargetSymbol === s || hasTarget);
                 return (
                   <div 
                     key={s} 
                     className="jirai-tag" 
                     style={{ 
-                      paddingRight: isActive ? '6px' : undefined,
+                      paddingRight: isExpanded ? '6px' : undefined,
                       cursor: config.useTargets ? 'pointer' : 'default',
-                      border: isActive ? '2px solid rgba(255,105,180,0.5)' : undefined 
+                      border: (config.useTargets && activeTargetSymbol === s) ? '2px solid rgba(255,105,180,0.5)' : undefined 
                     }}
                     onClick={() => {
                       if (config.useTargets) {
-                        setActiveTargetSymbol(isActive ? null : s);
+                        setActiveTargetSymbol((activeTargetSymbol === s) ? null : s);
                       }
                     }}
                   >
                     {s}
-                    {isActive && (
+                    {isExpanded && (
                       <span 
                         style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', background: 'rgba(255,255,255,0.3)', padding: '4px 6px', borderRadius: '6px' }}
                         onClick={e => e.stopPropagation()} // Prevent toggling when clicking input
@@ -452,10 +453,12 @@ const Configurator = () => {
                         />
                       </span>
                     )}
+                    {isExpanded && <span style={{ borderLeft: '1px solid rgba(0,0,0,0.1)', height: '16px', marginLeft: '6px' }} />}
                     <button 
                       onClick={(e) => { e.stopPropagation(); removeSymbol(s); }} 
+                      title={`${s} 종목 삭제`}
                       aria-label={`${s} 제거`} 
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px', lineHeight: 1, marginLeft: '8px', marginRight: isActive ? '4px' : '0' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px', lineHeight: 1, marginLeft: isExpanded ? '6px' : '8px', marginRight: isExpanded ? '4px' : '0' }}
                     >✕</button>
                   </div>
                 );
