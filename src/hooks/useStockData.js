@@ -139,6 +139,8 @@ export const useStockData = (symbols, demo = false) => {
       previousClose: s.base, // sparkline baseline in demo too
       week52High: s.base * 1.06, // reachable by demo surges -> banner preview
       week52Low: s.base * 0.94,
+      dayHigh: Math.max(...s.closes, s.price),
+      dayLow: Math.min(...s.closes, s.price),
       name: `${sym} (데모)`,
       marketState: 'REGULAR',
       closes: [...s.closes],
@@ -316,7 +318,15 @@ export const useStockData = (symbols, demo = false) => {
             const next = { ...prev };
             const cur = next[symbol] || {};
             const session = usMarketState;
-            const common = { ...cur, previousClose: q.pc, name: cur.name || symbol, stale: false };
+            const common = {
+              ...cur,
+              previousClose: q.pc,
+              name: cur.name || symbol,
+              stale: false,
+              // day range for the optional high/low bar
+              dayHigh: (typeof q.h === 'number' && q.h > 0) ? q.h : cur.dayHigh,
+              dayLow: (typeof q.l === 'number' && q.l > 0) ? q.l : cur.dayLow,
+            };
 
             // Finnhub's own dp (change % vs pc) backs up our calculation
             // when a response arrives with a transient pc=0

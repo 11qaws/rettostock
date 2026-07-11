@@ -21,7 +21,7 @@ let particleId = 0;
 
 const TickerCard = ({
   symbol, price, changePercent, previousClose, regularMarketPrice, name, marketState, closes, stale,
-  week52High, week52Low,
+  week52High, week52Low, dayHigh, dayLow, showRange, targetPrice,
   fx = 'full', pixel = false, showSparkline = true, loopPrevPrice,
   ...motionProps
 }) => {
@@ -37,10 +37,35 @@ const TickerCard = ({
   // (that stuck the effect state and swallowed future same-direction fires)
   const w52TimerRef = useRef(null);
   const crossTimerRef = useRef(null);
+  const targetTimerRef = useRef(null);
   useEffect(() => () => {
     clearTimeout(w52TimerRef.current);
     clearTimeout(crossTimerRef.current);
+    clearTimeout(targetTimerRef.current);
   }, []);
+
+  // Target price (스트리머 지정): fires when the price crosses the target
+  // line in either direction. Same anti-spam pattern as the 52w records.
+  const [targetPop, setTargetPop] = useState(null); // { n } — nonce for remount
+  const targetRef = useRef({ side: null, lastFx: 0, bornAt: Date.now() });
+  useEffect(() => {
+    if (typeof price !== 'number' || typeof targetPrice !== 'number' || targetPrice <= 0) return;
+    const t = targetRef.current;
+    const side = price >= targetPrice ? 1 : -1;
+    const prev = t.side;
+    t.side = side;
+    if (prev === null || prev === side) return;
+
+    const now = Date.now();
+    if (now - t.bornAt < 10000) return;   // warm-up: booting isn't "reaching"
+    if (fx === 'off') return;
+    if (now - t.lastFx < 300000) return;  // 5min cooldown
+    t.lastFx = now;
+
+    clearTimeout(targetTimerRef.current);
+    setTargetPop(p => ({ n: (p?.n || 0) + 1 }));
+    targetTimerRef.current = setTimeout(() => setTargetPop(null), 2700);
+  }, [price, targetPrice, fx]);
   const prevPriceRef = useRef(loopPrevPrice !== undefined ? loopPrevPrice : price);
   const prevSurgeRef = useRef(null); // null = no data seen yet
   const prevSignRef = useRef(null);
@@ -127,8 +152,9 @@ const TickerCard = ({
 
     const fire = (dir) => {
       clearTimeout(w52TimerRef.current);
-      setW52Pop(null); // force remount so the animation replays even same-direction
-      requestAnimationFrame(() => setW52Pop(dir));
+      // nonce key remounts the elements so the animation replays even for
+      // back-to-back same-direction events (no rAF: it can be frozen)
+      setW52Pop(p => ({ dir, n: (p?.n || 0) + 1 }));
       w52TimerRef.current = setTimeout(() => setW52Pop(null), 2700);
     };
 
@@ -175,8 +201,7 @@ const TickerCard = ({
     lastCrossRef.current = now;
 
     clearTimeout(crossTimerRef.current);
-    setCrossFx(null);
-    requestAnimationFrame(() => setCrossFx(sign > 0 ? 'up' : 'down'));
+    setCrossFx(p => ({ dir: sign > 0 ? 'up' : 'down', n: (p?.n || 0) + 1 }));
     crossTimerRef.current = setTimeout(() => setCrossFx(null), 1100);
   }, [changePercent, fx]);
 
@@ -208,22 +233,32 @@ const TickerCard = ({
       {/* Zero-cross: shimmer wipe + an arrow passing through the card,
           easing off at the center before shooting out (full fx only) */}
       {crossFx && fx === 'full' && (
-        <>
-          <span className={`cross-wipe wipe-${crossFx}`} aria-hidden="true" />
-          <span className={`cross-arrow arrow-${crossFx}`} aria-hidden="true">
-            {crossFx === 'up' ? '▲' : '▼'}
+        <React.Fragment key={`cross-${crossFx.n}`}>
+          <span className={`cross-wipe wipe-${crossFx.dir}`} aria-hidden="true" />
+          <span className={`cross-arrow arrow-${crossFx.dir}`} aria-hidden="true">
+            {crossFx.dir === 'up' ? '▲' : '▼'}
           </span>
-        </>
+        </React.Fragment>
       )}
 
       {/* 52-week record celebration */}
       {w52Pop && (
-        <>
-          <span className={`w52-ring w52-ring-${w52Pop}`} aria-hidden="true" />
-          <span className={`w52-banner w52-${w52Pop}`} aria-hidden="true">
-            {w52Pop === 'high' ? '🏆 52주 신고가' : '❄️ 52주 신저가'}
+        <React.Fragment key={`w52-${w52Pop.n}`}>
+          <span className={`w52-ring w52-ring-${w52Pop.dir}`} aria-hidden="true" />
+          <span className={`w52-banner w52-${w52Pop.dir}`} aria-hidden="true">
+            {w52Pop.dir === 'high' ? '🏆 52주 신고가' : '❄️ 52주 신저가'}
           </span>
-        </>
+        </React.Fragment>
+      )}
+
+      {/* Target price reached (opt-in) */}
+      {targetPop && (
+        <React.Fragment key={`target-${targetPop.n}`}>
+          <span className="w52-ring target-ring" aria-hidden="true" />
+          <span className="w52-banner target-banner" aria-hidden="true">
+            🎯 목표가 ${typeof targetPrice === 'number' ? targetPrice.toFixed(2) : ''}
+          </span>
+        </React.Fragment>
       )}
 
       <div className="card-row">
@@ -270,6 +305,18 @@ const TickerCard = ({
       {showSparkline && (
         <div className={`sparkline-wrap ${colorClass}`}>
           {closes && closes.length > 1 && <Sparkline data={closes} baseline={previousClose} pixel={pixel} />}
+        </div>
+      )}
+
+      {/* Optional day high/low range bar (space reserved once enabled) */}
+      {showRange && (
+        <div className="range-bar" aria-hidden="true">
+          {typeof dayHigh === 'number' && typeof dayLow === 'number' && dayHigh > dayLow && typeof price === 'number' && (
+            <span
+              className={`range-dot ${colorClass}`}
+              style={{ left: `${Math.min(100, Math.max(0, ((price - dayLow) / (dayHigh - dayLow)) * 100))}%` }}
+            />
+          )}
         </div>
       )}
     </motion.div>

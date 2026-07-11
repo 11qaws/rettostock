@@ -109,6 +109,8 @@ const defaultConfig = {
   speed: 1,
   demo: false,
   remote: false, // cross-device relay is opt-in
+  range: false,  // day high/low bar is opt-in
+  targets: {},   // per-symbol target prices (empty = off)
 };
 
 const loadConfig = () => {
@@ -306,6 +308,11 @@ const Configurator = () => {
     if (config.opacity !== 1) params.set('opacity', config.opacity);
     if (config.fx !== 'full') params.set('fx', config.fx);
     if (config.demo) params.set('demo', '1');
+    if (config.range) params.set('range', '1');
+    const targetPairs = symbolList
+      .map(s => [s.toUpperCase(), parseFloat(config.targets?.[s.toUpperCase()])])
+      .filter(([, v]) => Number.isFinite(v) && v > 0);
+    if (targetPairs.length) params.set('targets', targetPairs.map(([s, v]) => `${s}:${v}`).join(','));
     // Relay params only when opted in: room = channel, k = this browser's
     // public key. The widget only accepts changes signed by the matching
     // private key, which never leaves this browser.
@@ -344,6 +351,27 @@ const Configurator = () => {
   const removeSymbol = (target) => {
     set('symbolsInput', symbolList.filter(s => s !== target).join(', '));
   };
+
+  // Presets: save the whole current config under a name, switch with one click
+  const PRESETS_KEY = 'obs-widget-presets';
+  const [presets, setPresets] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(PRESETS_KEY)) || []; } catch { return []; }
+  });
+  const [namingPreset, setNamingPreset] = useState(false);
+  const [presetName, setPresetName] = useState('');
+
+  const persistPresets = (next) => {
+    setPresets(next);
+    try { localStorage.setItem(PRESETS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  };
+  const savePreset = () => {
+    const name = presetName.trim() || `프리셋 ${presets.length + 1}`;
+    persistPresets([...presets.filter(p => p.name !== name), { name, config }]);
+    setNamingPreset(false);
+    setPresetName('');
+  };
+  const applyPreset = (p) => setConfig({ ...defaultConfig, ...p.config, v: 2 });
+  const deletePreset = (name) => persistPresets(presets.filter(p => p.name !== name));
 
   return (
     <div className="config-bg" style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '20px' }}>
@@ -475,7 +503,55 @@ const Configurator = () => {
             </p>
           </div>
 
-          {/* 6. Advanced settings, collapsed by default */}
+          {/* 6. Presets: one-click switching between saved setups */}
+          <div className="jirai-card" style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>📁 프리셋</label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {presets.map(p => (
+                <div key={p.name} className="jirai-tag">
+                  <button
+                    onClick={() => applyPreset(p)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', color: 'inherit', padding: 0 }}
+                  >{p.name}</button>
+                  <button
+                    onClick={() => deletePreset(p.name)}
+                    aria-label={`${p.name} 삭제`}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px', lineHeight: 1 }}
+                  >✕</button>
+                </div>
+              ))}
+              {!namingPreset ? (
+                <button
+                  className="jirai-button jirai-button-outline"
+                  style={{ padding: '6px 12px', fontSize: '13px' }}
+                  onClick={() => setNamingPreset(true)}
+                >+ 현재 구성 저장</button>
+              ) : (
+                <span style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                  <input
+                    className="jirai-input"
+                    style={{ padding: '6px 10px', width: '140px', fontSize: '13px' }}
+                    autoFocus
+                    placeholder={`프리셋 ${presets.length + 1}`}
+                    value={presetName}
+                    onChange={e => setPresetName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') savePreset();
+                      if (e.key === 'Escape') { setNamingPreset(false); setPresetName(''); }
+                    }}
+                  />
+                  <button className="jirai-button" style={{ padding: '6px 14px', fontSize: '13px' }} onClick={savePreset}>저장</button>
+                </span>
+              )}
+            </div>
+            {presets.length === 0 && !namingPreset && (
+              <p style={{ fontSize: '13px', color: '#b5a39c', margin: '8px 0 0' }}>
+                지금 구성(종목·테마·모드·옵션)을 통째로 저장해두고, 방송 중 딸깍 한 번으로 갈아탈 수 있어요.
+              </p>
+            )}
+          </div>
+
+          {/* 7. Advanced settings, collapsed by default */}
           <details className="jirai-card advanced-panel">
             <summary>⚙️ 고급 설정</summary>
 
@@ -531,6 +607,38 @@ const Configurator = () => {
               <label>🫧 카드 불투명도 <b>{Math.round(config.opacity * 100)}%</b></label>
               <input type="range" min="0.2" max="1" step="0.05" value={config.opacity}
                 onChange={e => set('opacity', parseFloat(e.target.value))} />
+            </div>
+
+            <div className="advanced-row">
+              <label className="demo-toggle">
+                <input type="checkbox" checked={!!config.range} onChange={e => set('range', e.target.checked)} />
+                📊 당일 고저 레인지 바 — 카드 아래에 오늘 저가~고가 사이 현재 위치를 점으로 표시해요
+              </label>
+            </div>
+
+            <div className="advanced-row">
+              <label>🎯 목표가 알림</label>
+              <p style={{ fontSize: '13px', color: '#8d6e63', margin: '0 0 8px', lineHeight: 1.5 }}>
+                가격을 적어두면 그 선을 지나는 순간 카드에 축하 배너가 떠요. 비워두면 꺼진 상태예요.
+              </p>
+              {symbolList.map(s => {
+                const key = s.toUpperCase();
+                return (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '6px 0' }}>
+                    <span style={{ width: '64px', fontSize: '14px', fontWeight: 'bold', color: '#4e342e' }}>{key}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      className="jirai-input"
+                      style={{ flex: 1, padding: '6px 12px', fontSize: '14px' }}
+                      placeholder="예: 200"
+                      value={config.targets?.[key] ?? ''}
+                      onChange={e => set('targets', { ...(config.targets || {}), [key]: e.target.value })}
+                    />
+                  </div>
+                );
+              })}
             </div>
 
             <div className="advanced-row">

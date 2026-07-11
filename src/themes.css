@@ -25,6 +25,18 @@
   --color-primary: #a855f7;
   --badge-ext: #fbbf24; /* pre/after-hours badge: amber, per-theme contrast */
 
+  /* Celebration banners (52주 신고/신저가, 목표가) — every theme restyles
+     these so the big moments feel native to the look */
+  --fx-high-bg: linear-gradient(100deg, #ffe27a, #ffc94d 40%, #ffefb0 60%, #f5b73e);
+  --fx-high-ink: #5a3a00;
+  --fx-high-glow: rgba(255, 200, 60, 0.8);
+  --fx-low-bg: linear-gradient(100deg, #2c4f8e, #3f74bd 45%, #2a548f);
+  --fx-low-ink: #eaf5ff;
+  --fx-low-glow: rgba(90, 150, 255, 0.65);
+  --fx-target-bg: linear-gradient(100deg, #ffb1d8, #ff6fae 45%, #ffd0e6);
+  --fx-target-ink: #4d1030;
+  --fx-target-glow: rgba(255, 110, 175, 0.75);
+
   --font-head: 'Inter', 'Segoe UI', sans-serif;
   --font-num: 'Inter', 'Segoe UI', sans-serif;
 }
@@ -44,6 +56,17 @@
 
   --color-primary: #ff2a85;
   --badge-ext: #ffd60a;
+
+  /* neon sign: dark plate + glowing neon text */
+  --fx-high-bg: rgba(22, 2, 34, 0.92);
+  --fx-high-ink: #ffe94d;
+  --fx-high-glow: rgba(255, 230, 80, 0.9);
+  --fx-low-bg: rgba(22, 2, 34, 0.92);
+  --fx-low-ink: #55e0ff;
+  --fx-low-glow: rgba(85, 224, 255, 0.85);
+  --fx-target-bg: rgba(22, 2, 34, 0.92);
+  --fx-target-ink: #ff2a85;
+  --fx-target-glow: rgba(255, 42, 133, 0.9);
 
   --font-head: 'Fredoka', 'Jua', sans-serif;
   --font-num: 'Fredoka', 'Jua', sans-serif;
@@ -71,6 +94,12 @@
   font-weight: 600;
 }
 
+.theme-cyber-neon .w52-banner,
+.theme-cyber-neon .target-banner {
+  border: 1.5px solid currentColor;
+  text-shadow: 0 0 6px currentColor, 0 0 14px currentColor;
+}
+
 .theme-cyber-neon .text-up {
   color: #fff;
   text-shadow: 0 0 5px #fff, 0 0 10px var(--color-up), 0 0 20px var(--color-up);
@@ -96,6 +125,17 @@
 
   --color-primary: #ffb6c1;
   --badge-ext: #c77800; /* dark amber, readable on the cream card */
+
+  /* rose-gold / lavender pastels */
+  --fx-high-bg: linear-gradient(100deg, #ffe3b3, #ffcf9e 40%, #ffd9e8 70%, #ffc7d9);
+  --fx-high-ink: #7a4a12;
+  --fx-high-glow: rgba(255, 180, 120, 0.7);
+  --fx-low-bg: linear-gradient(100deg, #e3ddff, #c9bcf7 45%, #dcd2ff);
+  --fx-low-ink: #453a78;
+  --fx-low-glow: rgba(160, 140, 240, 0.6);
+  --fx-target-bg: linear-gradient(100deg, #ffc2e0, #ff8fbf 45%, #ffd4e8);
+  --fx-target-ink: #6b1039;
+  --fx-target-glow: rgba(255, 140, 190, 0.75);
 
   --font-head: 'Jua', 'Fredoka', sans-serif;
   --font-num: 'Jua', 'Fredoka', sans-serif;
@@ -137,6 +177,17 @@
 
   --color-primary: #ed76ac;
   --badge-ext: #ffcf5c;
+
+  /* RETTO palette, hard pixel look (square corners set below) */
+  --fx-high-bg: #ed76ac;
+  --fx-high-ink: #331c36;
+  --fx-high-glow: rgba(237, 118, 172, 0.75);
+  --fx-low-bg: #97a5ff;
+  --fx-low-ink: #101443;
+  --fx-low-glow: rgba(151, 165, 255, 0.75);
+  --fx-target-bg: #ffcf5c;
+  --fx-target-ink: #4a3000;
+  --fx-target-glow: rgba(255, 207, 92, 0.75);
 
   --font-head: 'Galmuri11', 'Galmuri9', 'NeoDunggeunmo', monospace;
   --font-num: 'Galmuri11', 'Galmuri9', monospace;
@@ -186,6 +237,15 @@
 
 .theme-retto-pixel .market-badge { border-radius: 0; }
 
+/* Pixel-hard celebration banners */
+.theme-retto-pixel .w52-banner,
+.theme-retto-pixel .target-banner {
+  border-radius: 0;
+  box-shadow: 3px 3px 0 #331c36;
+  -webkit-font-smoothing: none;
+}
+.theme-retto-pixel .w52-ring, .theme-retto-pixel .target-ring { border-radius: 0; }
+
 /* ===== Theme: LED Board — brokerage ticker board ===== */
 .theme-led-board {
   --bg-rgb: 5, 9, 13;
@@ -202,6 +262,17 @@
 
   --color-primary: #ffb300;        /* amber LED */
   --badge-ext: #ffb300;
+
+  /* LED sign: black plate + glowing segments */
+  --fx-high-bg: #0a0e12;
+  --fx-high-ink: #ffb300;
+  --fx-high-glow: rgba(255, 179, 0, 0.85);
+  --fx-low-bg: #0a0e12;
+  --fx-low-ink: #45aaff;
+  --fx-low-glow: rgba(69, 170, 255, 0.8);
+  --fx-target-bg: #0a0e12;
+  --fx-target-ink: #ff5fa2;
+  --fx-target-glow: rgba(255, 95, 162, 0.8);
 
   --font-head: 'Orbitron', 'Inter', sans-serif;
   --font-num: 'DSEG7-Classic', 'DSEG7 Classic', 'Orbitron', monospace;
@@ -252,6 +323,14 @@
 .theme-led-board .text-up { text-shadow: 0 0 4px var(--color-up), 0 0 12px var(--color-up-glow); }
 .theme-led-board .text-down { text-shadow: 0 0 4px var(--color-down), 0 0 12px var(--color-down-glow); }
 
+/* LED sign celebration banners */
+.theme-led-board .w52-banner,
+.theme-led-board .target-banner {
+  border: 1px solid #263544;
+  letter-spacing: 2px;
+  text-shadow: 0 0 6px currentColor;
+}
+
 /* ===== Theme: Pastel Light — for bright scenes ===== */
 .theme-pastel-light {
   --bg-rgb: 255, 255, 255;
@@ -267,6 +346,17 @@
 
   --color-primary: #d4589c;
   --badge-ext: #b26a00; /* dark amber for the white card */
+
+  /* soft pastels on the white card */
+  --fx-high-bg: linear-gradient(100deg, #ffedbd, #ffdd8f 45%, #fff3d1);
+  --fx-high-ink: #6b4a00;
+  --fx-high-glow: rgba(240, 190, 90, 0.55);
+  --fx-low-bg: linear-gradient(100deg, #d9e8ff, #b7d1f7 45%, #e3eeff);
+  --fx-low-ink: #23477e;
+  --fx-low-glow: rgba(120, 160, 230, 0.5);
+  --fx-target-bg: linear-gradient(100deg, #ffd6ea, #ffadd2 45%, #ffe3f0);
+  --fx-target-ink: #711b44;
+  --fx-target-glow: rgba(255, 150, 200, 0.6);
 
   --font-head: 'Fredoka', 'Jua', sans-serif;
   --font-num: 'Fredoka', 'Jua', sans-serif;
