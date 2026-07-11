@@ -320,7 +320,7 @@ const Configurator = () => {
       params.set('room', room);
       params.set('k', signingKeys.publicKeyB64);
     }
-    return `${baseUrl}?${params.toString()}`;
+    return `${baseUrl}#/widget?${params.toString()}`;
   }, [config, symbolList, room, signingKeys]);
 
   const [debouncedWidgetUrl, setDebouncedWidgetUrl] = useState(widgetUrl);
