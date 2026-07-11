@@ -145,12 +145,12 @@ const Configurator = () => {
   const [room] = useState(() => getOrCreateRoom());
   const [signingKeys, setSigningKeys] = useState(null);
 
-  // Key pair exists only in this browser; created lazily when remote is on
+  // Key pair exists only in this browser; created lazily
   useEffect(() => {
-    if (config.remote && !signingKeys) {
+    if (!signingKeys) {
       getOrCreateSigningKeys().then(setSigningKeys).catch(() => {});
     }
-  }, [config.remote, signingKeys]);
+  }, [signingKeys]);
   const [copied, setCopied] = useState(false);
   const [previewBg, setPreviewBg] = useState('dark');
   const [justApplied, setJustApplied] = useState(false);
@@ -310,27 +310,43 @@ const Configurator = () => {
     if (config.fx !== 'full') params.set('fx', config.fx);
     if (config.demo) params.set('demo', '1');
     const targetPairs = symbolList
-      .map(s => [s.toUpperCase(), parseFloat(config.targets?.[s.toUpperCase()])])
+      .map(s => [s.toUpperCase(), parseFloat(config.targets?.[s])])
       .filter(([, v]) => Number.isFinite(v) && v > 0);
     if (targetPairs.length) params.set('targets', targetPairs.map(([s, v]) => `${s}:${v}`).join(','));
-    // Relay params only when opted in: room = channel, k = this browser's
+    // Relay params always included: room = channel, k = this browser's
     // public key. The widget only accepts changes signed by the matching
     // private key, which never leaves this browser.
-    if (config.remote && signingKeys) {
+    if (signingKeys) {
       params.set('room', room);
       params.set('k', signingKeys.publicKeyB64);
     }
-    return `${baseUrl}#/widget?${params.toString()}`;
+    return `${baseUrl}?${params.toString()}`;
   }, [config, symbolList, room, signingKeys]);
+
+  const [debouncedWidgetUrl, setDebouncedWidgetUrl] = useState(widgetUrl);
+  
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedWidgetUrl(widgetUrl), 500);
+    return () => clearTimeout(t);
+  }, [widgetUrl]);
 
   // Persist settings + push to widget (same-browser channels + ntfy relay)
   useEffect(() => {
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch { /* ignore */ }
-    publishSync({ url: widgetUrl, timestamp: Date.now() }, config.remote && signingKeys ? room : null, signingKeys?.privateKey);
+    
+    // Debounce the network publish to prevent rate limiting
+    const timeoutId = setTimeout(() => {
+      publishSync({ url: widgetUrl, timestamp: Date.now() }, room, signingKeys?.privateKey);
+    }, 500);
+
     setJustApplied(true);
     setCustomDims(null); // Reset custom dims when config changes significantly
     const t = setTimeout(() => setJustApplied(false), 1500);
-    return () => clearTimeout(t);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      clearTimeout(t);
+    };
   }, [widgetUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for 'TARGET_REACHED' feedback from the preview iframe so we can auto-clear the input
@@ -850,7 +866,7 @@ const Configurator = () => {
                         }}
                       >
                         <iframe
-                          src={widgetUrl}
+                    src={debouncedWidgetUrl}
                           style={{
                             width: `${actualDims.w}px`,
                             height: `${actualDims.h}px`,
@@ -904,7 +920,7 @@ const Configurator = () => {
                     : (PREVIEW_BGS.find(b => b.value === previewBg) || PREVIEW_BGS[0]).style),
                 }}>
                   <iframe
-                    src={widgetUrl}
+                    src={debouncedWidgetUrl}
                     style={{
                       width: `${frameW}px`,
                       height: `${frameH}px`,

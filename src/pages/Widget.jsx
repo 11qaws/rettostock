@@ -68,8 +68,19 @@ const Widget = () => {
   useWidgetSync(roomParam, keyParam, (payload) => {
     try {
       const newUrlObj = new URL(payload.url, window.location.origin);
-      if (window.location.hash !== newUrlObj.hash) {
-        navigate(newUrlObj.hash.replace(/^#/, ''), { replace: true });
+      const newParams = new URLSearchParams(newUrlObj.hash.split('?')[1] || '');
+      const newTargets = newParams.get('targets');
+      
+      const currentParams = new URLSearchParams(searchParams);
+      const currentTargets = currentParams.get('targets');
+      
+      if (newTargets !== currentTargets) {
+        if (newTargets) {
+          currentParams.set('targets', newTargets);
+        } else {
+          currentParams.delete('targets');
+        }
+        navigate(`?${currentParams.toString()}`, { replace: true });
       }
     } catch { /* ignore */ }
   });
