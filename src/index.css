@@ -889,3 +889,12 @@ html, body, #root {
   }
   .theme-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+.no-spin-button::-webkit-outer-spin-button,
+.no-spin-button::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spin-button {
+  -moz-appearance: textfield;
+}

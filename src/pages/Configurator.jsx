@@ -446,10 +446,24 @@ const Configurator = () => {
                           type="number"
                           min="0"
                           step="any"
+                          className="no-spin-button"
                           style={{ width: '75px', background: '#fff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: '#333', fontSize: '14px', marginLeft: '4px', outline: 'none', padding: '2px 6px', fontFamily: 'inherit' }}
                           placeholder="목표가"
                           value={config.targets?.[s] ?? ''}
                           onChange={e => set('targets', { ...(config.targets || {}), [s]: e.target.value })}
+                          onFocus={e => { e.target.dataset.initialValue = config.targets?.[s] ?? ''; }}
+                          onKeyDown={e => {
+                            if (e.key === 'Escape') {
+                              set('targets', { ...(config.targets || {}), [s]: e.target.dataset.initialValue });
+                              e.target.blur();
+                            } else if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (e.target.value === '0') {
+                                set('targets', { ...(config.targets || {}), [s]: '' });
+                              }
+                              e.target.blur();
+                            }
+                          }}
                         />
                       </span>
                     )}
@@ -653,6 +667,23 @@ const Configurator = () => {
               <label>🫧 카드 불투명도 <b>{Math.round(config.opacity * 100)}%</b></label>
               <input type="range" min="0.2" max="1" step="0.05" value={config.opacity}
                 onChange={e => set('opacity', parseFloat(e.target.value))} />
+            </div>
+
+            <div className="advanced-row">
+              <label className="demo-toggle">
+                <input type="checkbox" checked={config.useTargets} onChange={e => {
+                  set('useTargets', e.target.checked);
+                  if (!e.target.checked) setActiveTargetSymbol(null);
+                }} />
+                🎯 목표가 알림 사용하기 (체크 후 맨 위 1번 항목에서 종목 태그를 클릭하세요)
+              </label>
+              {config.useTargets && (
+                <ul style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0 24px', paddingLeft: '16px', lineHeight: 1.6 }}>
+                  <li><b>Enter</b>: 입력 완료</li>
+                  <li><b>ESC</b>: 입력 취소 (원래 숫자로 복구)</li>
+                  <li><b>0 입력 후 Enter</b>: 목표가 해제</li>
+                </ul>
+              )}
             </div>
 
             <div className="advanced-row">
