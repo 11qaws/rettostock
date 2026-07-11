@@ -44,24 +44,39 @@ const TickerCard = ({
     clearTimeout(targetTimerRef.current);
   }, []);
 
-  // Target price (스트리머 지정): fires when the price crosses the target
-  // line in either direction. Same anti-spam pattern as the 52w records.
+  // Target price (스트리머 지정): a milestone. Celebrates once when the
+  // price first crosses the target, then auto-disarms — a reached goal is
+  // consumed, no repeat nagging. A ±0.15% dead zone keeps boundary noise
+  // from flipping the side; editing the target re-arms it silently (a new
+  // number never pops on its own).
   const [targetPop, setTargetPop] = useState(null); // { n } — nonce for remount
-  const targetRef = useRef({ side: null, lastFx: 0, bornAt: Date.now() });
+  const targetRef = useRef({ side: null, lastTarget: null, done: false, bornAt: Date.now() });
   useEffect(() => {
     if (typeof price !== 'number' || typeof targetPrice !== 'number' || targetPrice <= 0) return;
     const t = targetRef.current;
-    const side = price >= targetPrice ? 1 : -1;
+
+    const margin = targetPrice * 0.0015;
+    let side;
+    if (price >= targetPrice + margin) side = 1;
+    else if (price <= targetPrice - margin) side = -1;
+    else side = t.side ?? (price >= targetPrice ? 1 : -1); // inside dead zone: hold
+
+    // Target changed (or first run): re-arm silently
+    if (t.lastTarget !== targetPrice) {
+      t.lastTarget = targetPrice;
+      t.side = side;
+      t.done = false;
+      return;
+    }
+
     const prev = t.side;
     t.side = side;
-    if (prev === null || prev === side) return;
-
-    const now = Date.now();
-    if (now - t.bornAt < 10000) return;   // warm-up: booting isn't "reaching"
+    if (prev === null || prev === side) return; // no genuine cross
+    if (t.done) return;                         // milestone already reached
+    if (Date.now() - t.bornAt < 10000) return;  // warm-up: booting isn't "reaching"
     if (fx === 'off') return;
-    if (now - t.lastFx < 300000) return;  // 5min cooldown
-    t.lastFx = now;
 
+    t.done = true; // reached — auto-disarm until the target is changed
     clearTimeout(targetTimerRef.current);
     setTargetPop(p => ({ n: (p?.n || 0) + 1 }));
     targetTimerRef.current = setTimeout(() => setTargetPop(null), 2700);
