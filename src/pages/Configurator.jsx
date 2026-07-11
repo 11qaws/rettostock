@@ -677,9 +677,8 @@ const Configurator = () => {
                       <RefreshCw size={14} /> 새 코드
                     </button>
                   </div>
-                  <p style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0', lineHeight: 1.6 }}>
-                    이 코드가 내 브라우저와 OBS 위젯을 짝지어 줘요.
-                    <b>켜거나 [새 코드]를 누른 뒤에는 OBS에 위젯 URL을 한 번 다시 복사해 넣으면</b> 연결 끝입니다.
+                <p style={{ fontSize: '13px', color: '#d84315', margin: '8px 0 0', lineHeight: 1.6, fontWeight: 'bold' }}>
+                    ⚠️ 체크한 후 위의 위젯 URL을 OBS 브라우저 소스에 다시 붙여넣어야 작동합니다.
                   </p>
                 </div>
               )}
