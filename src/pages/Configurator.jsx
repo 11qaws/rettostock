@@ -158,16 +158,26 @@ const Configurator = () => {
   const [customDims, setCustomDims] = useState(null);
   const [widgetPos, setWidgetPos] = useState({ x: 0.02, y: 0.03 }); // preview-only, never in the URL
   const [sceneBoxW, setSceneBoxW] = useState(0);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [matchedTheme, setMatchedTheme] = useState(null); // ping the auto-picked swatch
+  const [placeHint, setPlaceHint] = useState(false);      // one-time "you can drag me" pulse
+  const [sceneZoom, setSceneZoom] = useState('fit');      // 'fit' | 'full' (1:1 pixels)
+  const [guides, setGuides] = useState({ v: false, h: false });
   const fileInputRef = useRef(null);
   const sceneBoxRef = useRef(null);
+  const sceneScrollRef = useRef(null);
 
   const handleSceneImage = async (file) => {
     if (!file || !file.type.startsWith('image/')) return;
+    setAnalyzing(true);
     try {
       const stats = await analyzeSceneImage(file);
       const pick = pickThemeForScene(stats);
       setConfig(prev => ({ ...prev, theme: pick.theme }));
       setMatchResult({ ...pick, avg: stats.avg, label: THEMES.find(t => t.value === pick.theme)?.label });
+      // Ping the swatch that was auto-picked so the cause is visible
+      setMatchedTheme(pick.theme);
+      setTimeout(() => setMatchedTheme(null), 2600);
       // Use the screenshot itself as the preview backdrop
       const url = URL.createObjectURL(file);
       setSceneImage(prev => {
@@ -176,9 +186,23 @@ const Configurator = () => {
       });
       setSceneDims({ w: stats.width, h: stats.height });
       setPreviewBg('scene');
+      setSceneZoom('fit');
+      setPlaceHint(true);
+      setTimeout(() => setPlaceHint(false), 2600);
     } catch {
       setMatchResult({ error: true });
+    } finally {
+      setAnalyzing(false);
     }
+  };
+
+  const clearScene = () => {
+    if (sceneImage) URL.revokeObjectURL(sceneImage);
+    setSceneImage(null);
+    setSceneDims(null);
+    setMatchResult(null);
+    setCustomDims(null);
+    if (previewBg === 'scene') setPreviewBg('dark');
   };
 
   const sceneMode = previewBg === 'scene' && sceneImage && sceneDims;
@@ -189,7 +213,17 @@ const Configurator = () => {
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
-  }, [sceneMode]);
+  }, [sceneMode, sceneZoom]);
+
+  // Entering 1:1 view: scroll so the widget is in the middle of the viewport
+  useEffect(() => {
+    if (sceneZoom !== 'full' || !sceneDims) return;
+    const el = sceneScrollRef.current;
+    if (!el) return;
+    el.scrollLeft = widgetPos.x * sceneDims.w - el.clientWidth / 2 + 100;
+    el.scrollTop = widgetPos.y * sceneDims.h - el.clientHeight / 2 + 100;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sceneZoom]);
 
   const startWidgetDrag = (e, frac) => {
     e.preventDefault();
@@ -197,14 +231,21 @@ const Configurator = () => {
     if (!box) return;
     const start = { px: e.clientX, py: e.clientY, x: widgetPos.x, y: widgetPos.y };
     const move = (ev) => {
-      const nx = start.x + (ev.clientX - start.px) / box.width;
-      const ny = start.y + (ev.clientY - start.py) / box.height;
+      let nx = start.x + (ev.clientX - start.px) / box.width;
+      let ny = start.y + (ev.clientY - start.py) / box.height;
+      // Soft snap to the scene center with visible guide lines
+      const v = Math.abs(nx + frac.w / 2 - 0.5) < 0.015;
+      const h = Math.abs(ny + frac.h / 2 - 0.5) < 0.015;
+      if (v) nx = 0.5 - frac.w / 2;
+      if (h) ny = 0.5 - frac.h / 2;
+      setGuides({ v, h });
       setWidgetPos({
         x: Math.min(Math.max(nx, -frac.w + 0.05), 0.95),
         y: Math.min(Math.max(ny, -frac.h + 0.05), 0.95),
       });
     };
     const up = () => {
+      setGuides({ v: false, h: false });
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
     };
@@ -354,7 +395,7 @@ const Configurator = () => {
               {THEMES.map(t => (
                 <button
                   key={t.value}
-                  className={`theme-swatch ${config.theme === t.value ? 'selected' : ''}`}
+                  className={`theme-swatch ${config.theme === t.value ? 'selected' : ''} ${matchedTheme === t.value ? 'matched' : ''}`}
                   onClick={() => set('theme', t.value)}
                 >
                   <span
@@ -541,17 +582,35 @@ const Configurator = () => {
         <div className="config-preview-wrapper">
           <label className="preview-label">🖥️ 미리보기</label>
 
-          {/* Scene screenshot: auto-match theme + use as preview backdrop */}
-          <div
-            className="scene-drop"
-            style={{ width: '100%', boxSizing: 'border-box', marginBottom: '12px' }}
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => { e.preventDefault(); handleSceneImage(e.dataTransfer.files[0]); }}
-          >
-            <ImagePlus size={18} />
-            방송 화면 스크린샷을 붙여넣기(Ctrl+V)하거나 드롭해 보세요
-          </div>
+          {/* Scene screenshot: auto-match theme + use as preview backdrop.
+              Before upload: a drop zone that says what you get.
+              After upload: a compact bar (thumbnail + 교체/제거). */}
+          {!sceneImage ? (
+            <div
+              className="scene-drop"
+              style={{ width: '100%', boxSizing: 'border-box', marginBottom: '12px' }}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); handleSceneImage(e.dataTransfer.files[0]); }}
+            >
+              <ImagePlus size={18} />
+              <span>
+                {analyzing ? '분석 중…' : '방송 화면 스크린샷을 붙여넣기(Ctrl+V)하거나 드롭해 보세요'}
+                {!analyzing && <small>어울리는 테마 추천 + 내 화면 위에 실제 배치 미리보기</small>}
+              </span>
+            </div>
+          ) : (
+            <div
+              className="scene-bar"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); handleSceneImage(e.dataTransfer.files[0]); }}
+            >
+              <img src={sceneImage} alt="" className="scene-thumb" />
+              <span className="scene-bar-label">{analyzing ? '분석 중…' : '방송 화면 적용됨'}</span>
+              <button className="jirai-button jirai-button-outline scene-bar-btn" onClick={() => fileInputRef.current?.click()}>교체</button>
+              <button className="jirai-button jirai-button-outline scene-bar-btn" onClick={clearScene}>제거</button>
+            </div>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -586,75 +645,90 @@ const Configurator = () => {
           </div>
 
           {sceneMode ? (() => {
-            // Placement preview: the whole screenshot at its real aspect
-            // ratio, with the widget at true relative scale. Drag to try
-            // positions — preview only, the widget URL never changes.
+            // Placement preview: the whole screenshot with the widget at
+            // true relative scale. '화면 맞춤' fits the scene to the panel
+            // (position work); '실제 크기' renders 1:1 pixels with scrolling
+            // so the widget is inspectable at its real size. Preview only —
+            // the widget URL never changes.
             const rec = recommendedDims(config.displayMode, symbolList.length);
             const actualDims = customDims || rec;
-            const k = sceneBoxW ? sceneBoxW / sceneDims.w : 0;
+            const isFull = sceneZoom === 'full';
+            const k = isFull ? 1 : (sceneBoxW ? sceneBoxW / sceneDims.w : 0);
             const frac = { w: actualDims.w / sceneDims.w, h: actualDims.h / sceneDims.h };
             return (
               <>
+                <div className="segmented small" style={{ width: '100%', marginBottom: '8px' }}>
+                  <button className={`segment ${!isFull ? 'selected' : ''}`} onClick={() => setSceneZoom('fit')}>
+                    화면 맞춤
+                  </button>
+                  <button className={`segment ${isFull ? 'selected' : ''}`} onClick={() => setSceneZoom('full')}>
+                    실제 크기 (100%)
+                  </button>
+                </div>
                 <div
-                  ref={sceneBoxRef}
+                  ref={sceneScrollRef}
                   style={{
                     width: '100%',
-                    aspectRatio: `${sceneDims.w} / ${sceneDims.h}`,
-                    background: `url(${sceneImage}) center / cover`,
-                    position: 'relative',
-                    overflow: 'hidden',
                     border: '4px solid #ffb6c1',
                     borderRadius: '12px',
                     boxSizing: 'content-box',
                     boxShadow: '0 8px 16px rgba(255,182,193,0.3)',
+                    overflow: isFull ? 'auto' : 'hidden',
+                    maxHeight: isFull ? '460px' : undefined,
                   }}
                 >
-                  {k > 0 && (
-                    <div
-                      onPointerDown={(e) => startWidgetDrag(e, frac)}
-                      style={{
-                        position: 'absolute',
-                        left: `${widgetPos.x * 100}%`,
-                        top: `${widgetPos.y * 100}%`,
-                        width: `${actualDims.w * k}px`,
-                        height: `${actualDims.h * k}px`,
-                        cursor: 'move',
-                        touchAction: 'none',
-                        outline: '1.5px dashed rgba(255, 182, 193, 0.9)',
-                        outlineOffset: '2px',
-                      }}
-                    >
-                      <iframe
-                        src={widgetUrl}
-                        style={{
-                          width: `${actualDims.w}px`,
-                          height: `${actualDims.h}px`,
-                          border: 'none',
-                          transform: `scale(${k})`,
-                          transformOrigin: 'top left',
-                          pointerEvents: 'none',
-                        }}
-                        title="Widget Placement Preview"
-                      />
-                      {/* Resize Handle */}
+                  <div
+                    ref={sceneBoxRef}
+                    style={{
+                      position: 'relative',
+                      ...(isFull
+                        ? { width: `${sceneDims.w}px`, height: `${sceneDims.h}px`, background: `url(${sceneImage}) 0 0 / 100% 100%` }
+                        : { width: '100%', aspectRatio: `${sceneDims.w} / ${sceneDims.h}`, background: `url(${sceneImage}) center / cover` }),
+                    }}
+                  >
+                    {guides.v && <span className="snap-guide guide-v" />}
+                    {guides.h && <span className="snap-guide guide-h" />}
+                    {k > 0 && (
                       <div
-                        onPointerDown={(e) => startWidgetResize(e, actualDims.w, actualDims.h, k)}
+                        className={placeHint ? 'place-hint' : ''}
+                        onPointerDown={(e) => startWidgetDrag(e, frac)}
                         style={{
                           position: 'absolute',
-                          bottom: 0,
-                          right: 0,
-                          width: '24px',
-                          height: '24px',
-                          cursor: 'nwse-resize',
-                          background: 'linear-gradient(135deg, transparent 50%, rgba(255,182,193,0.9) 50%)',
-                          zIndex: 10,
+                          left: `${widgetPos.x * 100}%`,
+                          top: `${widgetPos.y * 100}%`,
+                          width: `${actualDims.w * k}px`,
+                          height: `${actualDims.h * k}px`,
+                          cursor: 'move',
+                          touchAction: 'none',
+                          outline: '1.5px dashed rgba(255, 182, 193, 0.9)',
+                          outlineOffset: '2px',
                         }}
-                      />
-                    </div>
-                  )}
+                      >
+                        <iframe
+                          src={widgetUrl}
+                          style={{
+                            width: `${actualDims.w}px`,
+                            height: `${actualDims.h}px`,
+                            border: 'none',
+                            transform: `scale(${k})`,
+                            transformOrigin: 'top left',
+                            pointerEvents: 'none',
+                          }}
+                          title="Widget Placement Preview"
+                        />
+                        {/* Resize handle — big enough to actually find */}
+                        <div
+                          onPointerDown={(e) => startWidgetResize(e, actualDims.w, actualDims.h, k)}
+                          className="place-resize-handle"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <p style={{ fontSize: '13px', color: '#b5a39c', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.5 }}>
-                  위젯을 드래그해서 배치하거나 우측 하단을 당겨 크기를 조절해 보세요<br />
+                  {isFull
+                    ? '실제 크기 보기 — 스크롤로 이동하며 위젯을 100% 크기로 확인하세요'
+                    : '위젯을 드래그해서 배치하거나 우측 하단 핸들로 크기를 조절해 보세요'}<br />
                   OBS 배치 참고: X {Math.round(widgetPos.x * sceneDims.w)}, Y {Math.round(widgetPos.y * sceneDims.h)} · 크기 {Math.round(actualDims.w)}×{Math.round(actualDims.h)}
                 </p>
               </>
