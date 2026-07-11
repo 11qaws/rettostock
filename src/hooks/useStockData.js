@@ -141,7 +141,6 @@ export const useStockData = (symbols, demo = false) => {
           changePercent: s.changePercent,
           previousClose: s.base, // sparkline baseline in demo too
           name: `${sym} (데모)`,
-          isCrypto: false,
           marketState: 'REGULAR',
           closes: [...s.closes],
           stale: false,
@@ -179,6 +178,7 @@ export const useStockData = (symbols, demo = false) => {
     let statusTimer = null;
     let holidayTimer = null;
     let stopped = false;
+    let quotesComplete = false; // all symbols have price + change on screen
     const failCounts = {};
     // Known synchronously from the very first tick — no network round-trip
     // needed before the widget knows which session it is in.
@@ -204,7 +204,6 @@ export const useStockData = (symbols, demo = false) => {
             closes: cur.closes || cached.closes,
             name: cur.name && cur.name !== sym ? cur.name : (cached.name || sym),
             previousClose: cur.previousClose ?? cached.previousClose,
-            isCrypto: false,
           };
         }
         return next;
@@ -239,8 +238,7 @@ export const useStockData = (symbols, demo = false) => {
                     price,
                     changePercent: cur.previousClose ? calcChange(price, cur.regularMarketPrice, cur.previousClose, cur.marketState) : cur.changePercent,
                     name: cur.name || sym,
-                    isCrypto: false,
-                    stale: false
+                            stale: false
                   };
                 }
                 return next;
@@ -283,7 +281,11 @@ export const useStockData = (symbols, demo = false) => {
             failCounts[symbol] = 0;
             const cur = next[symbol] || {};
             const session = usMarketState;
-            const common = { ...cur, previousClose: q.pc, name: cur.name || symbol, isCrypto: false, stale: false };
+            const common = { ...cur, previousClose: q.pc, name: cur.name || symbol, stale: false };
+
+            // Finnhub's own dp (change % vs pc) backs up our calculation
+            // when a response arrives with a transient pc=0
+            const dpFallback = (typeof q.dp === 'number' && q.dp !== 0) ? q.dp : cur.changePercent;
 
             if (session === 'REGULAR') {
               // Overwrite unconditionally: ETFs missing from the websocket
@@ -292,14 +294,14 @@ export const useStockData = (symbols, demo = false) => {
                 ...common,
                 price: q.c,
                 regularMarketPrice: q.c,
-                changePercent: calcChange(q.c, q.c, q.pc, 'REGULAR') ?? cur.changePercent,
+                changePercent: calcChange(q.c, q.c, q.pc, 'REGULAR') ?? dpFallback,
               };
             } else if (typeof cur.price !== 'number') {
               // First paint before TradingView lands (or when it's blocked).
               next[symbol] = {
                 ...common,
                 price: q.c,
-                changePercent: calcChange(q.c, cur.regularMarketPrice, q.pc, session) ?? cur.changePercent,
+                changePercent: calcChange(q.c, cur.regularMarketPrice, q.pc, session) ?? dpFallback,
               };
             } else {
               // PRE/POST/CLOSED with a price already on screen: q.c is the
@@ -309,6 +311,11 @@ export const useStockData = (symbols, demo = false) => {
               next[symbol] = common;
             }
           }
+          // First paint counts as done only when every symbol has both
+          // numbers — until then the CLOSED throttle must not kick in
+          quotesComplete = stockSymbols.every(
+            s => typeof next[s]?.price === 'number' && typeof next[s]?.changePercent === 'number'
+          );
           return next;
         });
       };
@@ -431,8 +438,10 @@ export const useStockData = (symbols, demo = false) => {
           if (stopped) return;
           // CLOSED: prices are frozen, so throttle way down (kept alive at
           // 10min for the overnight previous-close rollover and staleness
-          // detection). Session changes kick an immediate fetch below.
-          quoteTimer = setTimeout(quoteLoop, usMarketState === 'CLOSED' ? 600000 : 10000);
+          // detection) — but only once the first paint is complete, so a
+          // transient bad response at boot retries in 10s, not 10min.
+          // Session changes kick an immediate fetch below.
+          quoteTimer = setTimeout(quoteLoop, usMarketState === 'CLOSED' && quotesComplete ? 600000 : 10000);
         };
         quoteLoop();
 
@@ -554,15 +563,15 @@ export const useStockData = (symbols, demo = false) => {
                     price: newPrice,
                     previousClose: previousClose,
                     regularMarketPrice: regClose,
-                    // CLOSED stays frozen — a slow proxy response must not
-                    // re-baseline the after-hours change overnight
-                    changePercent: cur.marketState === 'CLOSED'
+                    // CLOSED stays frozen — but only when a number is already
+                    // on screen; the very first computation (fresh boot while
+                    // closed, quotes down) must still go through
+                    changePercent: (cur.marketState === 'CLOSED' && typeof cur.changePercent === 'number')
                       ? cur.changePercent
                       : (calcChange(newPrice, regClose, previousClose, cur.marketState) ?? cur.changePercent),
                     name: quote.shortName || cur.name || symbol,
                     closes: downsample(rawCloses, MAX_SPARK_POINTS),
-                    isCrypto: false,
-                  },
+                          },
                 };
               });
             }

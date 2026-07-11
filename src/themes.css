@@ -185,7 +185,6 @@
 .theme-retto-pixel .text-down { text-shadow: 2px 2px 0 #331c36; }
 
 .theme-retto-pixel .market-badge { border-radius: 0; }
-.theme-retto-pixel .mini-tag { border-radius: 0; }
 
 /* ===== Theme: LED Board — brokerage ticker board ===== */
 .theme-led-board {
@@ -207,11 +206,12 @@
   --font-head: 'Orbitron', 'Inter', sans-serif;
   --font-num: 'DSEG7-Classic', 'DSEG7 Classic', 'Orbitron', monospace;
 
-  /* Scale down base fonts to account for wide Orbitron/DSEG7 glyphs */
-  --fs-title: clamp(13px, 7vw, 21px);
-  --fs-sub: clamp(9px, 4vw, 12px);
-  --fs-price: clamp(15px, 8vw, 27px);
-  --fs-change: clamp(10px, 5vw, 15px);
+  /* Scale down base fonts to account for wide Orbitron/DSEG7 glyphs
+     (caps at ~1.5x the 300px design, same policy as the base sizes) */
+  --fs-title: clamp(13px, 7vw, 31px);
+  --fs-sub: clamp(9px, 4vw, 18px);
+  --fs-price: clamp(15px, 8vw, 40px);
+  --fs-change: clamp(10px, 5vw, 22px);
 }
 
 .theme-led-board .glass-card {

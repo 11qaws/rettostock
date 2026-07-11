@@ -119,7 +119,6 @@ const Widget = () => {
         previousClose={ticker?.previousClose}
         regularMarketPrice={ticker?.regularMarketPrice}
         name={ticker?.name || 'Loading...'}
-        isCrypto={ticker?.isCrypto}
         marketState={ticker?.marketState}
         closes={ticker?.closes}
         stale={ticker?.stale}

@@ -328,7 +328,7 @@ const Configurator = () => {
           <div className="jirai-card" style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#4e342e' }}>🎀 등록할 종목 심볼</label>
             <p style={{ fontSize: '14px', color: '#8d6e63', marginBottom: '12px' }}>
-              쉼표(,)로 구분해서 입력해 주세요. (예: AAPL, TSLA, BTC)
+              쉼표(,)로 구분해서 입력해 주세요. (예: AAPL, TSLA, NVDA)
             </p>
             <input
               type="text"
@@ -399,10 +399,15 @@ const Configurator = () => {
               <li>복사한 주소를 URL 칸에 붙여넣기 합니다.</li>
               <li>크기는 <b>{recommendedSize(config.displayMode, symbolList.length)}</b>로 맞추면 끝!</li>
             </ol>
-            {config.displayMode === 'scroll' && (
+            {config.displayMode === 'scroll' ? (
               <p style={{ fontSize: '13px', color: '#8d6e63', margin: '10px 0 0', lineHeight: 1.6 }}>
                 💡 흐름이 뚝뚝 끊겨 보이면: 소스를 늘려서 키우지 말고 처음부터 위 크기로 만들어 주세요.
                 그래도 끊기면 브라우저 소스 속성에서 <b>사용자 지정 프레임 속도</b>를 체크하고 <b>60</b>으로 설정하면 부드러워져요.
+              </p>
+            ) : (
+              <p style={{ fontSize: '13px', color: '#8d6e63', margin: '10px 0 0', lineHeight: 1.6 }}>
+                💡 더 크게 쓰고 싶으면 소스를 마우스로 잡아 늘리지 말고, 위 크기의 <b>가로·세로 값을 같은 배율로 키워서</b> 만드세요
+                (예: 1.5배 = 450×{Math.round(recommendedDims(config.displayMode, symbolList.length).h * 1.5)}). 어떤 크기든 또렷하게 나옵니다.
               </p>
             )}
           </div>

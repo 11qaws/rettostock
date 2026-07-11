@@ -20,7 +20,7 @@ const DOWN_PARTICLES = ['💧', '▼', '💦', '🫧'];
 let particleId = 0;
 
 const TickerCard = ({
-  symbol, price, changePercent, previousClose, regularMarketPrice, name, isCrypto, marketState, closes, stale,
+  symbol, price, changePercent, previousClose, regularMarketPrice, name, marketState, closes, stale,
   fx = 'full', pixel = false, showSparkline = true, loopPrevPrice,
   ...motionProps
 }) => {
@@ -176,9 +176,7 @@ const TickerCard = ({
   const surged = typeof changePercent === 'number' && Math.abs(changePercent) >= SURGE_THRESHOLD;
   const surgeClass = surged ? (isUp ? 'is-surge-up' : 'is-surge-down') : '';
 
-  const market = isCrypto
-    ? { text: '24H', cls: 'ms-open' }
-    : MARKET_LABELS[marketState];
+  const market = MARKET_LABELS[marketState];
 
   return (
     <motion.div
@@ -210,7 +208,6 @@ const TickerCard = ({
         <div className="card-left">
           <div className="card-symbol-row">
             <h3 className="neon-title">{symbol}</h3>
-            {isCrypto && <span className="mini-tag">CRYPTO</span>}
           </div>
           <p className="neon-subtitle">{name}</p>
         </div>
