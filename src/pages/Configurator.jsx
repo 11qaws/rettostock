@@ -119,9 +119,10 @@ const loadConfig = () => {
     // One-time migration: opacity default changed 1 -> 0.95
     if (!saved || saved.v !== 2) merged.opacity = 0.95;
     merged.v = 2;
+    merged.demo = false; // Always force demo off on initial load
     return merged;
   } catch {
-    return { ...defaultConfig, v: 2 };
+    return { ...defaultConfig, v: 2, demo: false };
   }
 };
 
@@ -637,12 +638,7 @@ const Configurator = () => {
               })}
             </div>
 
-            <div className="advanced-row">
-              <label className="demo-toggle">
-                <input type="checkbox" checked={config.demo} onChange={e => set('demo', e.target.checked)} />
-                🧪 데모 모드 — 가짜 시세가 움직여요 (장 마감에도 테마·이펙트 확인용)
-              </label>
-            </div>
+
 
             <div className="advanced-row">
               <label className="demo-toggle">
@@ -660,6 +656,18 @@ const Configurator = () => {
                     ⚠️ 위의 위젯 URL을 OBS에 다시 붙여넣으면, 이후부터는 여기서 바꾼 설정이 즉시 반영됩니다.
                   </p>
                 </div>
+              )}
+            </div>
+
+            <div className="advanced-row" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px dashed #e0e0e0' }}>
+              <label className="demo-toggle" style={{ color: '#9e9e9e' }}>
+                <input type="checkbox" checked={config.demo} onChange={e => set('demo', e.target.checked)} />
+                🛠️ 개발자 전용 데모 모드 (가짜 시세 주입)
+              </label>
+              {config.demo && (
+                <p style={{ fontSize: '13px', color: '#d84315', margin: '8px 0 0 24px', lineHeight: 1.6, fontWeight: 'bold' }}>
+                  ⚠️ 경고: 현재 가짜 데이터가 흐르고 있습니다. 실시간 연결 중이라면 OBS 방송에도 가짜 시세가 송출되니 주의하세요!
+                </p>
               )}
             </div>
           </details>
