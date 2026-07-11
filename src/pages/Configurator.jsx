@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Copy, Check, AlertCircle, RefreshCw, ImagePlus, Eye, EyeOff } from 'lucide-react';
-import { getOrCreateRoom, createRoom, saveRoom, publishSync, getOrCreateSigningKeys, resetSigningKeys } from '../hooks/useRemoteSync';
+import { Copy, Check, AlertCircle, ImagePlus } from 'lucide-react';
+import { getOrCreateRoom, publishSync, getOrCreateSigningKeys } from '../hooks/useRemoteSync';
 
 // Analyze a screenshot of the broadcast scene and pick a matching theme
 const analyzeSceneImage = (file) => new Promise((resolve, reject) => {
@@ -140,7 +140,7 @@ const recommendedSize = (mode, count) => {
 
 const Configurator = () => {
   const [config, setConfig] = useState(loadConfig);
-  const [room, setRoom] = useState(() => getOrCreateRoom());
+  const [room] = useState(() => getOrCreateRoom());
   const [signingKeys, setSigningKeys] = useState(null);
 
   // Key pair exists only in this browser; created lazily when remote is on
@@ -153,7 +153,7 @@ const Configurator = () => {
   const [previewBg, setPreviewBg] = useState('dark');
   const [justApplied, setJustApplied] = useState(false);
   const [matchResult, setMatchResult] = useState(null);
-  const [showRoom, setShowRoom] = useState(false); // keep the code off-stream by default
+
   const [sceneImage, setSceneImage] = useState(null);
   const [sceneDims, setSceneDims] = useState(null);
   const [customDims, setCustomDims] = useState(null);
@@ -353,14 +353,7 @@ const Configurator = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleNewRoom = () => {
-    // Full re-pairing: fresh channel AND fresh key pair
-    const newRoom = createRoom();
-    saveRoom(newRoom);
-    setRoom(newRoom);
-    resetSigningKeys();
-    setSigningKeys(null); // effect regenerates
-  };
+
 
   const removeSymbol = (target) => {
     set('symbolsInput', symbolList.filter(s => s !== target).join(', '));
@@ -503,7 +496,7 @@ const Configurator = () => {
                 type="text"
                 readOnly
                 className="jirai-input"
-                value={showRoom ? widgetUrl : widgetUrl.replace(`room=${room}`, 'room=●●●●●●●●')}
+                value={widgetUrl.replace(/room=[^&]+/, 'room=●●●●')}
                 title="복사 버튼을 누르면 실제 주소가 복사돼요"
                 style={{ flex: 1, minWidth: 0 }}
               />
@@ -663,21 +656,7 @@ const Configurator = () => {
               )}
               {config.remote && (
                 <div style={{ margin: '10px 0 0 24px' }}>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <code className="room-code">{showRoom ? room : '●●●●●●●●'}</code>
-                    <button
-                      className="jirai-button jirai-button-outline"
-                      style={{ padding: '6px 12px', fontSize: '13px' }}
-                      onClick={() => setShowRoom(v => !v)}
-                      aria-label={showRoom ? '코드 가리기' : '코드 보기'}
-                    >
-                      {showRoom ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                    <button className="jirai-button jirai-button-outline" style={{ padding: '6px 12px', fontSize: '13px' }} onClick={handleNewRoom}>
-                      <RefreshCw size={14} /> 새 코드
-                    </button>
-                  </div>
-                <p style={{ fontSize: '13px', color: '#d84315', margin: '8px 0 0', lineHeight: 1.6, fontWeight: 'bold' }}>
+                <p style={{ fontSize: '13px', color: '#d84315', margin: '0', lineHeight: 1.6, fontWeight: 'bold' }}>
                     ⚠️ 체크한 후 위의 위젯 URL을 OBS 브라우저 소스에 다시 붙여넣어야 작동합니다.
                   </p>
                 </div>
