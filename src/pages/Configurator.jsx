@@ -370,15 +370,24 @@ const Configurator = () => {
   const [presetName, setPresetName] = useState('');
   const [activeTargetSymbol, setActiveTargetSymbol] = useState(null);
 
-  // Click outside to deselect active target symbol
+  // Click outside or press ESC to deselect active target symbol
   useEffect(() => {
     const handleGlobalClick = (e) => {
       if (!e.target.closest('.jirai-tag')) {
         setActiveTargetSymbol(null);
       }
     };
+    const handleGlobalKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setActiveTargetSymbol(null);
+      }
+    };
     window.addEventListener('mousedown', handleGlobalClick);
-    return () => window.removeEventListener('mousedown', handleGlobalClick);
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener('mousedown', handleGlobalClick);
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    };
   }, []);
 
   const persistPresets = (next) => {
