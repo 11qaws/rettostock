@@ -370,6 +370,17 @@ const Configurator = () => {
   const [presetName, setPresetName] = useState('');
   const [activeTargetSymbol, setActiveTargetSymbol] = useState(null);
 
+  // Click outside to deselect active target symbol
+  useEffect(() => {
+    const handleGlobalClick = (e) => {
+      if (!e.target.closest('.jirai-tag')) {
+        setActiveTargetSymbol(null);
+      }
+    };
+    window.addEventListener('mousedown', handleGlobalClick);
+    return () => window.removeEventListener('mousedown', handleGlobalClick);
+  }, []);
+
   const persistPresets = (next) => {
     setPresets(next);
     try { localStorage.setItem(PRESETS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
