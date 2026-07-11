@@ -647,7 +647,7 @@ const Configurator = () => {
             <div className="advanced-row">
               <label className="demo-toggle">
                 <input type="checkbox" checked={!!config.remote} onChange={e => set('remote', e.target.checked)} />
-                🔗 실시간 연결 — 여기서 설정을 바꾸면 OBS 위젯에 즉시 적용됩니다
+                🔗 실시간 연결
               </label>
               {!config.remote && (
                 <p style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0 24px', lineHeight: 1.6 }}>
@@ -657,7 +657,7 @@ const Configurator = () => {
               {config.remote && (
                 <div style={{ margin: '10px 0 0 24px' }}>
                 <p style={{ fontSize: '13px', color: '#d84315', margin: '0', lineHeight: 1.6, fontWeight: 'bold' }}>
-                    ⚠️ 체크한 후 위의 위젯 URL을 OBS 브라우저 소스에 다시 붙여넣어야 작동합니다.
+                    ⚠️ 위의 위젯 URL을 OBS에 다시 붙여넣으면, 이후부터는 여기서 바꾼 설정이 즉시 반영됩니다.
                   </p>
                 </div>
               )}
