@@ -29,7 +29,7 @@ const Widget = () => {
   const keyParam = searchParams.get('k') || ''; // remote's public key (relay is signature-gated)
   const demoParam = searchParams.get('demo') === '1';
   const fxParam = ['off', 'soft', 'full'].includes(searchParams.get('fx')) ? searchParams.get('fx') : 'full';
-  const scaleParam = clampNum(searchParams.get('scale'), 0.5, 2.5, 1);
+
   const intervalParam = clampNum(searchParams.get('interval'), 3, 120, 10);
   const opacityParam = clampNum(searchParams.get('opacity'), 0.1, 1, 1);
   const speedParam = clampNum(searchParams.get('speed'), 0.25, 3, 1);
@@ -104,7 +104,7 @@ const Widget = () => {
   }, [symbols.length]);
 
   const rootClass = `widget-root mode-${modeParam} fx-${fxParam}`;
-  const rootStyle = { zoom: scaleParam, '--card-opacity': opacityParam };
+  const rootStyle = { '--card-opacity': opacityParam };
 
   if (symbols.length === 0) {
     return (

@@ -102,7 +102,7 @@ const defaultConfig = {
   theme: 'theme-amore-cute',
   displayMode: 'list',
   colorStyle: 'theme',
-  scale: 1,
+
   interval: 10,
   opacity: 0.95,
   fx: 'full',
@@ -301,7 +301,7 @@ const Configurator = () => {
     if (config.theme !== 'default') params.set('theme', config.theme);
     if (config.displayMode !== 'list') params.set('mode', config.displayMode);
     if (config.colorStyle !== 'theme') params.set('colors', config.colorStyle);
-    if (config.scale !== 1) params.set('scale', config.scale);
+
     if (config.displayMode === 'rotate' && config.interval !== 10) params.set('interval', config.interval);
     if (config.displayMode === 'scroll' && config.speed !== 1) params.set('speed', config.speed);
     if (config.opacity !== 1) params.set('opacity', config.opacity);
@@ -595,11 +595,7 @@ const Configurator = () => {
               </div>
             </div>
 
-            <div className="advanced-row">
-              <label>🔍 크기 배율 <b>{Number(config.scale).toFixed(2)}×</b></label>
-              <input type="range" min="0.5" max="2" step="0.05" value={config.scale}
-                onChange={e => set('scale', parseFloat(e.target.value))} />
-            </div>
+
 
             {config.displayMode === 'rotate' && (
               <div className="advanced-row">
