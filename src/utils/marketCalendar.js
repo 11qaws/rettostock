@@ -149,3 +149,18 @@ export const calcNySession = (now = new Date()) => {
     return null; // very old CEF without Intl timezone support
   }
 };
+
+// Returns the current session and the upcoming session if a transition is within 5 minutes.
+export const calcNySessionDetailed = (now = new Date()) => {
+  const current = calcNySession(now);
+  if (!current) return { current: null, upcoming: null };
+  
+  // Look 5 minutes into the future
+  const future = new Date(now.getTime() + 5 * 60000);
+  const nextSession = calcNySession(future);
+  
+  if (current !== nextSession) {
+    return { current, upcoming: nextSession };
+  }
+  return { current, upcoming: null };
+};

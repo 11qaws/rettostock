@@ -21,7 +21,7 @@ const pickEnrichInterval = (state) => {
 // marketCalendar knows weekends, NYSE holidays (with substitute rules)
 // and 13:00 half days; Finnhub remains only as a backstop for ad-hoc
 // closures no calendar can predict (mourning days, disasters).
-import { calcNySession } from '../utils/marketCalendar';
+import { calcNySession, calcNySessionDetailed } from '../utils/marketCalendar';
 
 const calcChange = (price, regClose, prevClose, marketState) => {
   if (typeof price !== 'number') return undefined;
@@ -118,10 +118,15 @@ export const useStockData = (symbols, demo = false) => {
   useEffect(() => {
     if (!demo || !symbols || symbols.length === 0) return;
 
+    const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    const demoTrans = urlParams.get('demo_transition') === '1';
+    const demoCross = urlParams.get('demo_cross') === '1';
+    const demoTarget = urlParams.get('demo_target') === '1';
+
     const state = {};
     symbols.forEach((symbol) => {
       const base = 20 + (hashCode(symbol) % 780);
-      const changePercent = ((hashCode(symbol + 'c') % 900) / 100) - 4.5;
+      const changePercent = demoCross ? 0 : (((hashCode(symbol + 'c') % 900) / 100) - 4.5);
       const price = base * (1 + changePercent / 100);
       const closes = [];
       let p = base;
@@ -133,17 +138,28 @@ export const useStockData = (symbols, demo = false) => {
       state[symbol] = { base, price, changePercent, closes };
     });
 
-    const entryOf = (sym, s) => ({
-      price: s.price,
-      changePercent: s.changePercent,
-      previousClose: s.base, // sparkline baseline in demo too
-      week52High: s.base * 1.06, // reachable by demo surges -> banner preview
-      week52Low: s.base * 0.94,
-      name: `${sym} (데모)`,
-      marketState: 'REGULAR',
-      closes: [...s.closes],
-      stale: false,
-    });
+    const getDemoMarketState = () => {
+      if (!demoTrans) return { marketState: 'REGULAR', upcomingState: null };
+      const cycle = Date.now() % 15000;
+      if (cycle < 5000) return { marketState: 'PRE', upcomingState: 'REGULAR' };
+      return { marketState: 'REGULAR', upcomingState: null };
+    };
+
+    const entryOf = (sym, s) => {
+      const ms = getDemoMarketState();
+      return {
+        price: s.price,
+        changePercent: s.changePercent,
+        previousClose: s.base, // sparkline baseline in demo too
+        week52High: s.base * 1.06, // reachable by demo surges -> banner preview
+        week52Low: s.base * 0.94,
+        name: `${sym} (데모)`,
+        marketState: ms.marketState,
+        upcomingState: ms.upcomingState,
+        closes: [...s.closes],
+        stale: false,
+      };
+    };
 
     setData(() => {
       const next = {};
@@ -156,9 +172,20 @@ export const useStockData = (symbols, demo = false) => {
     const jitter = new Set();
     const timer = setInterval(() => {
       for (const [sym, s] of Object.entries(state)) {
-        let drift = (Math.random() - 0.5) * 0.4;
-        if (Math.random() < 0.03) drift += (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 4);
-        s.changePercent += drift;
+        if (demoCross) {
+          s.changePercent = Math.sin(Date.now() / 2000 + hashCode(sym)) * 0.15;
+        } else {
+          let drift = (Math.random() - 0.5) * 0.4;
+          if (demoTarget && (Date.now() % 15000 < 1500)) {
+            s.changePercent += 5; // one big spike to hit targets
+          } else {
+            if (Math.random() < 0.03) drift += (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 4);
+            s.changePercent += drift;
+            // clamp to prevent infinity
+            if (s.changePercent > 15) s.changePercent = 15;
+            if (s.changePercent < -15) s.changePercent = -15;
+          }
+        }
         s.price = s.base * (1 + s.changePercent / 100);
         s.closes.push(s.price);
         if (s.closes.length > MAX_SPARK_POINTS) s.closes.shift();
@@ -215,7 +242,9 @@ export const useStockData = (symbols, demo = false) => {
     };
     // Known synchronously from the very first tick — no network round-trip
     // needed before the widget knows which session it is in.
-    let usMarketState = calcNySession();
+    const initialSession = calcNySessionDetailed();
+    let usMarketState = initialSession ? initialSession.current : 'CLOSED';
+    let usUpcomingState = initialSession ? initialSession.upcoming : null;
     let holidayClosed = false;
 
     // Stocks/ETFs only (crypto support was removed to keep the data layer lean)
@@ -520,14 +549,14 @@ export const useStockData = (symbols, demo = false) => {
       //       consulted separately, low-frequency, only for holiday closures
       //       (its isOpen is false during normal pre/after hours too, so it
       //       must never drive the session by itself).
-      const applySessionToData = (session) => {
+      const applySessionToData = (session, upcoming) => {
         if (!session) return;
         setData(prev => {
           const next = { ...prev };
           for (const sym of stockSymbols) {
             const cur = next[sym] || {};
-            if (cur.marketState === session) continue;
-            const updated = { ...cur, marketState: session };
+            if (cur.marketState === session && cur.upcomingState === upcoming) continue;
+            const updated = { ...cur, marketState: session, upcomingState: upcoming };
             // Baseline rules on live transitions ("최근 정규장 종가" 기준):
             //   -> PRE / REGULAR : vs previous regular close (continuous at 09:30)
             //   -> POST          : vs today's regular close (resets to ~0% at 16:00)
@@ -541,18 +570,22 @@ export const useStockData = (symbols, demo = false) => {
           return next;
         });
       };
-      applySessionToData(usMarketState); // badge correct from the first paint
+      applySessionToData(usMarketState, usUpcomingState); // badge correct from the first paint
 
       const sessionLoop = () => {
         if (stopped) return;
         try {
-          const s = holidayClosed ? 'CLOSED' : calcNySession();
-          if (s && s !== usMarketState) {
+          const detailed = calcNySessionDetailed();
+          const s = holidayClosed ? 'CLOSED' : detailed?.current;
+          const u = holidayClosed ? null : detailed?.upcoming;
+          if ((s && s !== usMarketState) || u !== usUpcomingState) {
+            const stateChanged = s !== usMarketState;
             usMarketState = s;
-            applySessionToData(s);
+            usUpcomingState = u;
+            applySessionToData(s, u);
             // Leaving CLOSED (04:00 pre-market open): resume quotes right away
             // instead of waiting out the 10min overnight timer
-            if (s !== 'CLOSED') {
+            if (stateChanged && s !== 'CLOSED') {
               clearTimeout(quoteTimer);
               quoteLoop();
             }

@@ -108,6 +108,9 @@ const defaultConfig = {
   fx: 'full',
   speed: 1,
   demo: false,
+  demoTrans: false,
+  demoCross: false,
+  demoTarget: false,
   remote: false, // cross-device relay is opt-in (currently disabled in UI)
   useTargets: false,
   targets: {},   // per-symbol target prices (empty = off)
@@ -121,6 +124,13 @@ const loadConfig = () => {
     if (!saved || saved.v !== 2) merged.opacity = 0.95;
     merged.v = 2;
     merged.demo = false; // Always force demo off on initial load
+    
+    // 목표가는 방송(세션)마다 초기화되어야 하는 데이터이므로 부팅 시 삭제
+    if (merged.targets && Object.keys(merged.targets).length > 0) {
+      merged.targets = {};
+      merged._targetsWiped = true; // 알림용 플래그
+    }
+    
     return merged;
   } catch {
     return { ...defaultConfig, v: 2, demo: false };
@@ -169,6 +179,21 @@ const Configurator = () => {
   const fileInputRef = useRef(null);
   const sceneBoxRef = useRef(null);
   const sceneScrollRef = useRef(null);
+
+  const [showWipeToast, setShowWipeToast] = useState(false);
+
+  // 목표가 초기화 알림 표시
+  useEffect(() => {
+    if (config._targetsWiped) {
+      setShowWipeToast(true);
+      setTimeout(() => setShowWipeToast(false), 4000);
+      setConfig(c => {
+        const newC = { ...c };
+        delete newC._targetsWiped;
+        return newC;
+      });
+    }
+  }, [config._targetsWiped]);
 
   const handleSceneImage = async (file) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -309,6 +334,9 @@ const Configurator = () => {
     if (config.opacity !== 1) params.set('opacity', config.opacity);
     if (config.fx !== 'full') params.set('fx', config.fx);
     if (config.demo) params.set('demo', '1');
+    if (config.demoTrans) params.set('demo_transition', '1');
+    if (config.demoCross) params.set('demo_cross', '1');
+    if (config.demoTarget) params.set('demo_target', '1');
     const targetPairs = symbolList
       .map(s => [s.toUpperCase(), parseFloat(config.targets?.[s])])
       .filter(([, v]) => Number.isFinite(v) && v > 0);
@@ -412,7 +440,9 @@ const Configurator = () => {
   };
   const savePreset = () => {
     const name = presetName.trim() || `프리셋 ${presets.length + 1}`;
-    persistPresets([...presets.filter(p => p.name !== name), { name, config }]);
+    // 프리셋 저장 시 목표가(targets)는 저장하지 않음
+    const { targets, _targetsWiped, ...configToSave } = config;
+    persistPresets([...presets.filter(p => p.name !== name), { name, config: configToSave }]);
     setNamingPreset(false);
     setPresetName('');
   };
@@ -730,9 +760,23 @@ const Configurator = () => {
                 🛠️ 개발자 전용 데모 모드 (가짜 시세 주입)
               </label>
               {config.demo && (
-                <p style={{ fontSize: '13px', color: '#d84315', margin: '8px 0 0 24px', lineHeight: 1.6, fontWeight: 'bold' }}>
-                  ⚠️ 경고: 현재 가짜 데이터가 흐르고 있습니다. 실시간 연결 중이라면 OBS 방송에도 가짜 시세가 송출되니 주의하세요!
-                </p>
+                <div style={{ paddingLeft: '24px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <p style={{ fontSize: '13px', color: '#d84315', margin: '0 0 4px 0', lineHeight: 1.6, fontWeight: 'bold' }}>
+                    ⚠️ 경고: 현재 가짜 데이터가 흐르고 있습니다. 실시간 연결 중이라면 OBS 방송에도 가짜 시세가 송출되니 주의하세요!
+                  </p>
+                  <label className="demo-toggle" style={{ fontSize: '0.9em', color: '#ddd' }}>
+                    <input type="checkbox" checked={config.demoTrans || false} onChange={e => set('demoTrans', e.target.checked)} />
+                    장 전환 테스트 (프리 &gt;&gt; 장중 반복)
+                  </label>
+                  <label className="demo-toggle" style={{ fontSize: '0.9em', color: '#ddd' }}>
+                    <input type="checkbox" checked={config.demoCross || false} onChange={e => set('demoCross', e.target.checked)} />
+                    제로 크로스 테스트 (양전/음전 진동)
+                  </label>
+                  <label className="demo-toggle" style={{ fontSize: '0.9em', color: '#ddd' }}>
+                    <input type="checkbox" checked={config.demoTarget || false} onChange={e => set('demoTarget', e.target.checked)} />
+                    목표가 도달 테스트 (15초 주기 급등)
+                  </label>
+                </div>
               )}
             </div>
           </details>
@@ -806,11 +850,6 @@ const Configurator = () => {
           </div>
 
           {sceneMode ? (() => {
-            // Placement preview: the whole screenshot with the widget at
-            // true relative scale. '화면 맞춤' fits the scene to the panel
-            // (position work); '실제 크기' renders 1:1 pixels with scrolling
-            // so the widget is inspectable at its real size. Preview only —
-            // the widget URL never changes.
             const rec = recommendedDims(config.displayMode, symbolList.length);
             const actualDims = customDims || rec;
             const isFull = sceneZoom === 'full';

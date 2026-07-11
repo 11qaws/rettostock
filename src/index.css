@@ -898,3 +898,34 @@ html, body, #root {
 .no-spin-button {
   -moz-appearance: textfield;
 }
+
+/* ============================================================
+   Market Transition Animations (5-min upcoming state)
+   ============================================================ */
+.blink-arrows {
+  animation: blinkArrows 1s steps(2, start) infinite;
+  display: inline-block;
+  margin: 0 2px;
+}
+@keyframes blinkArrows {
+  to { visibility: hidden; }
+}
+
+.transition-slide-in {
+  display: inline-block;
+  animation: slideInLeft 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes slideInLeft {
+  from { transform: translateX(12px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.fade-out-left {
+  display: inline-block;
+  animation: fadeOutLeft 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  white-space: nowrap;
+}
+@keyframes fadeOutLeft {
+  from { transform: translateX(0); opacity: 1; max-width: 60px; margin-right: 2px; }
+  to { transform: translateX(-15px); opacity: 0; max-width: 0; margin-right: 0; overflow: hidden; }
+}

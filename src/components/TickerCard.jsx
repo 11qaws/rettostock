@@ -20,7 +20,7 @@ const DOWN_PARTICLES = ['💧', '▼', '💦', '🫧'];
 let particleId = 0;
 
 const TickerCard = ({
-  symbol, price, changePercent, previousClose, regularMarketPrice, name, marketState, closes, stale,
+  symbol, price, changePercent, previousClose, regularMarketPrice, name, marketState, upcomingState, closes, stale,
   week52High, week52Low, targetPrice,
   fx = 'full', pixel = false, showSparkline = true, loopPrevPrice,
   ...motionProps
@@ -90,6 +90,20 @@ const TickerCard = ({
   const prevSurgeRef = useRef(null); // null = no data seen yet
   const prevSignRef = useRef(null);
   const lastCrossRef = useRef(0);
+
+  // Transition animation state
+  const prevMarketRef = useRef(marketState);
+  const prevUpcomingRef = useRef(upcomingState);
+  const [transitioning, setTransitioning] = useState(null);
+
+  useEffect(() => {
+    if (prevUpcomingRef.current && !upcomingState && marketState !== prevMarketRef.current) {
+      setTransitioning({ from: prevMarketRef.current, to: marketState });
+      setTimeout(() => setTransitioning(null), 1000); // 1초 뒤 애니메이션 초기화
+    }
+    prevUpcomingRef.current = upcomingState;
+    prevMarketRef.current = marketState;
+  }, [upcomingState, marketState]);
 
   let changeAbs = null;
   if (typeof price === 'number' && typeof changePercent === 'number') {
@@ -295,7 +309,22 @@ const TickerCard = ({
               {surged && fx !== 'off' && (
                 <span className="surge-badge">{isUp ? '🔥' : '💦'}</span>
               )}
-              {market && <span className={`market-badge ${market.cls}`}>{market.text}</span>}
+              {market && (
+                <span className={`market-badge ${market.cls}`}>
+                  {upcomingState && MARKET_LABELS[upcomingState] ? (
+                    <span className="transition-slide-in">
+                      {market.text} <span className="blink-arrows">&gt;&gt;</span> {MARKET_LABELS[upcomingState].text}
+                    </span>
+                  ) : transitioning && MARKET_LABELS[transitioning.from] && MARKET_LABELS[transitioning.to] ? (
+                    <span>
+                      <span className="fade-out-left">{MARKET_LABELS[transitioning.from].text} <span className="blink-arrows">&gt;&gt;</span> </span>
+                      {MARKET_LABELS[transitioning.to].text}
+                    </span>
+                  ) : (
+                    market.text
+                  )}
+                </span>
+              )}
             </div>
           )}
           <span className={`neon-price ${priceFlash}`}>
