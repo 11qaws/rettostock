@@ -80,7 +80,12 @@ const TickerCard = ({
     clearTimeout(targetTimerRef.current);
     setTargetPop(p => ({ n: (p?.n || 0) + 1 }));
     targetTimerRef.current = setTimeout(() => setTargetPop(null), 2700);
-  }, [price, targetPrice, fx]);
+
+    // If running in the Configurator's preview iframe, notify it to clear the target UI
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'TARGET_REACHED', symbol }, '*');
+    }
+  }, [price, targetPrice, fx, symbol]);
   const prevPriceRef = useRef(loopPrevPrice !== undefined ? loopPrevPrice : price);
   const prevSurgeRef = useRef(null); // null = no data seen yet
   const prevSignRef = useRef(null);

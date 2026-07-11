@@ -331,6 +331,22 @@ const Configurator = () => {
     return () => clearTimeout(t);
   }, [widgetUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Listen for 'TARGET_REACHED' feedback from the preview iframe so we can auto-clear the input
+  useEffect(() => {
+    const onMessage = (e) => {
+      if (e.data?.type === 'TARGET_REACHED' && e.data?.symbol) {
+        setConfig(prev => {
+          if (!prev.targets || !prev.targets[e.data.symbol]) return prev;
+          const newTargets = { ...prev.targets };
+          delete newTargets[e.data.symbol];
+          return { ...prev, targets: newTargets };
+        });
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+
   const handleCopy = () => {
     navigator.clipboard.writeText(widgetUrl);
     setCopied(true);
