@@ -905,6 +905,7 @@ html, body, #root {
 .blink-arrows {
   animation: blinkArrows 1s steps(2, start) infinite;
   display: inline-block;
+  vertical-align: top; /* no baseline descender gap -> badge height never grows */
   margin: 0 2px;
 }
 @keyframes blinkArrows {
@@ -913,6 +914,7 @@ html, body, #root {
 
 .transition-slide-in {
   display: inline-block;
+  vertical-align: top; /* keep the expanded badge on one line box, same height as plain */
   animation: slideInLeft 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 @keyframes slideInLeft {
@@ -922,6 +924,7 @@ html, body, #root {
 
 .fade-out-left {
   display: inline-block;
+  vertical-align: top; /* sibling-to-text inline-block must not add descender height */
   animation: fadeOutLeft 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   white-space: nowrap;
 }

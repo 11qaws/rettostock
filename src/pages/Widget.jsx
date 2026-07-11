@@ -141,6 +141,7 @@ const Widget = () => {
         regularMarketPrice={ticker?.regularMarketPrice}
         name={ticker?.name || 'Loading...'}
         marketState={ticker?.marketState}
+        upcomingState={ticker?.upcomingState}
         week52High={ticker?.week52High}
         week52Low={ticker?.week52Low}
         targetPrice={targets[symbol]}
