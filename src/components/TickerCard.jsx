@@ -236,7 +236,7 @@ const TickerCard = ({
 
     clearTimeout(crossTimerRef.current);
     setCrossFx(p => ({ dir: sign > 0 ? 'up' : 'down', n: (p?.n || 0) + 1 }));
-    crossTimerRef.current = setTimeout(() => setCrossFx(null), 1100);
+    crossTimerRef.current = setTimeout(() => setCrossFx(null), 1500);
   }, [changePercent, fx]);
 
   const isUp = changePercent > 0;
@@ -269,8 +269,10 @@ const TickerCard = ({
       {crossFx && fx === 'full' && (
         <React.Fragment key={`cross-${crossFx.n}`}>
           <span className={`cross-wipe wipe-${crossFx.dir}`} aria-hidden="true" />
+          {/* Render the OLD-direction glyph; the scaleY flip reveals the new
+              one (▼→▲ for 양전, ▲→▼ for 음전) mid-animation. */}
           <span className={`cross-arrow arrow-${crossFx.dir}`} aria-hidden="true">
-            {crossFx.dir === 'up' ? '▲' : '▼'}
+            {crossFx.dir === 'up' ? '▼' : '▲'}
           </span>
         </React.Fragment>
       )}

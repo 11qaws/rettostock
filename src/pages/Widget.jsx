@@ -51,7 +51,7 @@ const Widget = () => {
   }, [symbolsParam]);
 
   const { data } = useStockData(symbols, demoParam);
-  const pixel = themeParam === 'theme-retto-pixel';
+  const pixel = false; // no pixel-art theme currently (retto-pixel replaced by eureka)
 
   useEffect(() => {
     const themeClass = themeParam && themeParam !== 'default' ? themeParam : '';

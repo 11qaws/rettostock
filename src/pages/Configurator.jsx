@@ -53,7 +53,7 @@ const pickThemeForScene = ({ lum, sat, domHue }) => {
   if (lum > 0.62) return { theme: pinkish ? 'theme-amore-cute' : 'theme-pastel-light', reason: '밝은 화면' };
   if (lum > 0.42 && pinkish) return { theme: 'theme-amore-cute', reason: '화사한 핑크 톤' };
   if (sat > 0.28 && (pinkish || purple)) return { theme: 'theme-cyber-neon', reason: '네온 핑크·보라 톤' };
-  if (purple || blue) return { theme: 'theme-retto-pixel', reason: '어두운 보라·남색 톤' };
+  if (purple || blue) return { theme: 'theme-eureka', reason: '어두운 남색·별밤 톤' };
   if (lum < 0.18) return { theme: 'theme-led-board', reason: '아주 어두운 화면' };
   return { theme: 'default', reason: '무난한 어두운 화면' };
 };
@@ -61,7 +61,7 @@ const pickThemeForScene = ({ lum, sat, domHue }) => {
 const THEMES = [
   { value: 'theme-amore-cute', label: '아모레 핑크', bg: '#fff0f3', border: '2px dashed #ffb6c1', text: '#4e342e', up: '#e91e63' },
   { value: 'theme-pastel-light', label: '파스텔 라이트', bg: '#ffffff', border: '2px solid #e3d5e2', text: '#2b1a2e', up: '#d6336c' },
-  { value: 'theme-retto-pixel', label: '픽셀 레트로', bg: '#221d5e', border: '3px solid #331c36', text: '#f8d6ef', up: '#ed76ac', radius: '0' },
+  { value: 'theme-eureka', label: '유레카 별밤', bg: '#0d162e', border: '1px solid #34e0a8', text: '#ffe9a8', up: '#ffd166' },
   { value: 'theme-cyber-neon', label: '네온 바', bg: '#14001f', border: '2px solid #ff2a85', text: '#ffffff', up: '#39ff14' },
   { value: 'theme-led-board', label: 'LED 전광판', bg: '#06090c', border: '1px solid #2a3947', text: '#ffb300', up: '#ff5252' },
   { value: 'default', label: '다크 글래스', bg: 'rgba(25,25,38,0.9)', border: '1px solid rgba(255,255,255,0.35)', text: '#f0f0f0', up: '#4ade80' },
@@ -467,7 +467,7 @@ const Configurator = () => {
             아모레또 위젯 리모컨
           </span>
           <span className={`header-status ${justApplied ? 'active' : ''}`}>
-            {justApplied ? '✓ 위젯에 적용됐어요' : '● 위젯 연결됨'}
+            {justApplied ? '✓ 주소 갱신됨 · 다시 복사해 붙여넣기' : '● OBS에 붙여넣을 준비 완료'}
           </span>
         </div>
 
@@ -964,9 +964,10 @@ const Configurator = () => {
             const MAX_VISIBLE_CARDS = 5;
             const scrolls = config.displayMode === 'list' && symbolList.length > MAX_VISIBLE_CARDS;
             const boxH = scrolls ? recommendedDims('list', MAX_VISIBLE_CARDS).h : frameH;
+            const themeAccent = (THEMES.find(t => t.value === config.theme) || {}).up || '#ffb6c1';
             return (
               <>
-                <div style={{
+                <div className="preview-frame-box" style={{
                   width: `${PREVIEW_W}px`,
                   maxWidth: '100%',
                   margin: '0 auto',
@@ -976,6 +977,7 @@ const Configurator = () => {
                   borderRadius: '16px',
                   overflowX: 'hidden',
                   overflowY: scrolls ? 'auto' : 'hidden', // 6+ cards: scroll inside the box
+                  '--sb-color': themeAccent, // scrollbar tinted to the selected widget theme
                   position: 'relative',
                   boxSizing: 'content-box',
                   boxShadow: '0 8px 16px rgba(255,182,193,0.3)',

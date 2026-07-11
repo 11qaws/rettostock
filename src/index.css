@@ -302,28 +302,31 @@ html, body, #root {
   pointer-events: none;
   line-height: 1;
   font-size: clamp(20px, 9vw, 42px);
+  transform-origin: center; /* scaleY flip pivots on the arrow's own centre */
 }
-.arrow-up {
-  color: var(--color-up);
-  text-shadow: 0 0 10px var(--color-up-glow), 0 0 24px var(--color-up-glow);
-  animation: crossArrowUp 1.05s forwards;
+/* Reversal (변동) effect: the OLD-direction arrow appears first, flips at the
+   centre (scaleY 1 -> -1 turns ▼↔▲) while recolouring, then travels out in the
+   NEW direction. The rendered glyph is the OLD one; the flip reveals the new. */
+.arrow-up { animation: crossFlipUp 1.4s forwards; }
+.arrow-down { animation: crossFlipDown 1.4s forwards; }
+
+/* 양전: ▼(하락색) 등장 → 뒤집혀 ▲(상승색) → 상승 퇴장 */
+@keyframes crossFlipUp {
+  0%   { top: 58%; opacity: 0; color: var(--color-down); text-shadow: 0 0 10px var(--color-down-glow); transform: translateX(-50%) scaleY(1) scale(0.85); animation-timing-function: ease-out; }
+  16%  { top: 50%; opacity: 1; color: var(--color-down); text-shadow: 0 0 10px var(--color-down-glow); transform: translateX(-50%) scaleY(1) scale(1); }
+  40%  { top: 50%; opacity: 1; color: var(--color-down); text-shadow: 0 0 10px var(--color-down-glow); transform: translateX(-50%) scaleY(1) scale(1.05); animation-timing-function: ease-in; }
+  50%  { top: 50%; opacity: 1; color: var(--color-down); transform: translateX(-50%) scaleY(0.04) scale(1.12); }
+  62%  { top: 47%; opacity: 1; color: var(--color-up); text-shadow: 0 0 12px var(--color-up-glow), 0 0 26px var(--color-up-glow); transform: translateX(-50%) scaleY(-1) scale(1.2); animation-timing-function: ease-in; }
+  100% { top: -22%; opacity: 0; color: var(--color-up); text-shadow: 0 0 10px var(--color-up-glow); transform: translateX(-50%) scaleY(-1) scale(0.95); }
 }
-.arrow-down {
-  color: var(--color-down);
-  text-shadow: 0 0 10px var(--color-down-glow), 0 0 24px var(--color-down-glow);
-  animation: crossArrowDown 1.05s forwards;
-}
-@keyframes crossArrowUp {
-  0% { top: 104%; opacity: 0; transform: translateX(-50%) scale(0.85); animation-timing-function: ease-out; }
-  35% { top: 60%; opacity: 1; transform: translateX(-50%) scale(1); animation-timing-function: ease-in-out; }
-  65% { top: 40%; opacity: 1; transform: translateX(-50%) scale(1.18); animation-timing-function: ease-in; }
-  100% { top: -22%; opacity: 0; transform: translateX(-50%) scale(0.95); }
-}
-@keyframes crossArrowDown {
-  0% { top: -22%; opacity: 0; transform: translateX(-50%) scale(0.85); animation-timing-function: ease-out; }
-  35% { top: 40%; opacity: 1; transform: translateX(-50%) scale(1); animation-timing-function: ease-in-out; }
-  65% { top: 60%; opacity: 1; transform: translateX(-50%) scale(1.18); animation-timing-function: ease-in; }
-  100% { top: 104%; opacity: 0; transform: translateX(-50%) scale(0.95); }
+/* 음전: ▲(상승색) 등장 → 뒤집혀 ▼(하락색) → 하강 퇴장 */
+@keyframes crossFlipDown {
+  0%   { top: 42%; opacity: 0; color: var(--color-up); text-shadow: 0 0 10px var(--color-up-glow); transform: translateX(-50%) scaleY(1) scale(0.85); animation-timing-function: ease-out; }
+  16%  { top: 50%; opacity: 1; color: var(--color-up); text-shadow: 0 0 10px var(--color-up-glow); transform: translateX(-50%) scaleY(1) scale(1); }
+  40%  { top: 50%; opacity: 1; color: var(--color-up); text-shadow: 0 0 10px var(--color-up-glow); transform: translateX(-50%) scaleY(1) scale(1.05); animation-timing-function: ease-in; }
+  50%  { top: 50%; opacity: 1; color: var(--color-up); transform: translateX(-50%) scaleY(0.04) scale(1.12); }
+  62%  { top: 53%; opacity: 1; color: var(--color-down); text-shadow: 0 0 12px var(--color-down-glow), 0 0 26px var(--color-down-glow); transform: translateX(-50%) scaleY(-1) scale(1.2); animation-timing-function: ease-in; }
+  100% { top: 104%; opacity: 0; color: var(--color-down); text-shadow: 0 0 10px var(--color-down-glow); transform: translateX(-50%) scaleY(-1) scale(0.95); }
 }
 
 /* 52-week record celebration: a rare, big moment — gold banner for a
@@ -842,6 +845,20 @@ html, body, #root {
   align-self: flex-start;
   max-height: calc(100vh - 40px);
   overflow-y: auto;
+}
+
+/* Preview box scrollbar (6+ symbols) tinted to the selected widget theme */
+.preview-frame-box {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb-color, #ffb6c1) transparent;
+}
+.preview-frame-box::-webkit-scrollbar { width: 8px; }
+.preview-frame-box::-webkit-scrollbar-track { background: transparent; }
+.preview-frame-box::-webkit-scrollbar-thumb {
+  background: var(--sb-color, #ffb6c1);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 
 /* Placement preview: widen the panel so the full screenshot is workable */
