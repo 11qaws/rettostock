@@ -286,9 +286,9 @@ const TickerCard = ({
 
         <div className="card-right">
           {(surged || market) && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+            <div className="badge-row">
               {surged && fx !== 'off' && (
-                <span className="surge-badge" style={{ flexShrink: 0, fontSize: '1.1em' }}>{isUp ? '🔥' : '💦'}</span>
+                <span className="surge-badge">{isUp ? '🔥' : '💦'}</span>
               )}
               {market && <span className={`market-badge ${market.cls}`}>{market.text}</span>}
             </div>

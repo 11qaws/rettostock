@@ -214,7 +214,29 @@ html, body, #root {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-3px); }
 }
-.surge-badge { margin-left: 6px; display: inline-block; animation: surgeBounce 1.1s ease-in-out infinite; }
+/* Surge emoji is absolutely placed to the left of the market badge, so
+   its appearance never changes the badge row height (and thus card size).
+   The row height is governed solely by the always-present market badge. */
+.badge-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+.surge-badge {
+  position: absolute;
+  right: 100%;
+  margin-right: 4px;
+  top: 0;
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.1em; /* original size — only the positioning changed */
+  line-height: 1;
+  pointer-events: none;
+  animation: surgeBounce 1.1s ease-in-out infinite;
+}
 
 /* Particle burst */
 .fx-particle {
