@@ -321,10 +321,24 @@ const Configurator = () => {
     [config.symbolsInput]
   );
 
+  // Only the free-text symbols field is debounced (for URL/preview): typing
+  // "AAPL" one letter at a time must not make the preview widget subscribe to
+  // garbage tickers each keystroke. Discrete controls (theme, mode, opacity,
+  // fx) are NOT debounced — they flow into widgetUrl and the iframe instantly.
+  const [dbSymbolsInput, setDbSymbolsInput] = useState(config.symbolsInput);
+  useEffect(() => {
+    const t = setTimeout(() => setDbSymbolsInput(config.symbolsInput), 400);
+    return () => clearTimeout(t);
+  }, [config.symbolsInput]);
+  const urlSymbolList = useMemo(
+    () => dbSymbolsInput.split(',').map(s => s.trim()).filter(s => s),
+    [dbSymbolsInput]
+  );
+
   const widgetUrl = useMemo(() => {
     const baseUrl = window.location.href.split('#')[0];
     const params = new URLSearchParams();
-    params.set('symbols', symbolList.join(','));
+    params.set('symbols', urlSymbolList.join(','));
     if (config.theme !== 'default') params.set('theme', config.theme);
     if (config.displayMode !== 'list') params.set('mode', config.displayMode);
     if (config.colorStyle !== 'theme') params.set('colors', config.colorStyle);
@@ -337,7 +351,7 @@ const Configurator = () => {
     if (config.demoTrans) params.set('demo_transition', '1');
     if (config.demoCross) params.set('demo_cross', '1');
     if (config.demoTarget) params.set('demo_target', '1');
-    const targetPairs = symbolList
+    const targetPairs = urlSymbolList
       .map(s => [s.toUpperCase(), parseFloat(config.targets?.[s])])
       .filter(([, v]) => Number.isFinite(v) && v > 0);
     if (targetPairs.length) params.set('targets', targetPairs.map(([s, v]) => `${s}:${v}`).join(','));
@@ -349,14 +363,7 @@ const Configurator = () => {
       params.set('k', signingKeys.publicKeyB64);
     }
     return `${baseUrl}#/widget?${params.toString()}`;
-  }, [config, symbolList, room, signingKeys]);
-
-  const [debouncedWidgetUrl, setDebouncedWidgetUrl] = useState(widgetUrl);
-  
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedWidgetUrl(widgetUrl), 500);
-    return () => clearTimeout(t);
-  }, [widgetUrl]);
+  }, [config, urlSymbolList, room, signingKeys]);
 
   // Persist settings + push to widget (same-browser channels + ntfy relay)
   useEffect(() => {
@@ -905,7 +912,7 @@ const Configurator = () => {
                         }}
                       >
                         <iframe
-                    src={debouncedWidgetUrl}
+                    src={widgetUrl}
                           style={{
                             width: `${actualDims.w}px`,
                             height: `${actualDims.h}px`,
@@ -959,7 +966,7 @@ const Configurator = () => {
                     : (PREVIEW_BGS.find(b => b.value === previewBg) || PREVIEW_BGS[0]).style),
                 }}>
                   <iframe
-                    src={debouncedWidgetUrl}
+                    src={widgetUrl}
                     style={{
                       width: `${frameW}px`,
                       height: `${frameH}px`,
