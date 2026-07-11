@@ -109,7 +109,6 @@ const defaultConfig = {
   speed: 1,
   demo: false,
   remote: false, // cross-device relay is opt-in
-  range: false,  // day high/low bar is opt-in
   targets: {},   // per-symbol target prices (empty = off)
 };
 
@@ -308,7 +307,6 @@ const Configurator = () => {
     if (config.opacity !== 1) params.set('opacity', config.opacity);
     if (config.fx !== 'full') params.set('fx', config.fx);
     if (config.demo) params.set('demo', '1');
-    if (config.range) params.set('range', '1');
     const targetPairs = symbolList
       .map(s => [s.toUpperCase(), parseFloat(config.targets?.[s.toUpperCase()])])
       .filter(([, v]) => Number.isFinite(v) && v > 0);
@@ -607,13 +605,6 @@ const Configurator = () => {
               <label>🫧 카드 불투명도 <b>{Math.round(config.opacity * 100)}%</b></label>
               <input type="range" min="0.2" max="1" step="0.05" value={config.opacity}
                 onChange={e => set('opacity', parseFloat(e.target.value))} />
-            </div>
-
-            <div className="advanced-row">
-              <label className="demo-toggle">
-                <input type="checkbox" checked={!!config.range} onChange={e => set('range', e.target.checked)} />
-                📊 당일 고저 레인지 바 — 카드 아래에 오늘 저가~고가 사이 현재 위치를 점으로 표시해요
-              </label>
             </div>
 
             <div className="advanced-row">

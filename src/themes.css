@@ -275,7 +275,9 @@
   --fx-target-glow: rgba(255, 95, 162, 0.8);
 
   --font-head: 'Orbitron', 'Inter', sans-serif;
-  --font-num: 'DSEG7-Classic', 'DSEG7 Classic', 'Orbitron', monospace;
+  /* MINI variant: same 7-segment look but narrower glyphs, so long
+     prices ($700+) stop squeezing the symbol out of the card */
+  --font-num: 'DSEG7-Classic-MINI', 'DSEG7-Classic', 'Orbitron', monospace;
 
   /* Scale down base fonts to account for wide Orbitron/DSEG7 glyphs
      (caps at ~1.5x the 300px design, same policy as the base sizes) */
@@ -307,7 +309,7 @@
 
 .theme-led-board .neon-title {
   color: #fff;
-  letter-spacing: 3px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   font-weight: 700;
   text-shadow: 0 0 8px rgba(232, 241, 255, 0.5);
@@ -317,7 +319,7 @@
   color: var(--color-primary);
   text-shadow: 0 0 4px rgba(255, 179, 0, 0.9), 0 0 14px rgba(255, 179, 0, 0.5);
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 
 .theme-led-board .text-up { text-shadow: 0 0 4px var(--color-up), 0 0 12px var(--color-up-glow); }

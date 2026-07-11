@@ -21,7 +21,7 @@ let particleId = 0;
 
 const TickerCard = ({
   symbol, price, changePercent, previousClose, regularMarketPrice, name, marketState, closes, stale,
-  week52High, week52Low, dayHigh, dayLow, showRange, targetPrice,
+  week52High, week52Low, targetPrice,
   fx = 'full', pixel = false, showSparkline = true, loopPrevPrice,
   ...motionProps
 }) => {
@@ -305,18 +305,6 @@ const TickerCard = ({
       {showSparkline && (
         <div className={`sparkline-wrap ${colorClass}`}>
           {closes && closes.length > 1 && <Sparkline data={closes} baseline={previousClose} pixel={pixel} />}
-        </div>
-      )}
-
-      {/* Optional day high/low range bar (space reserved once enabled) */}
-      {showRange && (
-        <div className="range-bar" aria-hidden="true">
-          {typeof dayHigh === 'number' && typeof dayLow === 'number' && dayHigh > dayLow && typeof price === 'number' && (
-            <span
-              className={`range-dot ${colorClass}`}
-              style={{ left: `${Math.min(100, Math.max(0, ((price - dayLow) / (dayHigh - dayLow)) * 100))}%` }}
-            />
-          )}
         </div>
       )}
     </motion.div>

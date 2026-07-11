@@ -33,7 +33,6 @@ const Widget = () => {
   const intervalParam = clampNum(searchParams.get('interval'), 3, 120, 10);
   const opacityParam = clampNum(searchParams.get('opacity'), 0.1, 1, 1);
   const speedParam = clampNum(searchParams.get('speed'), 0.25, 3, 1);
-  const rangeParam = searchParams.get('range') === '1';
   // targets=SYM:price,SYM:price — optional per-symbol target lines
   const targets = useMemo(() => {
     const out = {};
@@ -133,9 +132,6 @@ const Widget = () => {
         marketState={ticker?.marketState}
         week52High={ticker?.week52High}
         week52Low={ticker?.week52Low}
-        dayHigh={ticker?.dayHigh}
-        dayLow={ticker?.dayLow}
-        showRange={rangeParam}
         targetPrice={targets[symbol]}
         closes={ticker?.closes}
         stale={ticker?.stale}

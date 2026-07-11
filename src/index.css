@@ -379,33 +379,6 @@ html, body, #root {
 .fx-off .w52-banner, .fx-off .w52-ring { display: none; }
 .fx-soft .w52-ring { display: none; } /* soft keeps the banner, drops the glow */
 
-/* Day range bar: thin track + current-price dot.
-   (No color-mix — old OBS CEF doesn't know it; ::before + opacity instead) */
-.range-bar {
-  position: relative;
-  height: 4px;
-  margin-top: clamp(6px, 2.2vw, 12px);
-}
-.range-bar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  background: var(--text-muted);
-  opacity: 0.3;
-}
-.range-dot {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: clamp(8px, 2.8vw, 13px);
-  height: clamp(8px, 2.8vw, 13px);
-  border-radius: 50%;
-  background: currentColor;
-  color: var(--text-muted);
-  box-shadow: 0 0 6px currentColor;
-  transition: left 0.6s ease;
-}
 
 /* ============================================================
    Marquee (scroll) mode — electronic board strip
@@ -838,6 +811,15 @@ html, body, #root {
   flex-direction: column;
   align-items: center;
   transition: width 0.25s ease;
+  /* Follow the scroll: stays in view while the sidebar (settings) scrolls,
+     so preview changes are visible even from the advanced panel far down.
+     align-self:flex-start un-stretches the flex child so sticky has travel
+     room; max-height + overflow keeps a tall preview fully on screen. */
+  position: sticky;
+  top: 20px;
+  align-self: flex-start;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
 }
 
 /* Placement preview: widen the panel so the full screenshot is workable */
@@ -858,8 +840,13 @@ html, body, #root {
   }
   .app-title { font-size: 16px; }
   .config-preview-wrapper {
-    /* Stack the preview below the controls instead of hiding it */
+    /* Stack the preview below the controls instead of hiding it;
+       sticky is pointless once stacked, so return to normal flow */
     width: 100%;
+    position: static;
+    max-height: none;
+    overflow: visible;
+    align-self: auto;
   }
   .config-layout.scene-expanded .config-preview-wrapper {
     width: 100%;
