@@ -270,6 +270,40 @@ html, body, #root {
 }
 .sign-flip { animation: signFlip 0.55s ease; }
 
+/* Zero-cross arrow: rushes in, lingers a beat at the center (slightly
+   growing), then accelerates out — speed is shaped by the keyframe
+   distribution (long travel in the outer stops, short in the middle) */
+.cross-arrow {
+  position: absolute;
+  left: 50%;
+  z-index: 5;
+  pointer-events: none;
+  line-height: 1;
+  font-size: clamp(20px, 9vw, 42px);
+}
+.arrow-up {
+  color: var(--color-up);
+  text-shadow: 0 0 10px var(--color-up-glow), 0 0 24px var(--color-up-glow);
+  animation: crossArrowUp 1.05s forwards;
+}
+.arrow-down {
+  color: var(--color-down);
+  text-shadow: 0 0 10px var(--color-down-glow), 0 0 24px var(--color-down-glow);
+  animation: crossArrowDown 1.05s forwards;
+}
+@keyframes crossArrowUp {
+  0% { top: 104%; opacity: 0; transform: translateX(-50%) scale(0.85); animation-timing-function: ease-out; }
+  35% { top: 60%; opacity: 1; transform: translateX(-50%) scale(1); animation-timing-function: ease-in-out; }
+  65% { top: 40%; opacity: 1; transform: translateX(-50%) scale(1.18); animation-timing-function: ease-in; }
+  100% { top: -22%; opacity: 0; transform: translateX(-50%) scale(0.95); }
+}
+@keyframes crossArrowDown {
+  0% { top: -22%; opacity: 0; transform: translateX(-50%) scale(0.85); animation-timing-function: ease-out; }
+  35% { top: 40%; opacity: 1; transform: translateX(-50%) scale(1); animation-timing-function: ease-in-out; }
+  65% { top: 60%; opacity: 1; transform: translateX(-50%) scale(1.18); animation-timing-function: ease-in; }
+  100% { top: 104%; opacity: 0; transform: translateX(-50%) scale(0.95); }
+}
+
 /* Session record (신고가/신저가) pop — floats up from the card center */
 .hilo-pop {
   position: absolute;
@@ -306,6 +340,7 @@ html, body, #root {
 .fx-off .surge-badge { animation: none; }
 .fx-off .fx-particle { display: none; }
 .fx-off .cross-wipe { display: none; }
+.fx-off .cross-arrow { display: none; }
 .fx-off .sign-flip { animation: none; }
 .fx-off .hilo-pop { display: none; }
 

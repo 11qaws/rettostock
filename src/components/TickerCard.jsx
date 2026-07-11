@@ -194,8 +194,16 @@ const TickerCard = ({
         </span>
       ))}
 
-      {/* Zero-cross color wipe (full fx only) */}
-      {crossFx && fx === 'full' && <span className={`cross-wipe wipe-${crossFx}`} aria-hidden="true" />}
+      {/* Zero-cross: shimmer wipe + an arrow passing through the card,
+          easing off at the center before shooting out (full fx only) */}
+      {crossFx && fx === 'full' && (
+        <>
+          <span className={`cross-wipe wipe-${crossFx}`} aria-hidden="true" />
+          <span className={`cross-arrow arrow-${crossFx}`} aria-hidden="true">
+            {crossFx === 'up' ? '▲' : '▼'}
+          </span>
+        </>
+      )}
 
       {/* Session record pop */}
       {hiloPop && (
