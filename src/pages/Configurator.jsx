@@ -417,25 +417,32 @@ const Configurator = () => {
             />
             <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {symbolList.map((s) => (
-                <div key={s} className="jirai-tag">
+                <div key={s} className="jirai-tag" style={{ paddingRight: config.useTargets ? '6px' : undefined }}>
                   {s}
                   {config.useTargets && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', background: 'rgba(255,255,255,0.2)', padding: '2px 4px', borderRadius: '4px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', background: 'rgba(255,255,255,0.3)', padding: '4px 6px', borderRadius: '6px' }}>
                       🎯
                       <input
                         type="number"
                         min="0"
                         step="any"
-                        style={{ width: '45px', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(0,0,0,0.2)', color: 'inherit', fontSize: '13px', marginLeft: '2px', outline: 'none', padding: '0 2px' }}
+                        style={{ width: '75px', background: '#fff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: '#333', fontSize: '14px', marginLeft: '4px', outline: 'none', padding: '2px 6px' }}
                         placeholder="목표가"
                         value={config.targets?.[s] ?? ''}
                         onChange={e => set('targets', { ...(config.targets || {}), [s]: e.target.value })}
                       />
                     </span>
                   )}
-                  <button onClick={() => removeSymbol(s)} aria-label={`${s} 제거`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px', lineHeight: 1, marginLeft: '6px' }}>✕</button>
+                  <button onClick={() => removeSymbol(s)} aria-label={`${s} 제거`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px', lineHeight: 1, marginLeft: '8px', marginRight: config.useTargets ? '4px' : '0' }}>✕</button>
                 </div>
               ))}
+            </div>
+            
+            <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px dashed #e0e0e0' }}>
+              <label className="demo-toggle" style={{ fontSize: '14px', color: '#4e342e' }}>
+                <input type="checkbox" checked={config.useTargets} onChange={e => set('useTargets', e.target.checked)} />
+                🎯 각 종목마다 목표가 알림 설정하기 (돌파 시 축하 배너)
+              </label>
             </div>
           </div>
 
@@ -629,13 +636,6 @@ const Configurator = () => {
             </div>
 
             <div className="advanced-row">
-              <label className="demo-toggle">
-                <input type="checkbox" checked={config.useTargets} onChange={e => set('useTargets', e.target.checked)} />
-                🎯 목표가 알림 사용하기 (체크 후 맨 위 1번 항목에서 목표가를 입력하세요)
-              </label>
-            </div>
-
-            <div className="advanced-row" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px dashed #e0e0e0' }}>
               <label className="demo-toggle" style={{ color: '#9e9e9e' }}>
                 <input type="checkbox" checked={config.demo} onChange={e => set('demo', e.target.checked)} />
                 🛠️ 개발자 전용 데모 모드 (가짜 시세 주입)
