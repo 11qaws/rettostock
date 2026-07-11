@@ -638,7 +638,9 @@ const Configurator = () => {
               </button>
             </div>
             <p className={`sync-status ${justApplied ? 'active' : ''}`}>
-              {justApplied ? '✓ 위젯에 적용됐어요' : '● 설정을 바꾸면 OBS 위젯에 바로 반영돼요'}
+              {justApplied
+                ? '✓ 설정이 반영된 주소예요 — 다시 복사해 OBS에 붙여넣으세요'
+                : '● 설정을 바꾸면 위젯 주소를 다시 복사해 OBS에 붙여넣으세요'}
             </p>
           </div>
 
@@ -791,7 +793,12 @@ const Configurator = () => {
         </div>
 
         {/* Right Side: Preview */}
-        <div className="config-preview-wrapper">
+        <div
+          className="config-preview-wrapper"
+          // List/rotate preview owns its own scroll (see the preview box below),
+          // so the panel grows freely up to 5 cards; scene mode keeps the CSS cap.
+          style={!sceneMode ? { maxHeight: 'none', overflowY: 'visible' } : undefined}
+        >
           <label className="preview-label">🖥️ 미리보기</label>
 
           {/* Scene screenshot: auto-match theme + use as preview backdrop.
@@ -947,17 +954,28 @@ const Configurator = () => {
             const rec = recommendedDims(config.displayMode, symbolList.length);
             const frameW = config.displayMode === 'scroll' ? PREVIEW_W : rec.w;
             const frameH = rec.h;
-            const scale = Math.min(1, PREVIEW_W / frameW, 640 / frameH);
+            // Card size must NOT shrink as symbols grow. The streamer only
+            // re-pastes the URL and sizes the OBS source to the (growing)
+            // recommended height, so the preview shows real card size — scale by
+            // width only. Up to 5 cards the panel simply grows; from 6 the
+            // preview box caps at 5 cards' height and scrolls inside (cards keep
+            // their real size either way).
+            const scale = Math.min(1, PREVIEW_W / frameW);
+            const MAX_VISIBLE_CARDS = 5;
+            const scrolls = config.displayMode === 'list' && symbolList.length > MAX_VISIBLE_CARDS;
+            const boxH = scrolls ? recommendedDims('list', MAX_VISIBLE_CARDS).h : frameH;
             return (
               <>
                 <div style={{
                   width: `${PREVIEW_W}px`,
                   maxWidth: '100%',
                   margin: '0 auto',
-                  height: `${Math.round(frameH * scale)}px`,
+                  height: `${Math.round(boxH * scale)}px`,
+                  flexShrink: 0, // keep real height; cards never get squished
                   border: '4px solid #ffb6c1',
                   borderRadius: '16px',
-                  overflow: 'hidden',
+                  overflowX: 'hidden',
+                  overflowY: scrolls ? 'auto' : 'hidden', // 6+ cards: scroll inside the box
                   position: 'relative',
                   boxSizing: 'content-box',
                   boxShadow: '0 8px 16px rgba(255,182,193,0.3)',
@@ -974,6 +992,7 @@ const Configurator = () => {
                       transform: `scale(${scale})`,
                       transformOrigin: 'top left',
                       marginLeft: `${Math.max(0, Math.round((PREVIEW_W - frameW * scale) / 2))}px`,
+                      pointerEvents: 'none', // let wheel scroll the sticky preview panel, not the widget
                     }}
                     title="Widget Preview"
                   />
