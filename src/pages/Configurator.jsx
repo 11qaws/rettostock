@@ -466,12 +466,14 @@ const Configurator = () => {
                           onKeyDown={e => {
                             if (e.key === 'Escape') {
                               set('targets', { ...(config.targets || {}), [s]: e.target.dataset.initialValue });
+                              setActiveTargetSymbol(null);
                               e.target.blur();
                             } else if (e.key === 'Enter') {
                               e.preventDefault();
                               if (e.target.value === '0') {
                                 set('targets', { ...(config.targets || {}), [s]: '' });
                               }
+                              setActiveTargetSymbol(null);
                               e.target.blur();
                             }
                           }}
