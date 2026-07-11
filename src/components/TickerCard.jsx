@@ -32,6 +32,15 @@ const TickerCard = ({
   const [fxIntensity, setFxIntensity] = useState(1); // tick effect strength ∝ move size
   const [w52Pop, setW52Pop] = useState(null); // 'high' | 'low' — 52-week record broken
   const w52Ref = useRef({ effHigh: null, effLow: null, bornAt: Date.now(), lastFx: { high: 0, low: 0 } });
+  // Reset timers live in refs, NOT in effect cleanups: a fast next tick
+  // re-running the effect must never cancel the pending state reset
+  // (that stuck the effect state and swallowed future same-direction fires)
+  const w52TimerRef = useRef(null);
+  const crossTimerRef = useRef(null);
+  useEffect(() => () => {
+    clearTimeout(w52TimerRef.current);
+    clearTimeout(crossTimerRef.current);
+  }, []);
   const prevPriceRef = useRef(loopPrevPrice !== undefined ? loopPrevPrice : price);
   const prevSurgeRef = useRef(null); // null = no data seen yet
   const prevSignRef = useRef(null);
@@ -116,15 +125,21 @@ const TickerCard = ({
     const now = Date.now();
     const warm = now - s.bornAt > 10000;
 
+    const fire = (dir) => {
+      clearTimeout(w52TimerRef.current);
+      setW52Pop(null); // force remount so the animation replays even same-direction
+      requestAnimationFrame(() => setW52Pop(dir));
+      w52TimerRef.current = setTimeout(() => setW52Pop(null), 2700);
+    };
+
     if (typeof week52High === 'number' && week52High > 0) {
       const ref = Math.max(week52High, s.effHigh ?? 0);
       if (price > ref) {
         if (warm && fx !== 'off' && now - s.lastFx.high > 300000) {
           s.lastFx.high = now;
           s.effHigh = price * 1.002; // next banner needs +0.2% on top
-          setW52Pop('high');
-          const t = setTimeout(() => setW52Pop(null), 2700);
-          return () => clearTimeout(t);
+          fire('high');
+          return;
         }
         s.effHigh = Math.max(s.effHigh ?? 0, price);
       }
@@ -135,9 +150,8 @@ const TickerCard = ({
         if (warm && fx !== 'off' && now - s.lastFx.low > 300000) {
           s.lastFx.low = now;
           s.effLow = price * 0.998;
-          setW52Pop('low');
-          const t = setTimeout(() => setW52Pop(null), 2700);
-          return () => clearTimeout(t);
+          fire('low');
+          return;
         }
         s.effLow = Math.min(s.effLow ?? Infinity, price);
       }
@@ -160,9 +174,10 @@ const TickerCard = ({
     if (now - lastCrossRef.current < 10000) return;
     lastCrossRef.current = now;
 
-    setCrossFx(sign > 0 ? 'up' : 'down');
-    const timer = setTimeout(() => setCrossFx(null), 1100);
-    return () => clearTimeout(timer);
+    clearTimeout(crossTimerRef.current);
+    setCrossFx(null);
+    requestAnimationFrame(() => setCrossFx(sign > 0 ? 'up' : 'down'));
+    crossTimerRef.current = setTimeout(() => setCrossFx(null), 1100);
   }, [changePercent, fx]);
 
   const isUp = changePercent > 0;
