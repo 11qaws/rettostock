@@ -654,12 +654,11 @@ const Configurator = () => {
             <div className="advanced-row">
               <label className="demo-toggle">
                 <input type="checkbox" checked={!!config.remote} onChange={e => set('remote', e.target.checked)} />
-                🔗 브라우저-OBS 실시간 연결 (폰 등 다른 기기에서 리모컨을 조작할 때만 필요)
+                🔗 실시간 연결 — 여기서 설정을 바꾸면 OBS 위젯에 즉시 적용됩니다
               </label>
               {!config.remote && (
                 <p style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0 24px', lineHeight: 1.6 }}>
-                  URL을 복사해서 OBS에 붙여넣는 방식으로 사용 중이라면 <b>체크하지 않아도 됩니다.</b><br />
-                  이 기능은 폰이나 다른 PC에서 리모컨을 열어 OBS 위젯을 원격 제어할 때만 필요합니다.
+                  URL을 복사해서 OBS에 붙여넣는 방식으로 사용 중이라면 <b>체크하지 않아도 됩니다.</b>
                 </p>
               )}
               {config.remote && (
