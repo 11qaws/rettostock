@@ -304,31 +304,56 @@ html, body, #root {
   100% { top: 104%; opacity: 0; transform: translateX(-50%) scale(0.95); }
 }
 
-/* Session record (신고가/신저가) pop — floats up from the card center */
-.hilo-pop {
+/* 52-week record celebration: a rare, big moment — gold banner for a
+   new 52w high, icy blue for a new 52w low, plus a pulsing ring overlay
+   (separate element so it never fights other card animations). */
+.w52-banner {
   position: absolute;
   left: 50%;
-  top: 38%;
-  transform: translateX(-50%);
-  font-size: clamp(11px, 3.7vw, 17px);
-  font-weight: 700;
-  letter-spacing: 1px;
+  top: 50%;
+  z-index: 7;
+  pointer-events: none;
   white-space: nowrap;
-  padding: 2px 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  font-size: clamp(13px, 5.5vw, 26px);
+  padding: 0.35em 1em;
   border-radius: 999px;
-  border: 1px solid currentColor;
-  background: rgba(var(--bg-rgb), 0.85);
+  animation: w52Pop 2.6s cubic-bezier(0.2, 1.1, 0.3, 1) forwards;
+}
+.w52-high {
+  color: #5a3a00;
+  background: linear-gradient(100deg, #ffe27a, #ffc94d 40%, #ffefb0 60%, #f5b73e);
+  box-shadow: 0 0 20px rgba(255, 200, 60, 0.8), 0 2px 0 rgba(120, 80, 0, 0.35);
+}
+.w52-low {
+  color: #eaf5ff;
+  background: linear-gradient(100deg, #2c4f8e, #3f74bd 45%, #2a548f);
+  border: 1px solid rgba(180, 215, 255, 0.75);
+  box-shadow: 0 0 20px rgba(90, 150, 255, 0.65);
+}
+@keyframes w52Pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.45); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1.14); }
+  22% { transform: translate(-50%, -50%) scale(1); }
+  82% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -60%) scale(1.03); }
+}
+.w52-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   pointer-events: none;
   z-index: 6;
-  animation: hiloPop 1.6s ease-out forwards;
+  animation: w52Ring 2.6s ease forwards;
 }
-.hilo-high { color: var(--color-up); }
-.hilo-low { color: var(--color-down); }
-@keyframes hiloPop {
-  0% { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.8); }
-  15% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.06); }
-  70% { opacity: 1; transform: translateX(-50%) translateY(-4px) scale(1); }
-  100% { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(1); }
+.w52-ring-high { box-shadow: inset 0 0 0 2px rgba(255, 205, 70, 0.9), inset 0 0 26px rgba(255, 200, 60, 0.4); }
+.w52-ring-low { box-shadow: inset 0 0 0 2px rgba(120, 170, 255, 0.9), inset 0 0 26px rgba(90, 150, 255, 0.35); }
+@keyframes w52Ring {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* fx intensity: soft = no shake/particles, off = no animations at all */
@@ -342,7 +367,8 @@ html, body, #root {
 .fx-off .cross-wipe { display: none; }
 .fx-off .cross-arrow { display: none; }
 .fx-off .sign-flip { animation: none; }
-.fx-off .hilo-pop { display: none; }
+.fx-off .w52-banner, .fx-off .w52-ring { display: none; }
+.fx-soft .w52-ring { display: none; } /* soft keeps the banner, drops the glow */
 
 /* ============================================================
    Marquee (scroll) mode — electronic board strip

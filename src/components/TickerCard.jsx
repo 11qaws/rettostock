@@ -21,6 +21,7 @@ let particleId = 0;
 
 const TickerCard = ({
   symbol, price, changePercent, previousClose, regularMarketPrice, name, marketState, closes, stale,
+  week52High, week52Low,
   fx = 'full', pixel = false, showSparkline = true, loopPrevPrice,
   ...motionProps
 }) => {
@@ -29,8 +30,8 @@ const TickerCard = ({
   const [particles, setParticles] = useState([]);
   const [crossFx, setCrossFx] = useState(null); // 'up' (양전) | 'down' (음전)
   const [fxIntensity, setFxIntensity] = useState(1); // tick effect strength ∝ move size
-  const [hiloPop, setHiloPop] = useState(null); // 'high' | 'low' — session record broken
-  const sessionRef = useRef({ high: null, low: null, effectHigh: null, effectLow: null, bornAt: Date.now(), lastFx: { high: 0, low: 0 } });
+  const [w52Pop, setW52Pop] = useState(null); // 'high' | 'low' — 52-week record broken
+  const w52Ref = useRef({ effHigh: null, effLow: null, bornAt: Date.now(), lastFx: { high: 0, low: 0 } });
   const prevPriceRef = useRef(loopPrevPrice !== undefined ? loopPrevPrice : price);
   const prevSurgeRef = useRef(null); // null = no data seen yet
   const prevSignRef = useRef(null);
@@ -104,49 +105,44 @@ const TickerCard = ({
     prevSurgeRef.current = surged;
   }, [changePercent, fx]);
 
-  // Session high/low tracking: flash a 신고가/신저가 pop the moment the
-  // day's record breaks. Guards: 25s warm-up after mount (initial fills),
-  // 45s per-direction cooldown, and the record must beat the last
-  // celebrated one by 0.1% so a creeping trend doesn't spam.
+  // 52-week record: a rare, big broadcast moment. Fires when the price
+  // crosses the 52-week high/low from Finnhub metrics. Guards: 10s
+  // warm-up, 5min per-direction cooldown, and each re-fire needs the
+  // record beaten by another 0.2% (the running record is tracked locally
+  // so a slow climb doesn't spam banners).
   useEffect(() => {
     if (typeof price !== 'number') return;
-    const s = sessionRef.current;
-    if (s.high === null) {
-      s.high = price; s.low = price;
-      s.effectHigh = price; s.effectLow = price;
-      return;
-    }
+    const s = w52Ref.current;
     const now = Date.now();
-    const warm = now - s.bornAt > 25000;
+    const warm = now - s.bornAt > 10000;
 
-    if (price > s.high) {
-      s.high = price;
-      if (warm && fx !== 'off' && now - s.lastFx.high > 45000 && price >= s.effectHigh * 1.001) {
-        s.lastFx.high = now;
-        s.effectHigh = price;
-        setHiloPop('high');
-        const t = setTimeout(() => setHiloPop(null), 1700);
-        return () => clearTimeout(t);
-      }
-    } else if (price < s.low) {
-      s.low = price;
-      if (warm && fx !== 'off' && now - s.lastFx.low > 45000 && price <= s.effectLow * 0.999) {
-        s.lastFx.low = now;
-        s.effectLow = price;
-        setHiloPop('low');
-        const t = setTimeout(() => setHiloPop(null), 1700);
-        return () => clearTimeout(t);
+    if (typeof week52High === 'number' && week52High > 0) {
+      const ref = Math.max(week52High, s.effHigh ?? 0);
+      if (price > ref) {
+        if (warm && fx !== 'off' && now - s.lastFx.high > 300000) {
+          s.lastFx.high = now;
+          s.effHigh = price * 1.002; // next banner needs +0.2% on top
+          setW52Pop('high');
+          const t = setTimeout(() => setW52Pop(null), 2700);
+          return () => clearTimeout(t);
+        }
+        s.effHigh = Math.max(s.effHigh ?? 0, price);
       }
     }
-  }, [price, fx]);
-
-  // New regular session -> fresh records
-  useEffect(() => {
-    if (marketState === 'REGULAR') {
-      const s = sessionRef.current;
-      s.high = null; s.low = null; s.effectHigh = null; s.effectLow = null;
+    if (typeof week52Low === 'number' && week52Low > 0) {
+      const ref = Math.min(week52Low, s.effLow ?? Infinity);
+      if (price < ref) {
+        if (warm && fx !== 'off' && now - s.lastFx.low > 300000) {
+          s.lastFx.low = now;
+          s.effLow = price * 0.998;
+          setW52Pop('low');
+          const t = setTimeout(() => setW52Pop(null), 2700);
+          return () => clearTimeout(t);
+        }
+        s.effLow = Math.min(s.effLow ?? Infinity, price);
+      }
     }
-  }, [marketState]);
+  }, [price, week52High, week52Low, fx]);
 
   // Zero-cross (양전/음전): color wipe + sign flip the moment the change
   // flips sign. Tiny values never commit a sign (hysteresis) and a
@@ -205,11 +201,14 @@ const TickerCard = ({
         </>
       )}
 
-      {/* Session record pop */}
-      {hiloPop && (
-        <span className={`hilo-pop hilo-${hiloPop}`} aria-hidden="true">
-          {hiloPop === 'high' ? '✨ 신고가' : '신저가'}
-        </span>
+      {/* 52-week record celebration */}
+      {w52Pop && (
+        <>
+          <span className={`w52-ring w52-ring-${w52Pop}`} aria-hidden="true" />
+          <span className={`w52-banner w52-${w52Pop}`} aria-hidden="true">
+            {w52Pop === 'high' ? '🏆 52주 신고가' : '❄️ 52주 신저가'}
+          </span>
+        </>
       )}
 
       <div className="card-row">

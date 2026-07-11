@@ -140,6 +140,8 @@ export const useStockData = (symbols, demo = false) => {
           price: s.price,
           changePercent: s.changePercent,
           previousClose: s.base, // sparkline baseline in demo too
+          week52High: s.base * 1.06, // reachable by demo surges -> banner preview
+          week52Low: s.base * 0.94,
           name: `${sym} (데모)`,
           marketState: 'REGULAR',
           closes: [...s.closes],
@@ -177,6 +179,7 @@ export const useStockData = (symbols, demo = false) => {
     let enrichTimer = null;
     let statusTimer = null;
     let holidayTimer = null;
+    let metricsTimer = null;
     let stopped = false;
     let quotesComplete = false; // all symbols have price + change on screen
     const failCounts = {};
@@ -432,7 +435,41 @@ export const useStockData = (symbols, demo = false) => {
         // Every loop swallows its own errors and always reschedules —
         // a single bad response must never silently kill a data feed
         // mid-stream.
-        const quoteLoop = async () => {
+        // 2b-1. 52-week high/low (Finnhub basic financials, direct CORS).
+      //       Reference levels for the 52주 신고가/신저가 celebration —
+      //       fetched once per boot and refreshed every 6h for marathon
+      //       sessions. Missing data just means no banner, never an error.
+      const fetchMetrics = async () => {
+        await Promise.allSettled(stockSymbols.map(async (symbol) => {
+          const res = await fetch(
+            `https://api.finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all&token=${API_KEY}`,
+            { cache: 'no-store' }
+          );
+          if (!res.ok) throw new Error(`metric ${res.status}`);
+          const m = (await res.json())?.metric;
+          const high = m?.['52WeekHigh'];
+          const low = m?.['52WeekLow'];
+          if (typeof high !== 'number' && typeof low !== 'number') return;
+          if (stopped) return;
+          setData(prev => ({
+            ...prev,
+            [symbol]: {
+              ...(prev[symbol] || {}),
+              week52High: typeof high === 'number' ? high : prev[symbol]?.week52High,
+              week52Low: typeof low === 'number' ? low : prev[symbol]?.week52Low,
+            },
+          }));
+        }));
+      };
+      const metricsLoop = async () => {
+        if (stopped) return;
+        try { await fetchMetrics(); } catch (err) { console.error('metrics loop:', err); }
+        if (stopped) return;
+        metricsTimer = setTimeout(metricsLoop, 6 * 3600000);
+      };
+      metricsLoop();
+
+      const quoteLoop = async () => {
           if (stopped) return;
           try { await fetchQuotes(); } catch (err) { console.error('quote loop:', err); }
           if (stopped) return;
@@ -596,6 +633,7 @@ export const useStockData = (symbols, demo = false) => {
         if (enrichTimer) clearTimeout(enrichTimer);
         if (statusTimer) clearTimeout(statusTimer);
         if (holidayTimer) clearTimeout(holidayTimer);
+        if (metricsTimer) clearTimeout(metricsTimer);
         if (finnhubReconnectTimer) clearTimeout(finnhubReconnectTimer);
         try { if (finnhubWs) finnhubWs.close(); } catch { /* ignore */ }
       };

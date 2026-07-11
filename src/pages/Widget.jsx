@@ -120,6 +120,8 @@ const Widget = () => {
         regularMarketPrice={ticker?.regularMarketPrice}
         name={ticker?.name || 'Loading...'}
         marketState={ticker?.marketState}
+        week52High={ticker?.week52High}
+        week52Low={ticker?.week52Low}
         closes={ticker?.closes}
         stale={ticker?.stale}
         fx={fxParam}
