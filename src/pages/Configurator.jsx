@@ -108,7 +108,8 @@ const defaultConfig = {
   fx: 'full',
   speed: 1,
   demo: false,
-  remote: false, // cross-device relay is opt-in
+  remote: false, // cross-device relay is opt-in (currently disabled in UI)
+  useTargets: false,
   targets: {},   // per-symbol target prices (empty = off)
 };
 
@@ -418,7 +419,21 @@ const Configurator = () => {
               {symbolList.map((s) => (
                 <div key={s} className="jirai-tag">
                   {s}
-                  <button onClick={() => removeSymbol(s)} aria-label={`${s} 제거`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px', lineHeight: 1 }}>✕</button>
+                  {config.useTargets && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', background: 'rgba(255,255,255,0.2)', padding: '2px 4px', borderRadius: '4px' }}>
+                      🎯
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        style={{ width: '45px', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(0,0,0,0.2)', color: 'inherit', fontSize: '13px', marginLeft: '2px', outline: 'none', padding: '0 2px' }}
+                        placeholder="목표가"
+                        value={config.targets?.[s] ?? ''}
+                        onChange={e => set('targets', { ...(config.targets || {}), [s]: e.target.value })}
+                      />
+                    </span>
+                  )}
+                  <button onClick={() => removeSymbol(s)} aria-label={`${s} 제거`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px', lineHeight: 1, marginLeft: '6px' }}>✕</button>
                 </div>
               ))}
             </div>
@@ -614,49 +629,10 @@ const Configurator = () => {
             </div>
 
             <div className="advanced-row">
-              <label>🎯 목표가 알림</label>
-              <p style={{ fontSize: '13px', color: '#8d6e63', margin: '0 0 8px', lineHeight: 1.5 }}>
-                가격을 적어두면 그 선을 지나는 순간 카드에 축하 배너가 떠요. 비워두면 꺼진 상태예요.
-              </p>
-              {symbolList.map(s => {
-                const key = s.toUpperCase();
-                return (
-                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '6px 0' }}>
-                    <span style={{ width: '64px', fontSize: '14px', fontWeight: 'bold', color: '#4e342e' }}>{key}</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      className="jirai-input"
-                      style={{ flex: 1, padding: '6px 12px', fontSize: '14px' }}
-                      placeholder="예: 200"
-                      value={config.targets?.[key] ?? ''}
-                      onChange={e => set('targets', { ...(config.targets || {}), [key]: e.target.value })}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-
-
-
-            <div className="advanced-row">
               <label className="demo-toggle">
-                <input type="checkbox" checked={!!config.remote} onChange={e => set('remote', e.target.checked)} />
-                🔗 실시간 연결
+                <input type="checkbox" checked={config.useTargets} onChange={e => set('useTargets', e.target.checked)} />
+                🎯 목표가 알림 사용하기 (체크 후 맨 위 1번 항목에서 목표가를 입력하세요)
               </label>
-              {!config.remote && (
-                <p style={{ fontSize: '13px', color: '#8d6e63', margin: '8px 0 0 24px', lineHeight: 1.6 }}>
-                  URL을 복사해서 OBS에 붙여넣는 방식으로 사용 중이라면 <b>체크하지 않아도 됩니다.</b>
-                </p>
-              )}
-              {config.remote && (
-                <div style={{ margin: '10px 0 0 24px' }}>
-                <p style={{ fontSize: '13px', color: '#d84315', margin: '0', lineHeight: 1.6, fontWeight: 'bold' }}>
-                    ⚠️ 위의 위젯 URL을 OBS에 다시 붙여넣으면, 이후부터는 여기서 바꾼 설정이 즉시 반영됩니다.
-                  </p>
-                </div>
-              )}
             </div>
 
             <div className="advanced-row" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px dashed #e0e0e0' }}>
