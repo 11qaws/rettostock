@@ -133,38 +133,48 @@ export const useStockData = (symbols, demo = false) => {
       state[symbol] = { base, price, changePercent, closes };
     });
 
-    const snapshot = () => {
-      const next = {};
-      for (const [sym, s] of Object.entries(state)) {
-        next[sym] = {
-          price: s.price,
-          changePercent: s.changePercent,
-          previousClose: s.base, // sparkline baseline in demo too
-          week52High: s.base * 1.06, // reachable by demo surges -> banner preview
-          week52Low: s.base * 0.94,
-          name: `${sym} (데모)`,
-          marketState: 'REGULAR',
-          closes: [...s.closes],
-          stale: false,
-        };
-      }
-      setData(next);
-    };
-    snapshot();
+    const entryOf = (sym, s) => ({
+      price: s.price,
+      changePercent: s.changePercent,
+      previousClose: s.base, // sparkline baseline in demo too
+      week52High: s.base * 1.06, // reachable by demo surges -> banner preview
+      week52Low: s.base * 0.94,
+      name: `${sym} (데모)`,
+      marketState: 'REGULAR',
+      closes: [...s.closes],
+      stale: false,
+    });
 
+    setData(() => {
+      const next = {};
+      for (const [sym, s] of Object.entries(state)) next[sym] = entryOf(sym, s);
+      return next;
+    });
+
+    // Each symbol lands with its own small random delay so the cards
+    // don't all tick in the same frame
+    const jitter = new Set();
     const timer = setInterval(() => {
-      for (const s of Object.values(state)) {
+      for (const [sym, s] of Object.entries(state)) {
         let drift = (Math.random() - 0.5) * 0.4;
         if (Math.random() < 0.03) drift += (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 4);
         s.changePercent += drift;
         s.price = s.base * (1 + s.changePercent / 100);
         s.closes.push(s.price);
         if (s.closes.length > MAX_SPARK_POINTS) s.closes.shift();
+
+        const t = setTimeout(() => {
+          jitter.delete(t);
+          setData(prev => ({ ...prev, [sym]: entryOf(sym, s) }));
+        }, Math.random() * 900);
+        jitter.add(t);
       }
-      snapshot();
     }, 1500);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      jitter.forEach(clearTimeout);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbolsKey, demo]);
 
@@ -183,6 +193,26 @@ export const useStockData = (symbols, demo = false) => {
     let stopped = false;
     let quotesComplete = false; // all symbols have price + change on screen
     const failCounts = {};
+
+    // Update jitter: batch responses land all at once, which makes every
+    // card pump/dump in the same frame — mechanical and dull. Each
+    // symbol's merge is delayed by a small random amount instead (first
+    // paint per symbol stays immediate). Delays are far below the polling
+    // intervals, so ordering per symbol is preserved.
+    const paintedOnce = new Set();
+    const jitterTimers = new Set();
+    const applyJittered = (symbol, maxDelay, apply) => {
+      if (!paintedOnce.has(symbol)) {
+        paintedOnce.add(symbol);
+        apply();
+        return;
+      }
+      const t = setTimeout(() => {
+        jitterTimers.delete(t);
+        if (!stopped) apply();
+      }, Math.random() * maxDelay);
+      jitterTimers.add(t);
+    };
     // Known synchronously from the very first tick — no network round-trip
     // needed before the widget knows which session it is in.
     let usMarketState = calcNySession();
@@ -271,17 +301,19 @@ export const useStockData = (symbols, demo = false) => {
           return { symbol, q: await res.json() };
         }));
         if (stopped) return;
-        setData(prev => {
-          const next = { ...prev };
-          for (const r of results) {
-            if (r.status !== 'fulfilled') continue;
-            const { symbol, q } = r.value;
-            if (!q || typeof q.c !== 'number' || q.c <= 0) {
-              failCounts[symbol] = (failCounts[symbol] || 0) + 1;
-              if (failCounts[symbol] >= 3 && next[symbol]) next[symbol] = { ...next[symbol], stale: true };
-              continue;
+        for (const r of results) {
+          if (r.status !== 'fulfilled') continue;
+          const { symbol, q } = r.value;
+          if (!q || typeof q.c !== 'number' || q.c <= 0) {
+            failCounts[symbol] = (failCounts[symbol] || 0) + 1;
+            if (failCounts[symbol] >= 3) {
+              setData(prev => (prev[symbol] ? { ...prev, [symbol]: { ...prev[symbol], stale: true } } : prev));
             }
-            failCounts[symbol] = 0;
+            continue;
+          }
+          failCounts[symbol] = 0;
+          applyJittered(symbol, 2500, () => setData(prev => {
+            const next = { ...prev };
             const cur = next[symbol] || {};
             const session = usMarketState;
             const common = { ...cur, previousClose: q.pc, name: cur.name || symbol, stale: false };
@@ -313,14 +345,14 @@ export const useStockData = (symbols, demo = false) => {
               // and a 10s/5s price ping-pong against TradingView).
               next[symbol] = common;
             }
-          }
-          // First paint counts as done only when every symbol has both
-          // numbers — until then the CLOSED throttle must not kick in
-          quotesComplete = stockSymbols.every(
-            s => typeof next[s]?.price === 'number' && typeof next[s]?.changePercent === 'number'
-          );
-          return next;
-        });
+            // First paint counts as done only when every symbol has both
+            // numbers — until then the CLOSED throttle must not kick in
+            quotesComplete = stockSymbols.every(
+              s => typeof next[s]?.price === 'number' && typeof next[s]?.changePercent === 'number'
+            );
+            return next;
+          }));
+        }
       };
       // 2c. Extended Hours data via TradingView Scanner
       const fetchPreMarket = async () => {
@@ -417,19 +449,12 @@ export const useStockData = (symbols, demo = false) => {
           };
         }
 
-        setData(prev => {
-          const next = { ...prev };
-          let changed = false;
-          for (const [symbol, updateData] of Object.entries(updates)) {
-            const cur = next[symbol] || {};
-            next[symbol] = {
-              ...cur,
-              ...updateData,
-            };
-            changed = true;
-          }
-          return changed ? next : prev;
-        });
+        for (const [symbol, updateData] of Object.entries(updates)) {
+          applyJittered(symbol, 2000, () => setData(prev => ({
+            ...prev,
+            [symbol]: { ...(prev[symbol] || {}), ...updateData },
+          })));
+        }
       };
 
         // Every loop swallows its own errors and always reschedules —
@@ -634,6 +659,7 @@ export const useStockData = (symbols, demo = false) => {
         if (statusTimer) clearTimeout(statusTimer);
         if (holidayTimer) clearTimeout(holidayTimer);
         if (metricsTimer) clearTimeout(metricsTimer);
+        jitterTimers.forEach(clearTimeout);
         if (finnhubReconnectTimer) clearTimeout(finnhubReconnectTimer);
         try { if (finnhubWs) finnhubWs.close(); } catch { /* ignore */ }
       };
