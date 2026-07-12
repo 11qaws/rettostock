@@ -105,7 +105,7 @@ const defaultConfig = {
   colorStyle: 'theme',
 
   interval: 10,
-  opacity: 0.95,
+  opacity: 1,
   fx: 'full',
   speed: 1,
   demo: false,
@@ -122,9 +122,13 @@ const loadConfig = () => {
   try {
     const saved = JSON.parse(localStorage.getItem(CONFIG_KEY));
     const merged = { ...defaultConfig, ...saved };
-    // One-time migration: opacity default changed 1 -> 0.95
-    if (!saved || saved.v !== 2) merged.opacity = 0.95;
-    merged.v = 2;
+    // Opacity default history: 1 → 0.95 (v2) → 1 (v3). Now that each dark theme's
+    // base --bg-a is raised for readability, 100% is the sensible default. v2
+    // force-stamped 0.95 on everyone, so move those holdovers back to 1 — but keep
+    // any value the user picked themselves (≠ the stamped 0.95). New users get 1
+    // straight from defaultConfig.
+    if (saved && saved.v === 2 && saved.opacity === 0.95) merged.opacity = 1;
+    merged.v = 3;
     merged.demo = false; // Always force demo off on initial load
     
     // 목표가는 방송(세션)마다 초기화되어야 하는 데이터이므로 부팅 시 삭제

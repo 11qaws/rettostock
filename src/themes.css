@@ -12,7 +12,7 @@
 /* ===== Default: Dark Glass ===== */
 :root {
   --bg-rgb: 22, 22, 34;
-  --bg-a: 0.85; /* raised from 0.72: stays glassy over dark scenes but reads solid on bright ones */
+  --bg-a: 0.92; /* dark cards need to stay readable over bright/busy scenes (light text loses to bleed-through); keep a hint of glass */
   --border-glass: rgba(255, 255, 255, 0.22);
   --text-main: #f0f0f0;
   --text-muted: #a8a8bd;
@@ -44,7 +44,7 @@
 /* ===== Theme: Cyber Neon (Cyberpunk Bar Vibe) ===== */
 .theme-cyber-neon {
   --bg-rgb: 10, 0, 20;
-  --bg-a: 0.55;
+  --bg-a: 0.86; /* was 0.55 — far too see-through over busy scenes; keep neon glassy but legible */
   --border-glass: #ff2a85;
   --text-main: #fff;
   --text-muted: #fbcfe8;
@@ -167,7 +167,7 @@
 /* ===== Theme: Eureka — VTuber 유레카 (gold hair + emerald tips, night sky) ===== */
 .theme-eureka {
   --bg-rgb: 13, 22, 46;            /* #0D162E deep midnight navy */
-  --bg-a: 0.93;
+  --bg-a: 0.96;
   --border-glass: #2c5a6b;         /* teal-steel edge */
   --text-main: #eaf3ff;            /* moonlit white */
   --text-muted: #93a6c8;           /* dusk blue-grey */
@@ -233,7 +233,7 @@
 /* ===== Theme: LED Board — brokerage ticker board ===== */
 .theme-led-board {
   --bg-rgb: 5, 9, 13;
-  --bg-a: 0.94;
+  --bg-a: 0.96;
   --border-glass: #263544;
   --text-main: #e8f1ff;
   --text-muted: #7d90a8;
