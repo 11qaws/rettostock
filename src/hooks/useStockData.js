@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // This remains client-side while the widget is hosted on GitHub Pages. The
 // second key is a timeout/rate-limit standby. Authentication and permission
@@ -157,6 +157,42 @@ const fetchViaProxy = async (targetUrl) => {
 // Last-known sparkline cache: the chart shows up with the first paint
 // and gets replaced by fresh data within one enrichment round.
 const SPARK_CACHE_PREFIX = 'spark-cache-';
+const QUOTE_SNAPSHOT_PREFIX = 'quote-snapshot-';
+const QUOTE_SNAPSHOT_MAX_AGE_MS = 15 * 60 * 1000;
+
+const quoteSnapshotKey = (symbols) => `${QUOTE_SNAPSHOT_PREFIX}${[...symbols].sort().join(',')}`;
+
+// A presentation-only setting (theme, colour, preview replay) must never
+// replace a visible quote with `---` while the new iframe reconnects. Keep a
+// short-lived, same-tab snapshot for the first paint after a widget remount.
+const readQuoteSnapshot = (symbols) => {
+  try {
+    const snapshot = JSON.parse(sessionStorage.getItem(quoteSnapshotKey(symbols)));
+    if (!snapshot || Date.now() - snapshot.savedAt > QUOTE_SNAPSHOT_MAX_AGE_MS || !snapshot.data) return {};
+    const restored = {};
+    for (const symbol of symbols) {
+      const value = snapshot.data[symbol];
+      if (value && typeof value.price === 'number') restored[symbol] = value;
+    }
+    return restored;
+  } catch {
+    return {};
+  }
+};
+
+const writeQuoteSnapshot = (symbols, data) => {
+  try {
+    const snapshot = {};
+    for (const symbol of symbols) {
+      const value = data[symbol];
+      if (value && typeof value.price === 'number') snapshot[symbol] = value;
+    }
+    if (Object.keys(snapshot).length) {
+      sessionStorage.setItem(quoteSnapshotKey(symbols), JSON.stringify({ savedAt: Date.now(), data: snapshot }));
+    }
+  } catch { /* storage is optional */ }
+};
+
 const readSparkCache = (symbol) => {
   try { return JSON.parse(localStorage.getItem(SPARK_CACHE_PREFIX + symbol)); } catch { return null; }
 };
@@ -174,13 +210,30 @@ const hashCode = (str) => {
 export const useStockData = (symbols, demoQuery = false) => {
   const [data, setData] = useState(() => {
     const initial = {};
+    const snapshot = symbols && Array.isArray(symbols) ? readQuoteSnapshot(symbols) : {};
     if (symbols && Array.isArray(symbols)) {
-      symbols.forEach(s => { initial[s] = { name: s, stale: true }; });
+      symbols.forEach(s => {
+        initial[s] = snapshot[s]
+          ? { ...snapshot[s], name: snapshot[s].name || s }
+          : { name: s, stale: true };
+      });
     }
     return initial;
   });
   const [error] = useState(null);
   const symbolsKey = symbols.join(',');
+  const lastSnapshotWriteRef = useRef(0);
+
+  // Throttle synchronous sessionStorage writes so high-frequency WebSocket
+  // ticks remain cheap, while every remounted preview still has a recent
+  // quote to paint immediately.
+  useEffect(() => {
+    const now = Date.now();
+    if (now - lastSnapshotWriteRef.current < 500) return;
+    if (!symbols.some(symbol => typeof data[symbol]?.price === 'number')) return;
+    writeQuoteSnapshot(symbols, data);
+    lastSnapshotWriteRef.current = now;
+  }, [data, symbols, symbolsKey]);
 
   // ---- Demo mode: fake ticking prices, no network ----
   useEffect(() => {

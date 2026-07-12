@@ -1,5 +1,9 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.29 Instant quote continuity across visual reloads
+- **No `---` on a visual-only change:** the widget now keeps a short-lived same-tab quote snapshot (price, change, name, chart references, and market state). A remounted preview or browser source paints that last valid quote immediately, then replaces it with the live REST/WebSocket value as usual.
+- **Scope and safety:** snapshots expire after 15 minutes and only contain already public, displayed market values. Writes are throttled to once per 500ms, so high-frequency WebSocket ticks do not introduce synchronous-storage pressure.
+
 ## 2026-07-13: v1.0.28 Broadcast-safe effect preview
 - **No price-feed restart on effect selection:** the Configurator no longer changes the preview iframe URL or key when Full/Card/Off is selected or replayed. It sends the preview command over a same-origin message instead, so the existing quote state, REST loop, and Finnhub WebSocket remain alive.
 - **Reliable handoff:** the preview widget announces when its message listener is ready, and the Configurator re-sends the current setting. This avoids a slow-device load race while keeping preview-only commands out of the OBS URL and remote sync.
