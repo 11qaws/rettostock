@@ -109,6 +109,7 @@ const defaultConfig = {
   // Broadcast-safe default: retain large-move card colours, while keeping
   // routine ticks quiet. URLs without an fx parameter remain legacy Full.
   fx: 'card',
+  eventFocus: true,
   speed: 1,
   demo: false,
   demoTrans: false,
@@ -176,6 +177,7 @@ const Configurator = () => {
   const [copied, setCopied] = useState(false);
   const [previewBg, setPreviewBg] = useState('dark');
   const [justApplied, setJustApplied] = useState(false);
+  const [fxPreviewNonce, setFxPreviewNonce] = useState(0);
   const [matchResult, setMatchResult] = useState(null);
 
   const [sceneImage, setSceneImage] = useState(null);
@@ -327,6 +329,10 @@ const Configurator = () => {
   }, []);
 
   const set = (key, value) => setConfig(prev => ({ ...prev, [key]: value }));
+  const setFx = (fx) => {
+    set('fx', fx);
+    setFxPreviewNonce(fx === 'off' ? 0 : Date.now());
+  };
 
   // Widget caps symbols at 10 (Finnhub free-tier rate limit); mirror that here.
   const MAX_SYMBOLS = 10;
@@ -362,6 +368,7 @@ const Configurator = () => {
     if (config.colorStyle !== 'theme') params.set('colors', config.colorStyle);
 
     if (config.displayMode === 'rotate' && config.interval !== 10) params.set('interval', config.interval);
+    if (config.displayMode === 'rotate' && config.eventFocus === false) params.set('event_focus', '0');
     if (config.displayMode === 'scroll' && config.speed !== 1) params.set('speed', config.speed);
     if (config.opacity !== 1) params.set('opacity', config.opacity);
     // Preserve the old no-param URL as Full for existing OBS sources. New
@@ -385,6 +392,13 @@ const Configurator = () => {
     }
     return `${baseUrl}#/widget?${params.toString()}`;
   }, [config, urlSymbolList, room, signingKeys]);
+
+  // Preview-only token: it is appended only to the embedded preview URL,
+  // never copied to OBS or sent through remote sync.
+  const previewWidgetUrl = useMemo(
+    () => fxPreviewNonce ? `${widgetUrl}&fx_preview=${fxPreviewNonce}` : widgetUrl,
+    [widgetUrl, fxPreviewNonce]
+  );
 
   // Persist settings + push to widget (same-browser channels + ntfy relay)
   useEffect(() => {
@@ -726,7 +740,7 @@ const Configurator = () => {
             <summary>⚙️ 고급 설정</summary>
 
             <div className="advanced-row">
-              <label>🎨 상승/하락 색상</label>
+              <label>🎨 상승/하락 색상 <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#8d6e63' }}>(색 조합)</span></label>
               <div className="segmented small">
                 {COLOR_STYLES.map(c => (
                   <button
@@ -739,13 +753,13 @@ const Configurator = () => {
             </div>
 
             <div className="advanced-row">
-              <label>💥 이벤트 이펙트</label>
+              <label>💥 이벤트 이펙트 <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#8d6e63' }}>(선택 시 미리보기에서 3초 자동 재생)</span></label>
               <div className="segmented small">
                 {FX_LEVELS.map(f => (
                   <button
                     key={f.value}
                     className={`segment ${config.fx === f.value ? 'selected' : ''}`}
-                    onClick={() => set('fx', f.value)}
+                    onClick={() => setFx(f.value)}
                     aria-pressed={config.fx === f.value}
                   >{f.label}</button>
                 ))}
@@ -755,23 +769,31 @@ const Configurator = () => {
 
 
             {config.displayMode === 'rotate' && (
-              <div className="advanced-row">
-                <label>⏱️ 종목 전환 간격 <b>{config.interval}초</b></label>
-                <input type="range" min="3" max="60" step="1" value={config.interval}
-                  onChange={e => set('interval', parseInt(e.target.value, 10))} />
-              </div>
+              <>
+                <div className="advanced-row">
+                  <label>⏱️ 종목 전환 간격 <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#8d6e63' }}>(한 카드가 머무는 시간)</span> <b>{config.interval}초</b></label>
+                  <input type="range" min="3" max="60" step="1" value={config.interval}
+                    onChange={e => set('interval', parseInt(e.target.value, 10))} />
+                </div>
+                <div className="advanced-row">
+                  <label className="demo-toggle">
+                    <input type="checkbox" checked={config.eventFocus !== false} onChange={e => set('eventFocus', e.target.checked)} />
+                    ⚡ 이벤트 포커스 <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#8d6e63' }}>(로테이트에서 이벤트 발생 시 즉시 카드 전환)</span>
+                  </label>
+                </div>
+              </>
             )}
 
             {config.displayMode === 'scroll' && (
               <div className="advanced-row">
-                <label>🎢 마퀴 속도 <b>{Number(config.speed).toFixed(2)}×</b> <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#8d6e63' }}>(느릴수록 부드러워요)</span></label>
+                <label>🎢 마퀴 속도 <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#8d6e63' }}>(한 바퀴 이동 속도)</span> <b>{Number(config.speed).toFixed(2)}×</b></label>
                 <input type="range" min="0.5" max="2" step="0.05" value={config.speed}
                   onChange={e => set('speed', parseFloat(e.target.value))} />
               </div>
             )}
 
             <div className="advanced-row">
-              <label>🫧 카드 불투명도 <b>{Math.round(config.opacity * 100)}%</b></label>
+              <label>🫧 카드 불투명도 <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#8d6e63' }}>(배경 비침 정도)</span> <b>{Math.round(config.opacity * 100)}%</b></label>
               <input type="range" min="0.2" max="1" step="0.05" value={config.opacity}
                 onChange={e => set('opacity', parseFloat(e.target.value))} />
             </div>
@@ -960,7 +982,7 @@ const Configurator = () => {
                         }}
                       >
                         <iframe
-                    src={widgetUrl}
+                    src={previewWidgetUrl}
                           style={{
                             width: `${actualDims.w}px`,
                             height: `${actualDims.h}px`,
@@ -1027,7 +1049,7 @@ const Configurator = () => {
                     : (PREVIEW_BGS.find(b => b.value === previewBg) || PREVIEW_BGS[0]).style),
                 }}>
                   <iframe
-                    src={widgetUrl}
+                    src={previewWidgetUrl}
                     style={{
                       width: `${frameW}px`,
                       height: `${frameH}px`,

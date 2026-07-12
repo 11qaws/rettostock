@@ -1,7 +1,10 @@
 # Retto Stock Widget - Development Log & Architecture
 
-## 2026-07-13: v1.0.23 Effect selector simplification
-- **Configurator:** removed all explanatory copy, comparison-guide rows, and hover tooltips from the broadcast-effect selector. Only **전체 / 약한 연출 / 끄기** remain; runtime behavior is unchanged.
+## 2026-07-13: v1.0.24 Advanced broadcast controls and selector simplification
+- **Clean selector:** removed all explanatory copy, comparison-guide rows, and hover tooltips from the broadcast-effect selector. Only **전체 / 약한 연출 / 끄기** remain; runtime behavior is unchanged.
+- **Event focus:** Rotate mode now exposes a default-on toggle for automatically cutting to the relevant card after an eligible event. Turning it off writes `event_focus=0`, so the overlay only advances on its chosen rotation interval.
+- **Effect preview:** selecting 전체 or 약한 연출 automatically replays that level on the first embedded-preview card for three seconds. It overlays visuals without changing the quote, is never copied into the OBS URL or remote-sync message, and adds particles/pulse/shake only at 전체. A one-time token prevents a normal preview reload from replaying it.
+- **Friendly advanced labels:** every advanced control now carries a short parenthetical purpose, including the exact scope of event focus and effect preview.
 
 ## 2026-07-13: v1.0.22 Three broadcast-effect levels and complete REST outage state
 - **Clear, cumulative levels:** the compact selector and its always-visible guide now use **전체 / 약한 연출 / 끄기**. 약한 연출 keeps the static ±5/10/15% card colour and glow, market-session transition, positive/negative crossings, target reached, and 52-week high/low milestones. 전체 adds particles, the continuous card pulse, and tick shake. 끄기 removes all of those, except the deliberately retained one-shot up/down price-number flash. Former 강한 연출 URLs and saved settings map to 약한 연출.

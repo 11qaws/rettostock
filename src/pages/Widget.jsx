@@ -30,6 +30,8 @@ const Widget = () => {
   const roomParam = searchParams.get('room') || '';
   const keyParam = searchParams.get('k') || ''; // remote's public key (relay is signature-gated)
   const demoParam = searchParams.get('demo') === '1';
+  const eventFocusParam = searchParams.get('event_focus') !== '0';
+  const previewFxToken = searchParams.get('fx_preview') || '';
   // Keep parameter-less legacy OBS URLs on their original Full behavior.
   // Old Calm/Soft/Strong URLs map to the new Weak option.
   const rawFxParam = searchParams.get('fx');
@@ -130,7 +132,7 @@ const Widget = () => {
   const lastFocusRef = useRef(0);
   const focusBornRef = useRef(null);
   useEffect(() => {
-    if (modeParam !== 'rotate' || symbols.length <= 1) return;
+    if (!eventFocusParam || modeParam !== 'rotate' || symbols.length <= 1) return;
     const prev = eventStateRef.current;
     // Warm-up: at boot every symbol's value lands at once (and can wobble as
     // Finnhub/Yahoo/cache sources settle). Spend the first 5s only recording a
@@ -161,7 +163,7 @@ const Widget = () => {
       const idx = symbols.indexOf(focusSym);
       if (idx >= 0) { setCurrentIndex(idx); setFocusNonce(n => n + 1); }
     }
-  }, [data, modeParam, symbols, currentIndex, targets]);
+  }, [data, modeParam, symbols, currentIndex, targets, eventFocusParam]);
 
   useEffect(() => {
     setCurrentIndex(0);
@@ -202,6 +204,7 @@ const Widget = () => {
         closes={ticker?.closes}
         stale={ticker?.stale}
         fx={fxParam}
+        previewFxToken={symbol === (modeParam === 'rotate' ? symbols[currentIndex % symbols.length] : symbols[0]) ? previewFxToken : ''}
         loopPrevPrice={loopPrevPrice}
         initial={modeParam === 'rotate' ? { opacity: 0, y: 20 } : undefined}
         animate={{ opacity: 1, y: 0 }}

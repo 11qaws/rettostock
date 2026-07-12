@@ -14,6 +14,7 @@ const TICK_MS = 600;      // anim-pump / price-flash (CSS 0.5–0.6s)
 const PARTICLE_MS = 1400; // fxPop burst (CSS 1.15s + up to 0.15s stagger)
 const BANNER_MS = 2700;   // w52Pop / target banner (CSS 2.6s)
 const CROSS_MS = 1500;    // crossFlip zero-cross (CSS 1.4s)
+const PREVIEW_MS = 3000;  // configurator-only effect preview
 
 const MARKET_LABELS = {
   REGULAR: { text: '장중', cls: 'ms-open' },
@@ -29,15 +30,28 @@ const DOWN_PARTICLES = ['💧', '▼', '💦', '🫧'];
 
 let particleId = 0;
 
+const makeParticleBurst = (changePercent) => {
+  const pool = changePercent > 0 ? UP_PARTICLES : DOWN_PARTICLES;
+  return Array.from({ length: 14 }, () => ({
+    id: ++particleId,
+    char: pool[Math.floor(Math.random() * pool.length)],
+    dx: `${(Math.random() - 0.5) * 180}px`,
+    dy: `${changePercent > 0 ? -(20 + Math.random() * 90) : (20 + Math.random() * 90)}px`,
+    rot: `${(Math.random() - 0.5) * 240}deg`,
+    delay: `${Math.random() * 0.15}s`,
+  }));
+};
+
 const TickerCard = ({
   symbol, price, changePercent, previousClose, name, marketState, upcomingState, countdown, closes, stale,
   week52High, week52Low, targetPrice,
-  fx = 'full', showSparkline = true, loopPrevPrice,
+  fx = 'full', showSparkline = true, loopPrevPrice, previewFxToken = '',
   ...motionProps
 }) => {
   const [animClass, setAnimClass] = useState('');
   const [priceFlash, setPriceFlash] = useState('');
   const [particles, setParticles] = useState([]);
+  const [previewActive, setPreviewActive] = useState(false);
   const [crossFx, setCrossFx] = useState(null); // 'up' (양전) | 'down' (음전)
   const [fxIntensity, setFxIntensity] = useState(1); // tick effect strength ∝ move size
   const [w52Pop, setW52Pop] = useState(null); // 'high' | 'low' — 52-week record broken
@@ -48,10 +62,13 @@ const TickerCard = ({
   const w52TimerRef = useRef(null);
   const crossTimerRef = useRef(null);
   const targetTimerRef = useRef(null);
+  const previewTimerRef = useRef(null);
+  const previewTokenRef = useRef('');
   useEffect(() => () => {
     clearTimeout(w52TimerRef.current);
     clearTimeout(crossTimerRef.current);
     clearTimeout(targetTimerRef.current);
+    clearTimeout(previewTimerRef.current);
   }, []);
 
   // Target price (스트리머 지정): a milestone. Celebrates once when the
@@ -103,6 +120,47 @@ const TickerCard = ({
   const prevSurgeRef = useRef(null); // null = no data seen yet
   const prevSignRef = useRef(null);
   const lastCrossRef = useRef(0);
+
+  // The configurator passes a token only to its embedded preview. It never
+  // changes a quote: a three-second visual layer is shown over the live card.
+  useEffect(() => {
+    if (!previewFxToken || previewTokenRef.current === previewFxToken) return;
+    if (typeof price !== 'number') return;
+    try {
+      const storageKey = 'rettostock-fx-preview-token';
+      if (sessionStorage.getItem(storageKey) === previewFxToken) {
+        previewTokenRef.current = previewFxToken;
+        return;
+      }
+      sessionStorage.setItem(storageKey, previewFxToken);
+    } catch { /* preview still works if sessionStorage is unavailable */ }
+    previewTokenRef.current = previewFxToken;
+
+    clearTimeout(previewTimerRef.current);
+    setPriceFlash('price-flash-up');
+    setAnimClass(fx === 'full' ? 'anim-pump' : '');
+    setPreviewActive(fx !== 'off');
+
+    if (fx !== 'off') {
+      clearTimeout(crossTimerRef.current);
+      clearTimeout(w52TimerRef.current);
+      clearTimeout(targetTimerRef.current);
+      setCrossFx(p => ({ dir: 'up', n: (p?.n || 0) + 1 }));
+      setW52Pop(p => ({ dir: 'high', n: (p?.n || 0) + 1 }));
+      setTargetPop(p => ({ n: (p?.n || 0) + 1, price: targetPrice ?? price }));
+      if (fx === 'full') setParticles(makeParticleBurst(1));
+    }
+
+    previewTimerRef.current = setTimeout(() => {
+      setPreviewActive(false);
+      setAnimClass('');
+      setPriceFlash('');
+      setParticles([]);
+      setCrossFx(null);
+      setW52Pop(null);
+      setTargetPop(null);
+    }, PREVIEW_MS);
+  }, [previewFxToken, fx, price, targetPrice]);
 
   // Transition animation state
   const prevMarketRef = useRef(marketState);
@@ -176,16 +234,7 @@ const TickerCard = ({
     }
 
     if (surged && !prevSurgeRef.current && fx === 'full') {
-      const pool = changePercent > 0 ? UP_PARTICLES : DOWN_PARTICLES;
-      const burst = Array.from({ length: 14 }, () => ({
-        id: ++particleId,
-        char: pool[Math.floor(Math.random() * pool.length)],
-        dx: `${(Math.random() - 0.5) * 180}px`,
-        dy: `${changePercent > 0 ? -(20 + Math.random() * 90) : (20 + Math.random() * 90)}px`,
-        rot: `${(Math.random() - 0.5) * 240}deg`,
-        delay: `${Math.random() * 0.15}s`,
-      }));
-      setParticles(burst);
+      setParticles(makeParticleBurst(changePercent));
       const timer = setTimeout(() => setParticles([]), PARTICLE_MS);
       prevSurgeRef.current = surged;
       return () => clearTimeout(timer);
@@ -271,8 +320,11 @@ const TickerCard = ({
   const tier = surgeTier(changePercent);
   const surged = tier >= 1;
   const dir = isUp ? 'up' : 'down';
+  const previewSurge = previewActive && fx !== 'off';
+  const visualTier = previewSurge ? Math.max(tier, 2) : tier;
+  const visualDir = previewSurge ? 'up' : dir;
   const cardFxEnabled = fx === 'full' || fx === 'card';
-  const surgeClass = cardFxEnabled && surged ? `is-surge-${dir} surge-${dir}-${tier}` : '';
+  const surgeClass = cardFxEnabled && (surged || previewSurge) ? `is-surge-${visualDir} surge-${visualDir}-${visualTier}` : '';
   // 4-digit+ prices ($1000+) render one step smaller so the wide number never
   // squeezes the ticker (stacks with fmtPrice dropping decimals).
   const bigPrice = typeof price === 'number' && Math.abs(price) >= 1000;
@@ -289,9 +341,9 @@ const TickerCard = ({
           full mood — "달아오른"(heated) rising up, "얼어붙은"(frozen) coming
           down. Tier 2 (±10%) is the same tint at a whisper (aura-mid), so the
           card visibly warms/cools on the way to tier 3. Sits behind content. */}
-      {tier >= 2 && cardFxEnabled && (
+      {visualTier >= 2 && cardFxEnabled && (
         <div
-          className={`surge-aura ${isUp ? 'aura-hot' : 'aura-frozen'} ${tier === 2 ? 'aura-mid' : ''}`}
+          className={`surge-aura ${visualDir === 'up' ? 'aura-hot' : 'aura-frozen'} ${visualTier === 2 ? 'aura-mid' : ''}`}
           aria-hidden="true"
         />
       )}
