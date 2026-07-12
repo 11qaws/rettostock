@@ -1,5 +1,10 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.28 Broadcast-safe effect preview
+- **No price-feed restart on effect selection:** the Configurator no longer changes the preview iframe URL or key when Full/Card/Off is selected or replayed. It sends the preview command over a same-origin message instead, so the existing quote state, REST loop, and Finnhub WebSocket remain alive.
+- **Reliable handoff:** the preview widget announces when its message listener is ready, and the Configurator re-sends the current setting. This avoids a slow-device load race while keeping preview-only commands out of the OBS URL and remote sync.
+- **Live-path check:** the deployed Cloudflare quote endpoint returned current values for KORU, MUU, SNXX, and SOXL with the production origin. The immediate blank-card issue was therefore the preview iframe reset, not an upstream outage.
+
 ## 2026-07-13: v1.0.27 Reliable four-card preview and Full preview duration
 - **All cards reliably render:** preview overlays are now derived directly from the preview token instead of depending on short-lived state updates. This fixes the deployed Pages build where only the first card's visual survived; surge/card glow, zero-cross, target reached, and 52-week record now stay on their respectively assigned cards for the full preview window.
 - **Full remains unmistakable:** the Full-only first card now keeps a subtle pulse and shake for all three seconds, with three particle waves spread across that same window. Card effects retain the card glow but none of those Full-only moving cues.

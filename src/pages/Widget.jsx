@@ -33,12 +33,49 @@ const Widget = () => {
   const keyParam = searchParams.get('k') || ''; // remote's public key (relay is signature-gated)
   const demoParam = searchParams.get('demo') === '1';
   const eventFocusParam = searchParams.get('event_focus') !== '0';
-  const previewFxToken = searchParams.get('fx_preview') || '';
+  const urlPreviewFxToken = searchParams.get('fx_preview') || '';
   // Keep parameter-less legacy OBS URLs on their original Full behavior.
   // Old Calm/Soft/Strong URLs map to the new Weak option.
   const rawFxParam = searchParams.get('fx');
-  const fxParam = ['calm', 'soft', 'event'].includes(rawFxParam) ? 'card'
+  const urlFxParam = ['calm', 'soft', 'event'].includes(rawFxParam) ? 'card'
     : ['off', 'card', 'full'].includes(rawFxParam) ? rawFxParam : 'full';
+  const [previewControl, setPreviewControl] = useState(() => ({
+    fx: null,
+    token: urlPreviewFxToken,
+  }));
+  const fxParam = previewControl.fx || urlFxParam;
+  const previewFxToken = previewControl.token || urlPreviewFxToken;
+
+  // Configurator previews use a same-origin message so changing/replaying an
+  // effect does not destroy this iframe. OBS sources never receive this and
+  // continue to use only their URL settings.
+  useEffect(() => {
+    const onPreviewControl = (event) => {
+      if (event.source !== window.parent || event.origin !== window.location.origin) return;
+      const message = event.data;
+      if (message?.type !== 'RETTOSTOCK_PREVIEW_FX') return;
+      const fx = ['full', 'card', 'off'].includes(message.fx) ? message.fx : 'full';
+      setPreviewControl({
+        fx,
+        token: message.token ? String(message.token) : '',
+      });
+    };
+    window.addEventListener('message', onPreviewControl);
+    return () => window.removeEventListener('message', onPreviewControl);
+  }, []);
+
+  // Handshake after the listener exists. This closes the small race where an
+  // iframe's load event can precede its first React effect on a slow device.
+  useEffect(() => {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'RETTOSTOCK_PREVIEW_READY' }, window.location.origin);
+    }
+  }, []);
+
+  // Retain compatibility with manually opened old preview URLs.
+  useEffect(() => {
+    setPreviewControl(prev => ({ ...prev, token: urlPreviewFxToken }));
+  }, [urlPreviewFxToken]);
 
   const intervalParam = clampNum(searchParams.get('interval'), 3, 120, 10);
   const opacityParam = clampNum(searchParams.get('opacity'), 0.1, 1, 1);

@@ -193,6 +193,7 @@ const Configurator = () => {
   const fileInputRef = useRef(null);
   const sceneBoxRef = useRef(null);
   const sceneScrollRef = useRef(null);
+  const previewFrameRef = useRef(null);
 
   const [showWipeToast, setShowWipeToast] = useState(false);
 
@@ -393,12 +394,28 @@ const Configurator = () => {
     return `${baseUrl}#/widget?${params.toString()}`;
   }, [config, urlSymbolList, room, signingKeys]);
 
-  // Preview-only token: it is appended only to the embedded preview URL,
-  // never copied to OBS or sent through remote sync.
+  // The embedded preview deliberately omits `fx`: effect selection is sent by
+  // postMessage below so repeated preview clicks never reload the iframe and
+  // restart its price/WebSocket connections. The OBS URL keeps its real fx.
   const previewWidgetUrl = useMemo(
-    () => fxPreviewNonce ? `${widgetUrl}&fx_preview=${fxPreviewNonce}` : widgetUrl,
-    [widgetUrl, fxPreviewNonce]
+    () => widgetUrl.replace(/([?&])fx=[^&]*&?/, '$1').replace(/[?&]$/, ''),
+    [widgetUrl]
   );
+
+  const postPreviewFx = (targetWindow = previewFrameRef.current?.contentWindow) => {
+    if (!targetWindow) return;
+    targetWindow.postMessage({
+      type: 'RETTOSTOCK_PREVIEW_FX',
+      fx: config.fx,
+      token: fxPreviewNonce ? String(fxPreviewNonce) : '',
+    }, window.location.origin);
+  };
+
+  // Repeated taps now reuse the same preview iframe. The child applies the
+  // visual immediately while its quote cache and WebSocket stay alive.
+  useEffect(() => {
+    postPreviewFx();
+  }, [config.fx, fxPreviewNonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist settings + push to widget (same-browser channels + ntfy relay)
   useEffect(() => {
@@ -419,6 +436,11 @@ const Configurator = () => {
   // Listen for 'TARGET_REACHED' feedback from the preview iframe so we can auto-clear the input
   useEffect(() => {
     const onMessage = (e) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type === 'RETTOSTOCK_PREVIEW_READY') {
+        postPreviewFx(e.source);
+        return;
+      }
       if (e.data?.type === 'TARGET_REACHED' && e.data?.symbol) {
         setConfig(prev => {
           if (!prev.targets || !prev.targets[e.data.symbol]) return prev;
@@ -430,7 +452,7 @@ const Configurator = () => {
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, []);
+  }, [config.fx, fxPreviewNonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCopy = () => {
     navigator.clipboard.writeText(widgetUrl);
@@ -982,8 +1004,10 @@ const Configurator = () => {
                         }}
                       >
                         <iframe
-                    key={previewWidgetUrl}
-                    src={previewWidgetUrl}
+                          key={previewWidgetUrl}
+                          ref={previewFrameRef}
+                          src={previewWidgetUrl}
+                          onLoad={(event) => postPreviewFx(event.currentTarget.contentWindow)}
                           style={{
                             width: `${actualDims.w}px`,
                             height: `${actualDims.h}px`,
@@ -1051,7 +1075,9 @@ const Configurator = () => {
                 }}>
                   <iframe
                     key={previewWidgetUrl}
+                    ref={previewFrameRef}
                     src={previewWidgetUrl}
+                    onLoad={(event) => postPreviewFx(event.currentTarget.contentWindow)}
                     style={{
                       width: `${frameW}px`,
                       height: `${frameH}px`,
