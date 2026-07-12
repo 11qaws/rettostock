@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Copy, Check, AlertCircle, ImagePlus } from 'lucide-react';
 import { getOrCreateRoom, publishSync, getOrCreateSigningKeys } from '../hooks/useRemoteSync';
+import { version as APP_VERSION } from '../../package.json';
 
 // Analyze a screenshot of the broadcast scene and pick a matching theme
 const analyzeSceneImage = (file) => new Promise((resolve, reject) => {
@@ -784,6 +785,9 @@ const Configurator = () => {
                 <input type="checkbox" checked={config.demo} onChange={e => set('demo', e.target.checked)} />
                 🛠️ 개발자 전용 데모 모드 (가짜 시세 주입)
               </label>
+              <p style={{ fontSize: '12px', color: '#e57373', margin: '2px 0 0 24px', fontWeight: 'bold' }}>
+                ⛔ 라이브 방송 중에는 누르지 마세요
+              </p>
               {config.demo && (
                 <div style={{ paddingLeft: '24px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <p style={{ fontSize: '13px', color: '#d84315', margin: '0 0 4px 0', lineHeight: 1.6, fontWeight: 'bold' }}>
@@ -808,6 +812,10 @@ const Configurator = () => {
                 </div>
               )}
             </div>
+
+            <p style={{ fontSize: '12px', color: '#9e9e9e', textAlign: 'right', margin: '10px 0 0 0' }}>
+              v{APP_VERSION}
+            </p>
           </details>
 
         </div>

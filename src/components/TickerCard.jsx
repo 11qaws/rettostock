@@ -339,27 +339,22 @@ const TickerCard = ({
         </div>
 
         <div className="card-right">
-          {(surged || market) && (
+          {market && (
             <div className="badge-row">
-              {surged && fx !== 'off' && (
-                <span className="surge-badge">{isUp ? '🔥' : '💦'}</span>
-              )}
-              {market && (
-                <span className={`market-badge ${market.cls}`}>
-                  {upcomingState && MARKET_LABELS[upcomingState] ? (
-                    <span className="transition-slide-in">
-                      {market.text} <span className="blink-arrows">&gt;&gt;</span> {MARKET_LABELS[upcomingState].text}
-                    </span>
-                  ) : transitioning && MARKET_LABELS[transitioning.from] && MARKET_LABELS[transitioning.to] ? (
-                    <span>
-                      <span className="fade-out-left">{MARKET_LABELS[transitioning.from].text} <span className="blink-arrows">&gt;&gt;</span> </span>
-                      {MARKET_LABELS[transitioning.to].text}
-                    </span>
-                  ) : (
-                    market.text
-                  )}
-                </span>
-              )}
+              <span className={`market-badge ${market.cls}`}>
+                {upcomingState && MARKET_LABELS[upcomingState] ? (
+                  <span className="transition-slide-in">
+                    {market.text} <span className="blink-arrows">&gt;&gt;</span> {MARKET_LABELS[upcomingState].text}
+                  </span>
+                ) : transitioning && MARKET_LABELS[transitioning.from] && MARKET_LABELS[transitioning.to] ? (
+                  <span>
+                    <span className="fade-out-left">{MARKET_LABELS[transitioning.from].text} <span className="blink-arrows">&gt;&gt;</span> </span>
+                    {MARKET_LABELS[transitioning.to].text}
+                  </span>
+                ) : (
+                  market.text
+                )}
+              </span>
             </div>
           )}
           <span className={`neon-price ${priceFlash} ${bigPrice ? 'price-lg' : ''}`}>
