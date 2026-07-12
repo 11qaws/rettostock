@@ -84,7 +84,7 @@ const TickerCard = ({
     if (prev === null || prev === side) return; // no genuine cross
     if (t.done) return;                         // milestone already reached
     if (Date.now() - t.bornAt < 10000) return;  // warm-up: booting isn't "reaching"
-    if (fx !== 'full' && fx !== 'event') return;
+    if (fx === 'off') return;
 
     t.done = true; // reached — auto-disarm until the target is changed
     clearTimeout(targetTimerRef.current);
@@ -175,7 +175,7 @@ const TickerCard = ({
       return;
     }
 
-    if (surged && !prevSurgeRef.current && (fx === 'full' || fx === 'event')) {
+    if (surged && !prevSurgeRef.current && fx === 'full') {
       const pool = changePercent > 0 ? UP_PARTICLES : DOWN_PARTICLES;
       const burst = Array.from({ length: 14 }, () => ({
         id: ++particleId,
@@ -216,7 +216,7 @@ const TickerCard = ({
     if (typeof week52High === 'number' && week52High > 0) {
       const ref = Math.max(week52High, s.effHigh ?? 0);
       if (price > ref) {
-        if (warm && (fx === 'full' || fx === 'event') && now - s.lastFx.high > 300000) {
+        if (warm && fx !== 'off' && now - s.lastFx.high > 300000) {
           s.lastFx.high = now;
           s.effHigh = price * 1.002; // next banner needs +0.2% on top
           fire('high');
@@ -228,7 +228,7 @@ const TickerCard = ({
     if (typeof week52Low === 'number' && week52Low > 0) {
       const ref = Math.min(week52Low, s.effLow ?? Infinity);
       if (price < ref) {
-        if (warm && (fx === 'full' || fx === 'event') && now - s.lastFx.low > 300000) {
+        if (warm && fx !== 'off' && now - s.lastFx.low > 300000) {
           s.lastFx.low = now;
           s.effLow = price * 0.998;
           fire('low');
@@ -250,7 +250,7 @@ const TickerCard = ({
     prevSignRef.current = sign;
     if (prev === null || prev === sign) return;
 
-    if (fx !== 'full' && fx !== 'event') return;
+    if (fx === 'off') return;
     const now = Date.now();
     if (now - lastCrossRef.current < 10000) return;
     lastCrossRef.current = now;
@@ -271,8 +271,7 @@ const TickerCard = ({
   const tier = surgeTier(changePercent);
   const surged = tier >= 1;
   const dir = isUp ? 'up' : 'down';
-  // Strong includes every weak card cue, but keeps its presentation still.
-  const cardFxEnabled = fx === 'full' || fx === 'event' || fx === 'card';
+  const cardFxEnabled = fx === 'full' || fx === 'card';
   const surgeClass = cardFxEnabled && surged ? `is-surge-${dir} surge-${dir}-${tier}` : '';
   // 4-digit+ prices ($1000+) render one step smaller so the wide number never
   // squeezes the ticker (stacks with fmtPrice dropping decimals).
@@ -297,7 +296,7 @@ const TickerCard = ({
         />
       )}
 
-      {(fx === 'full' || fx === 'event' ? particles : []).map(p => (
+      {(fx === 'full' ? particles : []).map(p => (
         <span
           key={p.id}
           className="fx-particle"
@@ -308,8 +307,8 @@ const TickerCard = ({
       ))}
 
       {/* Zero-cross: shimmer wipe + an arrow passing through the card,
-          easing off at the center before shooting out (event and full only) */}
-      {crossFx && (fx === 'full' || fx === 'event') && (
+          easing off at the center before shooting out (Weak and Full only) */}
+      {crossFx && fx !== 'off' && (
         <React.Fragment key={`cross-${crossFx.n}`}>
           <span className={`cross-wipe wipe-${crossFx.dir}`} aria-hidden="true" />
           {/* Render the OLD-direction glyph; the scaleY flip reveals the new

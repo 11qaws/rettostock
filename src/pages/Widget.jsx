@@ -31,11 +31,10 @@ const Widget = () => {
   const keyParam = searchParams.get('k') || ''; // remote's public key (relay is signature-gated)
   const demoParam = searchParams.get('demo') === '1';
   // Keep parameter-less legacy OBS URLs on their original Full behavior.
-  // Old Calm/Soft URLs map to the closest new four-mode intent.
+  // Old Calm/Soft/Strong URLs map to the new Weak option.
   const rawFxParam = searchParams.get('fx');
-  const fxParam = rawFxParam === 'calm' ? 'card'
-    : rawFxParam === 'soft' ? 'event'
-      : ['off', 'event', 'card', 'full'].includes(rawFxParam) ? rawFxParam : 'full';
+  const fxParam = ['calm', 'soft', 'event'].includes(rawFxParam) ? 'card'
+    : ['off', 'card', 'full'].includes(rawFxParam) ? rawFxParam : 'full';
 
   const intervalParam = clampNum(searchParams.get('interval'), 3, 120, 10);
   const opacityParam = clampNum(searchParams.get('opacity'), 0.1, 1, 1);

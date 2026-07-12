@@ -1,7 +1,7 @@
 # Retto Stock Widget - Development Log & Architecture
 
-## 2026-07-13: v1.0.21 Four broadcast-effect levels and complete REST outage state
-- **Clear, cumulative levels:** the compact selector and its always-visible guide now use **전체 / 강한 연출 / 약한 연출 / 끄기**. 약한 연출 keeps the static ±5/10/15% card colour and glow plus the market-session transition; 강한 연출 includes those cues plus positive/negative crossings, target reached, 52-week high/low milestones, and particles; 전체 adds the continuous card pulse and tick shake. 끄기 removes all of those, except the deliberately retained one-shot up/down price-number flash.
+## 2026-07-13: v1.0.22 Three broadcast-effect levels and complete REST outage state
+- **Clear, cumulative levels:** the compact selector and its always-visible guide now use **전체 / 약한 연출 / 끄기**. 약한 연출 keeps the static ±5/10/15% card colour and glow, market-session transition, positive/negative crossings, target reached, and 52-week high/low milestones. 전체 adds particles, the continuous card pulse, and tick shake. 끄기 removes all of those, except the deliberately retained one-shot up/down price-number flash. Former 강한 연출 URLs and saved settings map to 약한 연출.
 - **Session transition classification:** PRE/regular/POST status text remains available in every level. Its sliding/fading treatment and countdown pulse start from 약한 연출, rather than being unlabelled movement effects.
 - **Complete REST failure:** when the cache and REST path both fail, cards without a WebSocket trade in the last 15 seconds enter the existing dimmed stale state. Recent direct trades stay bright; partial quote failures also count toward the existing per-symbol stale handling.
 

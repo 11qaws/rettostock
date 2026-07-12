@@ -81,9 +81,8 @@ const COLOR_STYLES = [
 ];
 
 const FX_LEVELS = [
-  { value: 'full', label: '전체', desc: '강한·약한 연출에 카드 펄스와 틱 흔들림까지 모두' },
-  { value: 'event', label: '강한 연출', desc: '약한 연출 포함 · 양전/음전 전환, 목표가·52주 알림, 파티클' },
-  { value: 'card', label: '약한 연출', desc: '±5/10/15% 카드 색상·글로우와 장 전환 · 평소 시세 변화는 조용하게' },
+  { value: 'full', label: '전체', desc: '약한 연출에 파티클·카드 펄스·틱 흔들림까지 모두' },
+  { value: 'card', label: '약한 연출', desc: '±5/10/15% 카드 색·글로우, 장 전환, 양전/음전·목표가·52주 알림' },
   { value: 'off', label: '끄기', desc: '효과는 모두 끔 · 가격 숫자의 짧은 상승/하락 플래시만 유지' },
 ];
 
@@ -131,10 +130,10 @@ const loadConfig = () => {
     // any value the user picked themselves (≠ the stamped 0.95). New users get 1
     // straight from defaultConfig.
     if (saved && saved.v === 2 && saved.opacity === 0.95) merged.opacity = 1;
-    // v1.0.21 condenses the old Calm/Soft choices into the clearer four-level
-    // model. Preserve their closest visual intent for saved configurations.
+    // v1.0.22 folds the former Strong option into Weak. Preserve the closest
+    // visual intent for all older saved configurations.
     if (merged.fx === 'calm') merged.fx = 'card';
-    if (merged.fx === 'soft') merged.fx = 'event';
+    if (merged.fx === 'soft' || merged.fx === 'event') merged.fx = 'card';
     merged.v = 3;
     merged.demo = false; // Always force demo off on initial load
     
