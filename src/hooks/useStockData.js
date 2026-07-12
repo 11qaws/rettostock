@@ -120,7 +120,7 @@ const hashCode = (str) => {
   return Math.abs(h);
 };
 
-export const useStockData = (symbols, demo = false) => {
+export const useStockData = (symbols, demoQuery = false) => {
   const [data, setData] = useState(() => {
     const initial = {};
     if (symbols && Array.isArray(symbols)) {
@@ -133,9 +133,9 @@ export const useStockData = (symbols, demo = false) => {
 
   // ---- Demo mode: fake ticking prices, no network ----
   useEffect(() => {
-    if (!demo || !symbols || symbols.length === 0) return;
+    if (!demoQuery || !symbols || symbols.length === 0) return;
 
-    const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    const urlParams = new URLSearchParams(typeof demoQuery === 'string' ? demoQuery : '');
     const demoTrans = urlParams.get('demo_transition') === '1';
     const demoCross = urlParams.get('demo_cross') === '1';
     const demoTarget = urlParams.get('demo_target') === '1';
@@ -165,14 +165,28 @@ export const useStockData = (symbols, demo = false) => {
     });
 
     const getDemoMarketState = () => {
-      if (!demoTrans) return { marketState: 'REGULAR', upcomingState: null };
-      const cycle = Date.now() % 15000;
-      if (cycle < 5000) return { marketState: 'PRE', upcomingState: 'REGULAR' };
-      return { marketState: 'REGULAR', upcomingState: null };
+      if (!demoTrans) return { marketState: 'REGULAR', upcomingState: null, countdown: null };
+      // Full cycle: REGULAR → POST → CLOSED → PRE → REGULAR (20s total, 5s each)
+      // Last 2s of each phase shows ">>" upcoming preview + countdown
+      const PHASES = [
+        { state: 'REGULAR', next: 'POST' },
+        { state: 'POST',    next: 'CLOSED' },
+        { state: 'CLOSED',  next: 'PRE' },
+        { state: 'PRE',     next: 'REGULAR' },
+      ];
+      const PHASE_MS = 5000;
+      const PREVIEW_MS = 2000;
+      const cycle = Date.now() % (PHASES.length * PHASE_MS);
+      const phaseIdx = Math.floor(cycle / PHASE_MS);
+      const elapsed = cycle - phaseIdx * PHASE_MS;
+      const phase = PHASES[phaseIdx];
+      const remaining = PHASE_MS - elapsed;
+      const upcoming = remaining <= PREVIEW_MS ? phase.next : null;
+      const countdown = upcoming ? Math.ceil(remaining / 1000) : null;
+      return { marketState: phase.state, upcomingState: upcoming, countdown };
     };
 
-    const entryOf = (sym, s) => {
-      const ms = getDemoMarketState();
+    const entryOf = (sym, s, ms) => {
       return {
         price: s.price,
         changePercent: s.changePercent,
@@ -182,21 +196,31 @@ export const useStockData = (symbols, demo = false) => {
         name: `${sym} (데모)`,
         marketState: ms.marketState,
         upcomingState: ms.upcomingState,
+        countdown: ms.countdown,
         closes: [...s.closes],
         stale: false,
       };
     };
 
     setData(() => {
+      const ms = getDemoMarketState();
       const next = {};
-      for (const [sym, s] of Object.entries(state)) next[sym] = entryOf(sym, s);
+      for (const [sym, s] of Object.entries(state)) next[sym] = entryOf(sym, s, ms);
       return next;
     });
 
     // Each symbol lands with its own small random delay so the cards
-    // don't all tick in the same frame
+    // don't all tick in the same frame — but market state transitions
+    // bypass jitter so all cards switch simultaneously.
     const jitter = new Set();
+    let lastMs = { upcomingState: null, countdown: null };
     const timer = setInterval(() => {
+      const ms = getDemoMarketState(); // snapshot once per tick
+      const needsSync = ms.upcomingState !== lastMs.upcomingState
+                     || ms.countdown !== lastMs.countdown;
+      lastMs = ms;
+
+      // Always compute prices for all symbols
       for (const [sym, s] of Object.entries(state)) {
         if (demoSurge) {
           // 배정된 등급 밴드 안에서만 ±0.4%p 진동 → tick 애니메이션은 살아있되 tier 고정
@@ -218,12 +242,26 @@ export const useStockData = (symbols, demo = false) => {
         s.price = s.base * (1 + s.changePercent / 100);
         s.closes.push(s.price);
         if (s.closes.length > MAX_SPARK_POINTS) s.closes.shift();
+      }
 
-        const t = setTimeout(() => {
-          jitter.delete(t);
-          setData(prev => ({ ...prev, [sym]: entryOf(sym, s) }));
-        }, Math.random() * 900);
-        jitter.add(t);
+      if (needsSync) {
+        // Transition event: flush jitter, update ALL cards at once
+        jitter.forEach(clearTimeout);
+        jitter.clear();
+        setData(() => {
+          const next = {};
+          for (const [sym, s] of Object.entries(state)) next[sym] = entryOf(sym, s, ms);
+          return next;
+        });
+      } else {
+        // Normal tick: staggered price updates with jitter
+        for (const [sym, s] of Object.entries(state)) {
+          const t = setTimeout(() => {
+            jitter.delete(t);
+            setData(prev => ({ ...prev, [sym]: entryOf(sym, s, ms) }));
+          }, Math.random() * 900);
+          jitter.add(t);
+        }
       }
     }, 1500);
 
@@ -232,19 +270,16 @@ export const useStockData = (symbols, demo = false) => {
       jitter.forEach(clearTimeout);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbolsKey, demo]);
+  }, [symbolsKey, demoQuery]);
 
   // ---- Live mode ----
   useEffect(() => {
-    if (demo || !symbols || symbols.length === 0) return;
+    if (demoQuery || !symbols || symbols.length === 0) return;
 
     let finnhubWs = null;
     let finnhubReconnectTimer = null;
     let quoteTimer = null;
     let preMarketTimer = null;
-    let enrichTimer = null;
-    let statusTimer = null;
-    let holidayTimer = null;
     let metricsTimer = null;
     let stopped = false;
     let quotesComplete = false; // all symbols have price + change on screen
@@ -269,11 +304,16 @@ export const useStockData = (symbols, demo = false) => {
       }, Math.random() * maxDelay);
       jitterTimers.add(t);
     };
+    let enrichTimer = null;
+    let statusTimer = null;
+    let holidayTimer = null;
+
     // Known synchronously from the very first tick — no network round-trip
     // needed before the widget knows which session it is in.
     const initialSession = calcNySessionDetailed();
     let usMarketState = initialSession ? initialSession.current : 'CLOSED';
     let usUpcomingState = initialSession ? initialSession.upcoming : null;
+    let usCountdown = initialSession ? initialSession.countdown : null;
     let holidayClosed = false;
 
     // Stocks/ETFs only (crypto support was removed to keep the data layer lean)
@@ -591,14 +631,14 @@ export const useStockData = (symbols, demo = false) => {
       //       consulted separately, low-frequency, only for holiday closures
       //       (its isOpen is false during normal pre/after hours too, so it
       //       must never drive the session by itself).
-      const applySessionToData = (session, upcoming) => {
+      const applySessionToData = (session, upcoming, countdown) => {
         if (!session) return;
         setData(prev => {
           const next = { ...prev };
           for (const sym of stockSymbols) {
             const cur = next[sym] || {};
-            if (cur.marketState === session && cur.upcomingState === upcoming) continue;
-            const updated = { ...cur, marketState: session, upcomingState: upcoming };
+            if (cur.marketState === session && cur.upcomingState === upcoming && cur.countdown === countdown) continue;
+            const updated = { ...cur, marketState: session, upcomingState: upcoming, countdown };
             // Baseline rules on live transitions ("최근 정규장 종가" 기준):
             //   -> PRE / REGULAR : vs previous regular close (continuous at 09:30)
             //   -> POST          : vs today's regular close (resets to ~0% at 16:00)
@@ -612,7 +652,7 @@ export const useStockData = (symbols, demo = false) => {
           return next;
         });
       };
-      applySessionToData(usMarketState, usUpcomingState); // badge correct from the first paint
+      applySessionToData(usMarketState, usUpcomingState, usCountdown); // badge correct from the first paint
 
       const sessionLoop = () => {
         if (stopped) return;
@@ -620,11 +660,13 @@ export const useStockData = (symbols, demo = false) => {
           const detailed = calcNySessionDetailed();
           const s = holidayClosed ? 'CLOSED' : detailed?.current;
           const u = holidayClosed ? null : detailed?.upcoming;
-          if ((s && s !== usMarketState) || u !== usUpcomingState) {
+          const c = holidayClosed ? null : detailed?.countdown;
+          if ((s && s !== usMarketState) || u !== usUpcomingState || c !== usCountdown) {
             const stateChanged = s !== usMarketState;
             usMarketState = s;
             usUpcomingState = u;
-            applySessionToData(s, u);
+            usCountdown = c;
+            applySessionToData(s, u, c);
             // Leaving CLOSED (04:00 pre-market open): resume quotes right away
             // instead of waiting out the 10min overnight timer
             if (stateChanged && s !== 'CLOSED') {
@@ -633,9 +675,9 @@ export const useStockData = (symbols, demo = false) => {
             }
           }
         } catch (err) { console.error('session loop:', err); }
-        statusTimer = setTimeout(sessionLoop, 10000); // boundaries flip within 10s
+        statusTimer = setTimeout(sessionLoop, 1000); // 1s poll for precise countdown and boundary flips
       };
-      statusTimer = setTimeout(sessionLoop, 10000);
+      statusTimer = setTimeout(sessionLoop, 1000);
 
       const holidayLoop = async () => {
         // The verdict only matters while the clock says the regular session
@@ -739,7 +781,7 @@ export const useStockData = (symbols, demo = false) => {
         try { if (finnhubWs) finnhubWs.close(); } catch { /* ignore */ }
       };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbolsKey, demo]);
+  }, [symbolsKey, demoQuery]);
 
   const displayData = { ...data };
   if (symbols && Array.isArray(symbols)) {

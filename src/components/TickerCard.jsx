@@ -30,7 +30,7 @@ const DOWN_PARTICLES = ['💧', '▼', '💦', '🫧'];
 let particleId = 0;
 
 const TickerCard = ({
-  symbol, price, changePercent, previousClose, name, marketState, upcomingState, closes, stale,
+  symbol, price, changePercent, previousClose, name, marketState, upcomingState, countdown, closes, stale,
   week52High, week52Low, targetPrice,
   fx = 'full', showSparkline = true, loopPrevPrice,
   ...motionProps
@@ -341,6 +341,9 @@ const TickerCard = ({
         <div className="card-right">
           {market && (
             <div className="badge-row">
+              {countdown != null && (
+                <span className="market-countdown">{countdown}초</span>
+              )}
               <span className={`market-badge ${market.cls}`}>
                 {upcomingState && MARKET_LABELS[upcomingState] ? (
                   <span className="transition-slide-in">

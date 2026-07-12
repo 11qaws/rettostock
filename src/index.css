@@ -130,6 +130,27 @@ html, body, #root {
 .ms-pre, .ms-post { color: var(--badge-ext); }
 .ms-closed { color: var(--text-muted); }
 
+/* Transition countdown (appears left of badge during >> preview) */
+.market-countdown {
+  display: inline-block;
+  font-size: clamp(10px, 3.3vw, 15px);
+  line-height: 1.5;
+  padding: 0 0.7em;
+  border-radius: 999px;
+  border: 1px solid var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 1px;
+  opacity: 0.9;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  animation: countdown-pulse 1s ease-in-out infinite;
+}
+@keyframes countdown-pulse {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.5; }
+}
+
 /* Sparkline — wrap keeps its height even before data arrives */
 .sparkline-wrap { margin-top: clamp(6px, 2.5vw, 15px); height: clamp(14px, 9vw, 42px); color: var(--text-muted); }
 .sparkline-wrap.text-up { color: var(--color-up); }

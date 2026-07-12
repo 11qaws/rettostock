@@ -54,7 +54,8 @@ const Widget = () => {
     return symbolsParam ? symbolsParam.split(',').map(s => s.trim().toUpperCase()).filter(s => s).slice(0, 10) : [];
   }, [symbolsParam]);
 
-  const { data } = useStockData(symbols, demoParam);
+  const demoQuery = demoParam ? searchParams.toString() : false;
+  const { data } = useStockData(symbols, demoQuery);
 
   useEffect(() => {
     const themeClass = themeParam && themeParam !== 'default' ? themeParam : '';
@@ -190,6 +191,7 @@ const Widget = () => {
         name={ticker?.name || 'Loading...'}
         marketState={ticker?.marketState}
         upcomingState={ticker?.upcomingState}
+        countdown={ticker?.countdown}
         week52High={ticker?.week52High}
         week52Low={ticker?.week52Low}
         targetPrice={targets[symbol]}

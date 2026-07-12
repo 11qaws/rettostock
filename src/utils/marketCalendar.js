@@ -150,17 +150,31 @@ export const calcNySession = (now = new Date()) => {
   }
 };
 
-// Returns the current session and the upcoming session if a transition is within 5 minutes.
+// Returns the current session, the upcoming session (if within 5 minutes), and a countdown (if within 60s).
 export const calcNySessionDetailed = (now = new Date()) => {
   const current = calcNySession(now);
-  if (!current) return { current: null, upcoming: null };
+  if (!current) return { current: null, upcoming: null, countdown: null };
   
   // Look 5 minutes into the future
   const future = new Date(now.getTime() + 5 * 60000);
   const nextSession = calcNySession(future);
   
   if (current !== nextSession) {
-    return { current, upcoming: nextSession };
+    // Find the exact second of transition
+    // Since transitions occur exactly at the start of a minute (e.g. 09:30:00.000 NY time)
+    // we can step forward minute by minute from the current minute to find the boundary.
+    let boundaryTime = new Date(now);
+    boundaryTime.setSeconds(0, 0); // truncate to start of minute
+    for (let i = 1; i <= 5; i++) {
+      boundaryTime = new Date(boundaryTime.getTime() + 60000);
+      if (calcNySession(boundaryTime) === nextSession) {
+        break;
+      }
+    }
+    const remainingMs = boundaryTime.getTime() - now.getTime();
+    const remainingSecs = Math.ceil(remainingMs / 1000);
+    const countdown = remainingSecs <= 60 ? remainingSecs : null;
+    return { current, upcoming: nextSession, countdown };
   }
-  return { current, upcoming: null };
+  return { current, upcoming: null, countdown: null };
 };
