@@ -81,10 +81,10 @@ const COLOR_STYLES = [
 ];
 
 const FX_LEVELS = [
-  { value: 'calm', label: 'Calm Live', desc: '평소 움직임 없음 · ±5/10/15% 색상과 목표·52주 알림만' },
-  { value: 'full', label: '전부', desc: '흔들림·숫자 플래시·방향 전환·파티클까지 모두 표시' },
-  { value: 'soft', label: '약하게', desc: '가격 플래시·상승 펌프·등락 색상 유지 · 파티클·방향 전환·52주 링은 숨김' },
-  { value: 'off', label: '끄기', desc: '색상만 표시 · 움직임과 목표·52주 알림은 모두 끔' },
+  { value: 'full', label: '전체', desc: '강한·약한 연출에 카드 펄스와 틱 흔들림까지 모두' },
+  { value: 'event', label: '강한 연출', desc: '약한 연출 포함 · 양전/음전 전환, 목표가·52주 알림, 파티클' },
+  { value: 'card', label: '약한 연출', desc: '±5/10/15% 카드 색상·글로우와 장 전환 · 평소 시세 변화는 조용하게' },
+  { value: 'off', label: '끄기', desc: '효과는 모두 끔 · 가격 숫자의 짧은 상승/하락 플래시만 유지' },
 ];
 
 const PREVIEW_BGS = [
@@ -107,10 +107,9 @@ const defaultConfig = {
 
   interval: 10,
   opacity: 1,
-  // The broadcast-safe default: keep large-move colour tiers visible, but
-  // remove routine tick motion. Existing OBS URLs without an `fx` parameter
-  // stay on the Widget's legacy `full` default (see Widget.jsx).
-  fx: 'calm',
+  // Broadcast-safe default: retain large-move card colours, while keeping
+  // routine ticks quiet. URLs without an fx parameter remain legacy Full.
+  fx: 'card',
   speed: 1,
   demo: false,
   demoTrans: false,
@@ -132,6 +131,10 @@ const loadConfig = () => {
     // any value the user picked themselves (≠ the stamped 0.95). New users get 1
     // straight from defaultConfig.
     if (saved && saved.v === 2 && saved.opacity === 0.95) merged.opacity = 1;
+    // v1.0.21 condenses the old Calm/Soft choices into the clearer four-level
+    // model. Preserve their closest visual intent for saved configurations.
+    if (merged.fx === 'calm') merged.fx = 'card';
+    if (merged.fx === 'soft') merged.fx = 'event';
     merged.v = 3;
     merged.demo = false; // Always force demo off on initial load
     
@@ -363,7 +366,7 @@ const Configurator = () => {
     if (config.displayMode === 'scroll' && config.speed !== 1) params.set('speed', config.speed);
     if (config.opacity !== 1) params.set('opacity', config.opacity);
     // Preserve the old no-param URL as Full for existing OBS sources. New
-    // Calm Live configs explicitly carry `fx=calm` so they are unambiguous.
+    // non-Full configurations explicitly carry their selected `fx` value.
     if (config.fx !== 'full') params.set('fx', config.fx);
     if (config.demo) params.set('demo', '1');
     if (config.demoTrans) params.set('demo_transition', '1');
@@ -749,7 +752,7 @@ const Configurator = () => {
                   >{f.label}</button>
                 ))}
               </div>
-              <div className="fx-guide" aria-label="이벤트 이펙트별 차이">
+              <div className="fx-guide" aria-label="연출 단계별 차이">
                 {FX_LEVELS.map(f => (
                   <div key={f.value} className={`fx-guide-item ${config.fx === f.value ? 'selected' : ''}`}>
                     <b>{f.label}</b>

@@ -84,7 +84,7 @@ const TickerCard = ({
     if (prev === null || prev === side) return; // no genuine cross
     if (t.done) return;                         // milestone already reached
     if (Date.now() - t.bornAt < 10000) return;  // warm-up: booting isn't "reaching"
-    if (fx === 'off') return;
+    if (fx !== 'full' && fx !== 'event') return;
 
     t.done = true; // reached — auto-disarm until the target is changed
     clearTimeout(targetTimerRef.current);
@@ -111,14 +111,16 @@ const TickerCard = ({
 
   const transitionTimerRef = useRef(null);
   useEffect(() => {
-    if (prevUpcomingRef.current && !upcomingState && marketState !== prevMarketRef.current) {
+    if (fx !== 'off' && prevUpcomingRef.current && !upcomingState && marketState !== prevMarketRef.current) {
       setTransitioning({ from: prevMarketRef.current, to: marketState });
       clearTimeout(transitionTimerRef.current);
       transitionTimerRef.current = setTimeout(() => setTransitioning(null), 1000); // 1초 뒤 애니메이션 초기화
+    } else if (fx === 'off') {
+      setTransitioning(null);
     }
     prevUpcomingRef.current = upcomingState;
     prevMarketRef.current = marketState;
-  }, [upcomingState, marketState]);
+  }, [upcomingState, marketState, fx]);
 
   useEffect(() => {
     return () => clearTimeout(transitionTimerRef.current);
@@ -173,7 +175,7 @@ const TickerCard = ({
       return;
     }
 
-    if (surged && !prevSurgeRef.current && fx === 'full') {
+    if (surged && !prevSurgeRef.current && (fx === 'full' || fx === 'event')) {
       const pool = changePercent > 0 ? UP_PARTICLES : DOWN_PARTICLES;
       const burst = Array.from({ length: 14 }, () => ({
         id: ++particleId,
@@ -214,7 +216,7 @@ const TickerCard = ({
     if (typeof week52High === 'number' && week52High > 0) {
       const ref = Math.max(week52High, s.effHigh ?? 0);
       if (price > ref) {
-        if (warm && fx !== 'off' && now - s.lastFx.high > 300000) {
+        if (warm && (fx === 'full' || fx === 'event') && now - s.lastFx.high > 300000) {
           s.lastFx.high = now;
           s.effHigh = price * 1.002; // next banner needs +0.2% on top
           fire('high');
@@ -226,7 +228,7 @@ const TickerCard = ({
     if (typeof week52Low === 'number' && week52Low > 0) {
       const ref = Math.min(week52Low, s.effLow ?? Infinity);
       if (price < ref) {
-        if (warm && fx !== 'off' && now - s.lastFx.low > 300000) {
+        if (warm && (fx === 'full' || fx === 'event') && now - s.lastFx.low > 300000) {
           s.lastFx.low = now;
           s.effLow = price * 0.998;
           fire('low');
@@ -248,7 +250,7 @@ const TickerCard = ({
     prevSignRef.current = sign;
     if (prev === null || prev === sign) return;
 
-    if (fx === 'off') return;
+    if (fx !== 'full' && fx !== 'event') return;
     const now = Date.now();
     if (now - lastCrossRef.current < 10000) return;
     lastCrossRef.current = now;
@@ -269,7 +271,9 @@ const TickerCard = ({
   const tier = surgeTier(changePercent);
   const surged = tier >= 1;
   const dir = isUp ? 'up' : 'down';
-  const surgeClass = surged ? `is-surge-${dir} surge-${dir}-${tier}` : '';
+  // Strong includes every weak card cue, but keeps its presentation still.
+  const cardFxEnabled = fx === 'full' || fx === 'event' || fx === 'card';
+  const surgeClass = cardFxEnabled && surged ? `is-surge-${dir} surge-${dir}-${tier}` : '';
   // 4-digit+ prices ($1000+) render one step smaller so the wide number never
   // squeezes the ticker (stacks with fmtPrice dropping decimals).
   const bigPrice = typeof price === 'number' && Math.abs(price) >= 1000;
@@ -286,14 +290,14 @@ const TickerCard = ({
           full mood — "달아오른"(heated) rising up, "얼어붙은"(frozen) coming
           down. Tier 2 (±10%) is the same tint at a whisper (aura-mid), so the
           card visibly warms/cools on the way to tier 3. Sits behind content. */}
-      {tier >= 2 && fx !== 'off' && (
+      {tier >= 2 && cardFxEnabled && (
         <div
           className={`surge-aura ${isUp ? 'aura-hot' : 'aura-frozen'} ${tier === 2 ? 'aura-mid' : ''}`}
           aria-hidden="true"
         />
       )}
 
-      {particles.map(p => (
+      {(fx === 'full' || fx === 'event' ? particles : []).map(p => (
         <span
           key={p.id}
           className="fx-particle"
@@ -304,8 +308,8 @@ const TickerCard = ({
       ))}
 
       {/* Zero-cross: shimmer wipe + an arrow passing through the card,
-          easing off at the center before shooting out (full fx only) */}
-      {crossFx && fx === 'full' && (
+          easing off at the center before shooting out (event and full only) */}
+      {crossFx && (fx === 'full' || fx === 'event') && (
         <React.Fragment key={`cross-${crossFx.n}`}>
           <span className={`cross-wipe wipe-${crossFx.dir}`} aria-hidden="true" />
           {/* Render the OLD-direction glyph; the scaleY flip reveals the new
@@ -352,10 +356,14 @@ const TickerCard = ({
               )}
               <span className={`market-badge ${market.cls}`}>
                 {upcomingState && MARKET_LABELS[upcomingState] ? (
-                  <span className="transition-slide-in">
-                    {market.text} <span className="blink-arrows">&gt;&gt;</span> {MARKET_LABELS[upcomingState].text}
-                  </span>
-                ) : transitioning && MARKET_LABELS[transitioning.from] && MARKET_LABELS[transitioning.to] ? (
+                  fx !== 'off' ? (
+                    <span className="transition-slide-in">
+                      {market.text} <span className="blink-arrows">&gt;&gt;</span> {MARKET_LABELS[upcomingState].text}
+                    </span>
+                  ) : (
+                    <span>{market.text} → {MARKET_LABELS[upcomingState].text}</span>
+                  )
+                ) : fx !== 'off' && transitioning && MARKET_LABELS[transitioning.from] && MARKET_LABELS[transitioning.to] ? (
                   <span>
                     <span className="fade-out-left">{MARKET_LABELS[transitioning.from].text} <span className="blink-arrows">&gt;&gt;</span> </span>
                     {MARKET_LABELS[transitioning.to].text}
@@ -400,4 +408,3 @@ const TickerCard = ({
 };
 
 export default TickerCard;
-

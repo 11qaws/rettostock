@@ -467,38 +467,38 @@ html, body, #root {
   100% { opacity: 0; }
 }
 
-/* FX intensity:
-   Calm Live (the new configurator default) has no routine motion: no tick
-   shake/flash, no zero-cross flip and no infinite surge/aura pulse. It DOES
-   retain the static 5/10/15% surge colours, including a subdued tier-2/3 card
-   tint, and rare target/52-week milestone banners. */
-.fx-calm .anim-pump,
-.fx-calm .anim-dump,
-.fx-calm .price-flash-up,
-.fx-calm .price-flash-down,
-.fx-calm .sign-flip { animation: none; }
-.fx-calm .is-surge-up,
-.fx-calm .is-surge-down {
+/* Effect levels are cumulative: Full has every motion, Strong adds rare
+   milestones and particles to the Weak card cues, Weak keeps static
+   ±5/10/15% card colours, and Off retains the essential one-shot
+   price-direction flash. */
+.fx-event .anim-pump,
+.fx-event .anim-dump,
+.fx-card .anim-pump,
+.fx-card .anim-dump,
+.fx-card .sign-flip,
+.fx-off .anim-pump,
+.fx-off .anim-dump,
+.fx-off .sign-flip { animation: none; }
+.fx-event .is-surge-up,
+.fx-event .is-surge-down,
+.fx-card .is-surge-up,
+.fx-card .is-surge-down {
   animation: none;
   box-shadow: 0 0 calc(var(--surge-max) * 0.55) var(--surge-glow), 0 2px 10px rgba(0, 0, 0, 0.28);
 }
-.fx-calm .surge-aura {
+.fx-event .surge-aura,
+.fx-card .surge-aura {
   animation: none;
   opacity: calc(var(--aura-lo) * 0.65);
 }
 
-/* Soft = no shake/particles; off = no animations at all. */
-.fx-soft .anim-pump { animation: pumpFlash 0.5s ease; }
-.fx-soft .fx-particle { display: none; }
-.fx-off .anim-pump, .fx-off .anim-dump { animation: none; }
-.fx-off .price-flash-up, .fx-off .price-flash-down { animation: none; }
-.fx-off .is-surge-up, .fx-off .is-surge-down { animation: none; }
+/* Price flash is deliberately not listed here: it stays available in every
+   level, including Off, as the minimum legibility cue for a changing quote. */
+.fx-off .market-countdown { animation: none; }
 .fx-off .fx-particle { display: none; }
 .fx-off .cross-wipe { display: none; }
 .fx-off .cross-arrow { display: none; }
-.fx-off .sign-flip { animation: none; }
 .fx-off .w52-banner, .fx-off .w52-ring { display: none; }
-.fx-soft .w52-ring { display: none; } /* soft keeps the banner, drops the glow */
 
 
 /* ============================================================
