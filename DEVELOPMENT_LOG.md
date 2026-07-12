@@ -1,9 +1,12 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.25 Effect preview no longer waits for live events
+- **Preview reliability:** selecting 전체 or 약한 연출 now starts its visual preview immediately. It no longer waits for a live price, surge, crossing, or target event, so the card glow/overlays and (at 전체) particles, pulse, and shake always appear for the three-second preview.
+
 ## 2026-07-13: v1.0.24 Advanced broadcast controls and selector simplification
 - **Clean selector:** removed all explanatory copy, comparison-guide rows, and hover tooltips from the broadcast-effect selector. Only **전체 / 약한 연출 / 끄기** remain; runtime behavior is unchanged.
 - **Event focus:** Rotate mode now exposes a default-on toggle for automatically cutting to the relevant card after an eligible event. Turning it off writes `event_focus=0`, so the overlay only advances on its chosen rotation interval.
-- **Effect preview:** selecting 전체 or 약한 연출 automatically replays that level on the first embedded-preview card for three seconds. It overlays visuals without changing the quote, is never copied into the OBS URL or remote-sync message, and adds particles/pulse/shake only at 전체. A one-time token prevents a normal preview reload from replaying it.
+- **Effect preview:** selecting 전체 or 약한 연출 automatically replays that level on the first embedded-preview card for three seconds. It overlays visuals without changing the quote, is never copied into the OBS URL or remote-sync message, and adds particles/pulse/shake only at 전체. The embedded iframe is remounted for every selection so the preview token always reaches the card.
 - **Friendly advanced labels:** every advanced control now carries a short parenthetical purpose, including the exact scope of event focus and effect preview.
 
 ## 2026-07-13: v1.0.22 Three broadcast-effect levels and complete REST outage state

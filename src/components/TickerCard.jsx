@@ -125,15 +125,6 @@ const TickerCard = ({
   // changes a quote: a three-second visual layer is shown over the live card.
   useEffect(() => {
     if (!previewFxToken || previewTokenRef.current === previewFxToken) return;
-    if (typeof price !== 'number') return;
-    try {
-      const storageKey = 'rettostock-fx-preview-token';
-      if (sessionStorage.getItem(storageKey) === previewFxToken) {
-        previewTokenRef.current = previewFxToken;
-        return;
-      }
-      sessionStorage.setItem(storageKey, previewFxToken);
-    } catch { /* preview still works if sessionStorage is unavailable */ }
     previewTokenRef.current = previewFxToken;
 
     clearTimeout(previewTimerRef.current);
@@ -147,7 +138,9 @@ const TickerCard = ({
       clearTimeout(targetTimerRef.current);
       setCrossFx(p => ({ dir: 'up', n: (p?.n || 0) + 1 }));
       setW52Pop(p => ({ dir: 'high', n: (p?.n || 0) + 1 }));
-      setTargetPop(p => ({ n: (p?.n || 0) + 1, price: targetPrice ?? price }));
+      if (typeof targetPrice === 'number' || typeof price === 'number') {
+        setTargetPop(p => ({ n: (p?.n || 0) + 1, price: targetPrice ?? price }));
+      }
       if (fx === 'full') setParticles(makeParticleBurst(1));
     }
 

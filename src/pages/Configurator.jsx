@@ -982,6 +982,7 @@ const Configurator = () => {
                         }}
                       >
                         <iframe
+                    key={previewWidgetUrl}
                     src={previewWidgetUrl}
                           style={{
                             width: `${actualDims.w}px`,
@@ -1049,6 +1050,7 @@ const Configurator = () => {
                     : (PREVIEW_BGS.find(b => b.value === previewBg) || PREVIEW_BGS[0]).style),
                 }}>
                   <iframe
+                    key={previewWidgetUrl}
                     src={previewWidgetUrl}
                     style={{
                       width: `${frameW}px`,
