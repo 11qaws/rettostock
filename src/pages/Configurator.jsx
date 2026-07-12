@@ -81,9 +81,9 @@ const COLOR_STYLES = [
 ];
 
 const FX_LEVELS = [
-  { value: 'full', label: '전체', desc: '약한 연출에 파티클·카드 펄스·틱 흔들림까지 모두' },
-  { value: 'card', label: '약한 연출', desc: '±5/10/15% 카드 색·글로우, 장 전환, 양전/음전·목표가·52주 알림' },
-  { value: 'off', label: '끄기', desc: '효과는 모두 끔 · 가격 숫자의 짧은 상승/하락 플래시만 유지' },
+  { value: 'full', label: '전체' },
+  { value: 'card', label: '약한 연출' },
+  { value: 'off', label: '끄기' },
 ];
 
 const PREVIEW_BGS = [
@@ -747,16 +747,7 @@ const Configurator = () => {
                     className={`segment ${config.fx === f.value ? 'selected' : ''}`}
                     onClick={() => set('fx', f.value)}
                     aria-pressed={config.fx === f.value}
-                    title={f.desc}
                   >{f.label}</button>
-                ))}
-              </div>
-              <div className="fx-guide" aria-label="연출 단계별 차이">
-                {FX_LEVELS.map(f => (
-                  <div key={f.value} className={`fx-guide-item ${config.fx === f.value ? 'selected' : ''}`}>
-                    <b>{f.label}</b>
-                    <span>{f.desc}</span>
-                  </div>
                 ))}
               </div>
             </div>

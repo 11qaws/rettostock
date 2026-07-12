@@ -1,5 +1,8 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.23 Effect selector simplification
+- **Configurator:** removed all explanatory copy, comparison-guide rows, and hover tooltips from the broadcast-effect selector. Only **전체 / 약한 연출 / 끄기** remain; runtime behavior is unchanged.
+
 ## 2026-07-13: v1.0.22 Three broadcast-effect levels and complete REST outage state
 - **Clear, cumulative levels:** the compact selector and its always-visible guide now use **전체 / 약한 연출 / 끄기**. 약한 연출 keeps the static ±5/10/15% card colour and glow, market-session transition, positive/negative crossings, target reached, and 52-week high/low milestones. 전체 adds particles, the continuous card pulse, and tick shake. 끄기 removes all of those, except the deliberately retained one-shot up/down price-number flash. Former 강한 연출 URLs and saved settings map to 약한 연출.
 - **Session transition classification:** PRE/regular/POST status text remains available in every level. Its sliding/fading treatment and countdown pulse start from 약한 연출, rather than being unlabelled movement effects.
