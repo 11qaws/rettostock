@@ -8,7 +8,7 @@ const H = 28;
 // below in the down color, with a dashed reference line — so the shape
 // alone tells the day's story. Without a baseline it falls back to a
 // single-color line inheriting currentColor.
-const Sparkline = ({ data, baseline, pixel = false }) => {
+const Sparkline = ({ data, baseline }) => {
   const uid = useId();
   if (!data || data.length < 2) return null;
 
@@ -20,24 +20,15 @@ const Sparkline = ({ data, baseline, pixel = false }) => {
 
   const pts = data.map((v, i) => [(i / (data.length - 1)) * W, y(v)]);
 
-  let line;
-  if (pixel) {
-    // Step path for a pixel-art feel
-    line = `M ${pts[0][0]} ${pts[0][1]}`;
-    for (let i = 1; i < pts.length; i++) {
-      line += ` L ${pts[i][0]} ${pts[i - 1][1]} L ${pts[i][0]} ${pts[i][1]}`;
-    }
-  } else {
-    line = `M ${pts.map(p => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L ')}`;
-  }
+  const line = `M ${pts.map(p => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L ')}`;
 
   const strokeProps = {
     fill: 'none',
     stroke: 'currentColor',
-    strokeWidth: pixel ? 2 : 1.6,
+    strokeWidth: 1.6,
     vectorEffect: 'non-scaling-stroke',
-    strokeLinejoin: pixel ? 'miter' : 'round',
-    strokeLinecap: pixel ? 'butt' : 'round',
+    strokeLinejoin: 'round',
+    strokeLinecap: 'round',
   };
 
   if (!hasBase) {

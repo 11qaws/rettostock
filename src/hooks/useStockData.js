@@ -329,7 +329,8 @@ export const useStockData = (symbols, demo = false) => {
           if (!res.ok) throw new Error(`quote ${res.status}`);
           return { symbol, q: await res.json() };
         }));
-        if (stopped) return;
+        if (stopped) return 0;
+        let okCount = 0; // successful fetches this cycle — drives rate-limit backoff
         for (const r of results) {
           if (r.status !== 'fulfilled') continue;
           const { symbol, q } = r.value;
@@ -341,6 +342,7 @@ export const useStockData = (symbols, demo = false) => {
             continue;
           }
           failCounts[symbol] = 0;
+          okCount++;
           applyJittered(symbol, 2500, () => setData(prev => {
             const next = { ...prev };
             const cur = next[symbol] || {};
@@ -382,6 +384,7 @@ export const useStockData = (symbols, demo = false) => {
             return next;
           }));
         }
+        return okCount;
       };
       // 2c. Extended Hours data via TradingView Scanner
       const fetchPreMarket = async () => {
@@ -523,16 +526,34 @@ export const useStockData = (symbols, demo = false) => {
       };
       metricsLoop();
 
+      // Rate-limit budget (Finnhub free = 60 req/min): the REST quote loop
+      // sends one request per symbol per cycle, so the safe interval scales
+      // with symbol count. N × 1.2s keeps quotes ≤ 50/min (headroom for the
+      // 5-min holiday + 6-hourly metrics calls); floor 5s so tiny lists don't
+      // hammer (the websocket already gives sub-second ticks for most stocks).
+      let quoteBackoff = 1;
+      const quoteIntervalMs = () =>
+        Math.max(5000, Math.ceil(stockSymbols.length * 1.2) * 1000);
+
       const quoteLoop = async () => {
           if (stopped) return;
-          try { await fetchQuotes(); } catch (err) { console.error('quote loop:', err); }
+          let okCount = 0;
+          try { okCount = await fetchQuotes(); } catch (err) { console.error('quote loop:', err); }
           if (stopped) return;
           // CLOSED: prices are frozen, so throttle way down (kept alive at
           // 10min for the overnight previous-close rollover and staleness
           // detection) — but only once the first paint is complete, so a
-          // transient bad response at boot retries in 10s, not 10min.
+          // transient bad response at boot retries fast, not in 10min.
           // Session changes kick an immediate fetch below.
-          quoteTimer = setTimeout(quoteLoop, usMarketState === 'CLOSED' && quotesComplete ? 600000 : 10000);
+          if (usMarketState === 'CLOSED' && quotesComplete) {
+            quoteBackoff = 1;
+            quoteTimer = setTimeout(quoteLoop, 600000);
+            return;
+          }
+          // A fully-failed cycle (rate-limit/outage) backs the interval off up
+          // to 4× so we stop hammering a throttled endpoint; any success resets.
+          quoteBackoff = okCount === 0 ? Math.min(quoteBackoff * 2, 4) : 1;
+          quoteTimer = setTimeout(quoteLoop, quoteIntervalMs() * quoteBackoff);
         };
         quoteLoop();
 

@@ -316,8 +316,14 @@ const Configurator = () => {
 
   const set = (key, value) => setConfig(prev => ({ ...prev, [key]: value }));
 
+  // Widget caps symbols at 10 (Finnhub free-tier rate limit); mirror that here.
+  const MAX_SYMBOLS = 10;
   const symbolList = useMemo(
-    () => config.symbolsInput.split(',').map(s => s.trim()).filter(s => s),
+    () => config.symbolsInput.split(',').map(s => s.trim()).filter(s => s).slice(0, MAX_SYMBOLS),
+    [config.symbolsInput]
+  );
+  const symbolOverflow = useMemo(
+    () => config.symbolsInput.split(',').map(s => s.trim()).filter(s => s).length > MAX_SYMBOLS,
     [config.symbolsInput]
   );
 
@@ -331,7 +337,7 @@ const Configurator = () => {
     return () => clearTimeout(t);
   }, [config.symbolsInput]);
   const urlSymbolList = useMemo(
-    () => dbSymbolsInput.split(',').map(s => s.trim()).filter(s => s),
+    () => dbSymbolsInput.split(',').map(s => s.trim()).filter(s => s).slice(0, MAX_SYMBOLS),
     [dbSymbolsInput]
   );
 
@@ -447,8 +453,8 @@ const Configurator = () => {
   };
   const savePreset = () => {
     const name = presetName.trim() || `프리셋 ${presets.length + 1}`;
-    // 프리셋 저장 시 목표가(targets)는 저장하지 않음
-    const { targets, _targetsWiped, ...configToSave } = config;
+    // 프리셋 저장 시 목표가(targets)·초기화 플래그는 제외 (의도적 폐기)
+    const { targets: _targets, _targetsWiped, ...configToSave } = config;
     persistPresets([...presets.filter(p => p.name !== name), { name, config: configToSave }]);
     setNamingPreset(false);
     setPresetName('');
@@ -471,6 +477,12 @@ const Configurator = () => {
           </span>
         </div>
 
+        {showWipeToast && (
+          <div className="wipe-toast" role="status">
+            🎯 목표가는 방송마다 초기화돼요 — 이번에 저장돼 있던 목표가를 비웠어요.
+          </div>
+        )}
+
         <div className="config-columns">
 
         {/* Left Sidebar: Controls */}
@@ -478,7 +490,7 @@ const Configurator = () => {
 
           {/* 1. Symbols */}
           <div className="jirai-card" style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#4e342e' }}>🎀 등록할 종목 심볼</label>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#4e342e' }}>🎀 등록할 종목 티커</label>
             <p style={{ fontSize: '14px', color: '#8d6e63', marginBottom: '12px' }}>
               쉼표(,)로 구분해서 입력해 주세요. (예: AAPL, TSLA, NVDA)
             </p>
@@ -489,6 +501,11 @@ const Configurator = () => {
               onChange={(e) => set('symbolsInput', e.target.value)}
               style={{ width: '100%', boxSizing: 'border-box' }}
             />
+            {symbolOverflow && (
+              <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#e0797f' }}>
+                ⚠️ 종목은 최대 {MAX_SYMBOLS}개까지만 표시돼요 (안정적인 실시간 갱신을 위해).
+              </p>
+            )}
             <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {symbolList.map((s) => {
                 const hasTarget = config.targets?.[s] !== undefined && config.targets?.[s] !== '';

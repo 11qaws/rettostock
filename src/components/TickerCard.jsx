@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Sparkline from './Sparkline';
+import { fmtPrice } from '../utils/format';
 
 const SURGE_THRESHOLD = 5; // |changePercent| >= 5% triggers surge state
 
@@ -20,9 +21,9 @@ const DOWN_PARTICLES = ['💧', '▼', '💦', '🫧'];
 let particleId = 0;
 
 const TickerCard = ({
-  symbol, price, changePercent, previousClose, regularMarketPrice, name, marketState, upcomingState, closes, stale,
+  symbol, price, changePercent, previousClose, name, marketState, upcomingState, closes, stale,
   week52High, week52Low, targetPrice,
-  fx = 'full', pixel = false, showSparkline = true, loopPrevPrice,
+  fx = 'full', showSparkline = true, loopPrevPrice,
   ...motionProps
 }) => {
   const [animClass, setAnimClass] = useState('');
@@ -330,14 +331,14 @@ const TickerCard = ({
             </div>
           )}
           <span className={`neon-price ${priceFlash}`}>
-            ${typeof price === 'number' ? price.toFixed(2) : '---'}
+            ${fmtPrice(price)}
           </span>
           <span className={`neon-change ${colorClass} ${crossFx ? 'sign-flip' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
             {Icon && <Icon size={14} className="change-icon" style={{ flexShrink: 0 }} />}
             <span style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
               {typeof changeAbs === 'number' && (
                 <span className="change-abs" style={{ fontSize: '0.92em', opacity: 0.9, fontWeight: 500 }}>
-                  {changeAbs > 0 ? '+' : ''}{changeAbs.toFixed(2)}
+                  {changeAbs > 0 ? '+' : ''}{fmtPrice(changeAbs)}
                 </span>
               )}
               {typeof changePercent === 'number' ? (
@@ -355,7 +356,7 @@ const TickerCard = ({
       {/* Space is always reserved so cards never change height as data loads */}
       {showSparkline && (
         <div className={`sparkline-wrap ${colorClass}`}>
-          {closes && closes.length > 1 && <Sparkline data={closes} baseline={previousClose} pixel={pixel} />}
+          {closes && closes.length > 1 && <Sparkline data={closes} baseline={previousClose} />}
         </div>
       )}
     </motion.div>

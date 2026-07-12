@@ -4,6 +4,7 @@ import TickerCard from '../components/TickerCard';
 import Sparkline from '../components/Sparkline';
 import { useStockData } from '../hooks/useStockData';
 import { useWidgetSync } from '../hooks/useRemoteSync';
+import { fmtPrice } from '../utils/format';
 import { AnimatePresence } from 'framer-motion';
 
 // Backwards compat: old URLs used color-red-blue / color-green-red
@@ -47,11 +48,12 @@ const Widget = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const symbols = useMemo(() => {
-    return symbolsParam ? symbolsParam.split(',').map(s => s.trim().toUpperCase()).filter(s => s) : [];
+    // Cap at 10: keeps Finnhub REST polling under the free 60-req/min limit
+    // (10 symbols × 5 polls/min = 50) so the feed never rate-limits mid-stream.
+    return symbolsParam ? symbolsParam.split(',').map(s => s.trim().toUpperCase()).filter(s => s).slice(0, 10) : [];
   }, [symbolsParam]);
 
   const { data } = useStockData(symbols, demoParam);
-  const pixel = false; // no pixel-art theme currently (retto-pixel replaced by eureka)
 
   useEffect(() => {
     const themeClass = themeParam && themeParam !== 'default' ? themeParam : '';
@@ -148,7 +150,6 @@ const Widget = () => {
         closes={ticker?.closes}
         stale={ticker?.stale}
         fx={fxParam}
-        pixel={pixel}
         loopPrevPrice={loopPrevPrice}
         initial={modeParam === 'rotate' ? { opacity: 0, y: 20 } : undefined}
         animate={{ opacity: 1, y: 0 }}
@@ -173,7 +174,7 @@ const Widget = () => {
         <div className="ticker-inline glass-card" key={`${trackId}-${item.k}`}>
           <span className="neon-title">{item.s}</span>
           <span className="neon-price">
-            ${typeof ticker?.price === 'number' ? ticker.price.toFixed(2) : '---'}
+            ${fmtPrice(ticker?.price)}
           </span>
           <span className={`neon-change ${colorClass}`}>
             {isUp ? '▲' : isDown ? '▼' : ''}
@@ -183,7 +184,7 @@ const Widget = () => {
           </span>
           {ticker?.closes && ticker.closes.length > 1 && (
             <span className={`inline-spark ${colorClass}`}>
-              <Sparkline data={ticker.closes} baseline={ticker?.previousClose} pixel={pixel} />
+              <Sparkline data={ticker.closes} baseline={ticker?.previousClose} />
             </span>
           )}
         </div>

@@ -17,7 +17,18 @@ class RecoveryBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('Widget crashed, reloading in 4s:', error, info);
+    console.error('Widget crashed:', error, info);
+    // Guard against a crash→reload loop: if we've already reloaded several
+    // times in the last minute, stop reloading and stay quietly transparent
+    // (better a frozen-but-invisible overlay than a page that flashes forever).
+    try {
+      const KEY = 'rs-crash-reloads';
+      const now = Date.now();
+      const recent = JSON.parse(sessionStorage.getItem(KEY) || '[]').filter(t => now - t < 60000);
+      if (recent.length >= 3) return; // give up: render null, no more reloads
+      recent.push(now);
+      sessionStorage.setItem(KEY, JSON.stringify(recent));
+    } catch { /* ignore */ }
     setTimeout(() => window.location.reload(), 4000);
   }
 

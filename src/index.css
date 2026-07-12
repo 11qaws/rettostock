@@ -861,6 +861,21 @@ html, body, #root {
   background-clip: content-box;
 }
 
+/* Boot notice: target prices are wiped each session (implicit change surfaced) */
+.wipe-toast {
+  margin: 0 auto 16px;
+  max-width: 640px;
+  background: #fff4d6;
+  color: #6d4c41;
+  border: 1px solid #f0d089;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 14px;
+  text-align: center;
+  animation: wipeToastIn 0.3s ease;
+}
+@keyframes wipeToastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
 /* Placement preview: widen the panel so the full screenshot is workable */
 .config-layout.scene-expanded { max-width: 1280px; }
 .config-layout.scene-expanded .config-preview-wrapper { width: 640px; }
