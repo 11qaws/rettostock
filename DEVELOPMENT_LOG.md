@@ -1,8 +1,12 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.32 Fixed-layout recovery and versioned OBS URLs
+- **No layout changes during recovery:** removed the temporary update text and marquee glyph. Recovery state may dim an existing card but never adds content or changes its dimensions.
+- **No stale deployment bundle:** newly copied OBS URLs carry the app version before the hash, bypassing GitHub Pages' 10-minute `index.html` cache on a new deployment.
+
 ## 2026-07-13: v1.0.31 Three-minute local quote recovery
 - **Fast, honest refresh:** the browser stores only source-timestamped quotes for up to three minutes. Each quote's own receipt time is checked again on restore, so an outage cannot keep extending an old value's lifetime. A manual refresh or OBS browser-source restart paints the qualifying local value immediately while the live connection starts.
-- **Never silently current:** a recovered card is dimmed and displays `업데이트 중`; its first live reconciliation suppresses artificial pump/dump, surge, and sign-flip effects, then clears the marker. Visual setting changes still do not read this cache because their preview iframe is kept alive.
+- **Stable broadcast layout:** recovery never adds a badge, text row, or marquee glyph. The first live reconciliation suppresses artificial pump/dump, surge, and sign-flip effects; visual setting changes still do not read this cache because their preview iframe is kept alive.
 
 ## 2026-07-13: v1.0.30 No stale-quote fallback; visual settings update in place
 - **Correct broadcast behaviour:** removed the v1.0.29 short-lived quote snapshot. A visual setting must never have the option to display an old quote just to avoid `---`.

@@ -449,7 +449,6 @@ const TickerCard = ({
         </div>
 
         <div className="card-right">
-          {recovering && <span className="recovery-badge">업데이트 중</span>}
           {market && (
             <div className="badge-row">
               {countdown != null && (
