@@ -126,6 +126,19 @@ html, body, #root {
   opacity: 0.9;
   white-space: nowrap;
 }
+.recovery-badge {
+  color: var(--text-muted);
+  font-size: clamp(9px, 2.8vw, 13px);
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.recovery-inline {
+  color: var(--text-muted);
+  font-size: 0.75em;
+  opacity: 0.85;
+}
 .ms-open { color: var(--color-up); }
 .ms-pre, .ms-post { color: var(--badge-ext); }
 .ms-closed { color: var(--text-muted); }

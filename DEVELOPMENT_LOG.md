@@ -1,5 +1,9 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.31 Three-minute local quote recovery
+- **Fast, honest refresh:** the browser stores only source-timestamped quotes for up to three minutes. Each quote's own receipt time is checked again on restore, so an outage cannot keep extending an old value's lifetime. A manual refresh or OBS browser-source restart paints the qualifying local value immediately while the live connection starts.
+- **Never silently current:** a recovered card is dimmed and displays `업데이트 중`; its first live reconciliation suppresses artificial pump/dump, surge, and sign-flip effects, then clears the marker. Visual setting changes still do not read this cache because their preview iframe is kept alive.
+
 ## 2026-07-13: v1.0.30 No stale-quote fallback; visual settings update in place
 - **Correct broadcast behaviour:** removed the v1.0.29 short-lived quote snapshot. A visual setting must never have the option to display an old quote just to avoid `---`.
 - **Real fix:** the embedded Configurator preview now keeps one live widget instance for theme, colour scheme, display mode, opacity, rotation speed, event focus, targets, and effect controls. These values are updated in place over a same-origin message; only a genuine data-source change (symbols or demo mode) replaces the iframe. The existing live REST/WebSocket state therefore remains on screen throughout visual adjustments.

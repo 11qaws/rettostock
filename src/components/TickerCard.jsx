@@ -59,7 +59,7 @@ const makePreviewParticleBurst = (token) => Array.from({ length: 18 }, (_, index
 });
 
 const TickerCard = ({
-  symbol, price, changePercent, previousClose, name, marketState, upcomingState, countdown, closes, stale,
+  symbol, price, changePercent, previousClose, name, marketState, upcomingState, countdown, closes, stale, recovering,
   week52High, week52Low, targetPrice,
   fx = 'full', showSparkline = true, loopPrevPrice, previewFxToken = '', previewFxVariant = 'surge',
   ...motionProps
@@ -135,6 +135,9 @@ const TickerCard = ({
   const prevPriceRef = useRef(loopPrevPrice !== undefined ? loopPrevPrice : price);
   const prevSurgeRef = useRef(null); // null = no data seen yet
   const prevSignRef = useRef(null);
+  const recoveryPriceRef = useRef(Boolean(recovering));
+  const recoverySurgeRef = useRef(Boolean(recovering));
+  const recoverySignRef = useRef(Boolean(recovering));
   const lastCrossRef = useRef(0);
 
   // The configurator passes a token only to its embedded preview. The visual
@@ -184,6 +187,19 @@ const TickerCard = ({
 
   // Tick animation on price change
   useEffect(() => {
+    // The first live response after a restored value is a reconciliation, not
+    // a market event. Establish a fresh baseline so it cannot create a false
+    // pump/dump, surge, or sign-flip animation.
+    if (recovering) {
+      recoveryPriceRef.current = true;
+      prevPriceRef.current = price;
+      return;
+    }
+    if (recoveryPriceRef.current) {
+      recoveryPriceRef.current = false;
+      prevPriceRef.current = price;
+      return;
+    }
     if (price === undefined || prevPriceRef.current === undefined) {
       prevPriceRef.current = price;
       return;
@@ -212,12 +228,23 @@ const TickerCard = ({
 
     prevPriceRef.current = price;
     return () => clearTimeout(timer);
-  }, [price]);
+  }, [price, recovering]);
 
   // Surge detection: particle burst the moment |change| crosses the threshold
   useEffect(() => {
     if (changePercent === undefined || changePercent === null) return;
     const surged = Math.abs(changePercent) >= SURGE_THRESHOLD;
+
+    if (recovering) {
+      recoverySurgeRef.current = true;
+      prevSurgeRef.current = surged;
+      return;
+    }
+    if (recoverySurgeRef.current) {
+      recoverySurgeRef.current = false;
+      prevSurgeRef.current = surged;
+      return;
+    }
 
     if (prevSurgeRef.current === null) {
       // First data point: record state without celebrating stale news
@@ -233,7 +260,7 @@ const TickerCard = ({
     }
 
     prevSurgeRef.current = surged;
-  }, [changePercent, fx]);
+  }, [changePercent, fx, recovering]);
 
   // 52-week record: a rare, big broadcast moment. Fires when the price
   // crosses the 52-week high/low from Finnhub metrics. Guards: 10s
@@ -285,8 +312,18 @@ const TickerCard = ({
   // cooldown stops noise around 0% from spamming the effect.
   useEffect(() => {
     if (typeof changePercent !== 'number') return;
+    const sign = Math.abs(changePercent) < 0.05 ? null : (changePercent > 0 ? 1 : -1);
+    if (recovering) {
+      recoverySignRef.current = true;
+      prevSignRef.current = sign;
+      return;
+    }
+    if (recoverySignRef.current) {
+      recoverySignRef.current = false;
+      prevSignRef.current = sign;
+      return;
+    }
     if (Math.abs(changePercent) < 0.05) return; // too small to count as a sign
-    const sign = changePercent > 0 ? 1 : -1;
     const prev = prevSignRef.current;
     prevSignRef.current = sign;
     if (prev === null || prev === sign) return;
@@ -299,7 +336,7 @@ const TickerCard = ({
     clearTimeout(crossTimerRef.current);
     setCrossFx(p => ({ dir: sign > 0 ? 'up' : 'down', n: (p?.n || 0) + 1 }));
     crossTimerRef.current = setTimeout(() => setCrossFx(null), CROSS_MS);
-  }, [changePercent, fx]);
+  }, [changePercent, fx, recovering]);
 
   const isUp = changePercent > 0;
   const isDown = changePercent < 0;
@@ -412,6 +449,7 @@ const TickerCard = ({
         </div>
 
         <div className="card-right">
+          {recovering && <span className="recovery-badge">업데이트 중</span>}
           {market && (
             <div className="badge-row">
               {countdown != null && (

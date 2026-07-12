@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // This remains client-side while the widget is hosted on GitHub Pages. The
 // second key is a timeout/rate-limit standby. Authentication and permission
@@ -157,6 +157,75 @@ const fetchViaProxy = async (targetUrl) => {
 // Last-known sparkline cache: the chart shows up with the first paint
 // and gets replaced by fresh data within one enrichment round.
 const SPARK_CACHE_PREFIX = 'spark-cache-';
+// A short browser-local recovery copy avoids an empty card immediately after
+// a manual refresh or an OBS browser-source restart. It is deliberately
+// marked stale and replaced by the first live response; it is never used for
+// in-place visual setting changes.
+const QUOTE_RECOVERY_PREFIX = 'quote-recovery-v1-';
+const QUOTE_RECOVERY_MAX_AGE_MS = 3 * 60 * 1000;
+const QUOTE_RECOVERY_FIELDS = ['changePercent', 'previousClose', 'regularMarketPrice', 'week52High', 'week52Low'];
+
+const quoteRecoveryKey = (symbols) => `${QUOTE_RECOVERY_PREFIX}${[...symbols].map(s => s.toUpperCase()).sort().join(',')}`;
+
+const readQuoteRecovery = (symbols) => {
+  if (!Array.isArray(symbols) || symbols.length === 0) return {};
+  const key = quoteRecoveryKey(symbols);
+  try {
+    const snapshot = JSON.parse(localStorage.getItem(key));
+    if (!snapshot || typeof snapshot.savedAt !== 'number') {
+      localStorage.removeItem(key);
+      return {};
+    }
+    const restored = {};
+    for (const symbol of symbols) {
+      const value = snapshot.data?.[symbol];
+      if (!value || !Number.isFinite(value.price) || value.price <= 0
+        || !Number.isFinite(value.quoteAt) || Date.now() - value.quoteAt > QUOTE_RECOVERY_MAX_AGE_MS) continue;
+      const quote = {
+        name: typeof value.name === 'string' ? value.name : symbol,
+        price: value.price,
+        quoteUpdatedAt: value.quoteAt,
+        stale: true,
+        recovering: true,
+      };
+      for (const field of QUOTE_RECOVERY_FIELDS) {
+        if (Number.isFinite(value[field])) quote[field] = value[field];
+      }
+      restored[symbol] = quote;
+    }
+    return restored;
+  } catch {
+    return {};
+  }
+};
+
+const writeQuoteRecovery = (symbols, data) => {
+  const snapshot = {};
+  for (const symbol of symbols) {
+    const value = data[symbol];
+    // Do not extend the 3-minute lifetime with the value we just restored.
+    if (!value || value.recovering || !Number.isFinite(value.price) || value.price <= 0
+      || !Number.isFinite(value.quoteUpdatedAt)
+      || Date.now() - value.quoteUpdatedAt > QUOTE_RECOVERY_MAX_AGE_MS) continue;
+    const quote = {
+      name: typeof value.name === 'string' ? value.name : symbol,
+      price: value.price,
+      quoteAt: value.quoteUpdatedAt,
+    };
+    for (const field of QUOTE_RECOVERY_FIELDS) {
+      if (Number.isFinite(value[field])) quote[field] = value[field];
+    }
+    snapshot[symbol] = quote;
+  }
+  if (Object.keys(snapshot).length === 0) return false;
+  try {
+    localStorage.setItem(quoteRecoveryKey(symbols), JSON.stringify({ savedAt: Date.now(), data: snapshot }));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const readSparkCache = (symbol) => {
   try { return JSON.parse(localStorage.getItem(SPARK_CACHE_PREFIX + symbol)); } catch { return null; }
 };
@@ -174,13 +243,24 @@ const hashCode = (str) => {
 export const useStockData = (symbols, demoQuery = false) => {
   const [data, setData] = useState(() => {
     const initial = {};
+    const recovered = symbols && Array.isArray(symbols) ? readQuoteRecovery(symbols) : {};
     if (symbols && Array.isArray(symbols)) {
-      symbols.forEach(s => { initial[s] = { name: s, stale: true }; });
+      symbols.forEach(s => { initial[s] = recovered[s] || { name: s, stale: true }; });
     }
     return initial;
   });
   const [error] = useState(null);
   const symbolsKey = symbols.join(',');
+  const lastQuoteRecoveryWriteRef = useRef(0);
+
+  // Persist only confirmed live values. The short throttle keeps frequent
+  // WebSocket ticks inexpensive while still making a refresh feel instant.
+  useEffect(() => {
+    if (demoQuery) return;
+    const now = Date.now();
+    if (now - lastQuoteRecoveryWriteRef.current < 750) return;
+    if (writeQuoteRecovery(symbols, data)) lastQuoteRecoveryWriteRef.current = now;
+  }, [data, demoQuery, symbolsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Demo mode: fake ticking prices, no network ----
   useEffect(() => {
@@ -436,7 +516,9 @@ export const useStockData = (symbols, demoQuery = false) => {
                     changePercent: cur.previousClose ? calcChange(price, cur.regularMarketPrice, cur.previousClose, cur.marketState) : cur.changePercent,
                     name: cur.name || sym,
                     lastTradeAt: tradeReceivedAt,
-                    stale: false
+                    quoteUpdatedAt: tradeReceivedAt,
+                    stale: false,
+                    recovering: false,
                   };
                 }
                 return next;
@@ -504,7 +586,14 @@ export const useStockData = (symbols, demoQuery = false) => {
             const next = { ...prev };
             const cur = next[symbol] || {};
             const session = usMarketState;
-            const common = { ...cur, previousClose: q.pc, name: cur.name || symbol, stale };
+            const common = {
+              ...cur,
+              previousClose: q.pc,
+              name: cur.name || symbol,
+              stale,
+              recovering: false,
+              quoteUpdatedAt: typeof fetchedAt === 'number' ? fetchedAt : Date.now(),
+            };
 
             // Finnhub's own dp (change % vs pc) backs up our calculation
             // when a response arrives with a transient pc=0
@@ -658,7 +747,12 @@ export const useStockData = (symbols, demoQuery = false) => {
         for (const [symbol, updateData] of Object.entries(updates)) {
           applyJittered(symbol, PREMARKET_INTERVAL * JITTER_FRACTION, () => setData(prev => ({
             ...prev,
-            [symbol]: { ...(prev[symbol] || {}), ...updateData },
+            [symbol]: {
+              ...(prev[symbol] || {}),
+              ...updateData,
+              recovering: false,
+              quoteUpdatedAt: Date.now(),
+            },
           })));
         }
       };

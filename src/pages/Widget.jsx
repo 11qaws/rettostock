@@ -261,6 +261,7 @@ const Widget = () => {
         targetPrice={targets[symbol]}
         closes={ticker?.closes}
         stale={ticker?.stale}
+        recovering={ticker?.recovering}
         fx={fxParam}
         previewFxToken={previewFxToken}
         previewFxVariant={previewVariant}
@@ -285,7 +286,7 @@ const Widget = () => {
       const isDown = ticker?.changePercent < 0;
       const colorClass = isUp ? 'text-up' : (isDown ? 'text-down' : '');
       return (
-        <div className="ticker-inline glass-card" key={`${trackId}-${item.k}`}>
+        <div className={`ticker-inline glass-card ${ticker?.recovering ? 'is-stale' : ''}`} key={`${trackId}-${item.k}`}>
           <span className="neon-title">{item.s}</span>
           <span className="neon-price">
             ${fmtPrice(ticker?.price)}
@@ -296,6 +297,7 @@ const Widget = () => {
               ? ` ${ticker.changePercent > 0 ? '+' : ''}${ticker.changePercent.toFixed(2)}%`
               : ' ---'}
           </span>
+          {ticker?.recovering && <span className="recovery-inline" aria-label="저장 시세를 업데이트 중">↻</span>}
           {ticker?.closes && ticker.closes.length > 1 && (
             <span className={`inline-spark ${colorClass}`}>
               <Sparkline data={ticker.closes} baseline={ticker?.previousClose} />
