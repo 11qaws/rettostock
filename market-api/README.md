@@ -12,6 +12,12 @@ This is a Cloudflare Pages Function that sits between the public OBS widget and 
 
 Only Finnhub HTTP 429 responses and 5-second upstream timeouts move to the standby key. A 401 or 403 is returned as an ordinary failure so a misconfigured key is not hidden.
 
+## What this means for on-screen delay
+
+During regular trading, direct Finnhub WebSocket trade ticks still update the visible price without passing through this cache. The cache only serves the 5-second REST correction loop. A normal cached REST result is 0–5 seconds old, but its 5-second freshness boundary can line up with the browser's 5-second poll, so the conservative upper bound before the next REST refresh is almost 10 seconds. This is measured from Finnhub's REST value, not from the exchange; Finnhub's own feed latency is outside the widget's control.
+
+When Finnhub is unavailable, the Function may return the last REST value for up to 60 seconds and marks it stale. A newer WebSocket trade is never overwritten by that older cached REST result. After the 60-second fallback expires, the widget keeps its existing value and its existing retry/backoff behavior applies.
+
 ## One-time deployment
 
 You do **not** need to find a special Cloudflare menu before starting. The dashboard's drag-and-drop Pages flow cannot compile this project's `functions` folder, so use the three short PowerShell steps below once. The first command opens the normal Cloudflare sign-in/sign-up page in your browser.

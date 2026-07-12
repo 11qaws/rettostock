@@ -257,15 +257,12 @@
   --fx-target-ink: #ff5fa2;
   --fx-target-glow: rgba(255, 95, 162, 0.8);
 
-  /* VT323: a compact retro-LED/terminal face used board-wide. Unlike a
-     7-segment font it renders $, %, ( ) and letters correctly, so prices,
-     change % and the symbol all show cleanly instead of clipping or falling
-     back to oversized glyphs. It's narrow, so it also keeps 4-char tickers
-     (e.g. SNXX) from being squeezed by a wide price. */
-  --font-head: 'VT323', 'Orbitron', sans-serif;
-  --font-num: 'VT323', 'Orbitron', monospace;
+  /* Share Tech Mono: a crisp digital/terminal face with clear numeric forms
+     for fast-moving prices and percentage changes. */
+  --font-head: 'Share Tech Mono', 'Orbitron', sans-serif;
+  --font-num: 'Share Tech Mono', 'Orbitron', monospace;
 
-  /* VT323 reads small per em, so sizes run near the base for legibility. */
+  /* Keep the compact LED scale tuned for a narrow on-air board. */
   --fs-title: clamp(15px, 8.5vw, 38px);
   --fs-sub: clamp(9px, 4.3vw, 20px);
   --fs-price: clamp(18px, 10.5vw, 52px);
@@ -302,13 +299,14 @@
 
 .theme-led-board .neon-price {
   color: var(--color-primary);
-  text-shadow: 0 0 4px rgba(255, 179, 0, 0.9), 0 0 14px rgba(255, 179, 0, 0.5);
-  font-weight: 700;
-  letter-spacing: 0;
+  /* Added a crisp dark inner shadow to define edges, followed by glow */
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.8), 0 0 5px rgba(255, 179, 0, 0.9), 0 0 12px rgba(255, 179, 0, 0.5);
+  font-weight: 400; /* Share Tech Mono only has 400 weight */
+  letter-spacing: -0.5px;
 }
 
-.theme-led-board .text-up { text-shadow: 0 0 4px var(--color-up), 0 0 12px var(--color-up-glow); }
-.theme-led-board .text-down { text-shadow: 0 0 4px var(--color-down), 0 0 12px var(--color-down-glow); }
+.theme-led-board .text-up { text-shadow: 1px 1px 0 rgba(0,0,0,0.8), 0 0 5px var(--color-up), 0 0 12px var(--color-up-glow); }
+.theme-led-board .text-down { text-shadow: 1px 1px 0 rgba(0,0,0,0.8), 0 0 5px var(--color-down), 0 0 12px var(--color-down-glow); }
 
 /* LED sign celebration banners */
 .theme-led-board .w52-banner,

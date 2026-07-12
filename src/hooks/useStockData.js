@@ -406,6 +406,7 @@ export const useStockData = (symbols, demoQuery = false) => {
             const response = JSON.parse(event.data);
             if (response.type === 'trade' && response.data && response.data.length > 0) {
               const updates = {};
+              const tradeReceivedAt = Date.now();
               response.data.forEach(trade => { updates[trade.s] = trade.p; });
               setData(prev => {
                 const next = { ...prev };
@@ -416,7 +417,8 @@ export const useStockData = (symbols, demoQuery = false) => {
                     price,
                     changePercent: cur.previousClose ? calcChange(price, cur.regularMarketPrice, cur.previousClose, cur.marketState) : cur.changePercent,
                     name: cur.name || sym,
-                            stale: false
+                    lastTradeAt: tradeReceivedAt,
+                    stale: false
                   };
                 }
                 return next;
@@ -443,21 +445,26 @@ export const useStockData = (symbols, demoQuery = false) => {
           results = stockSymbols.map((symbol) => {
             const quote = payload?.quotes?.[symbol];
             return quote
-              ? { status: 'fulfilled', value: { symbol, q: quote.data, stale: Boolean(quote.stale) } }
+              ? { status: 'fulfilled', value: {
+                symbol,
+                q: quote.data,
+                stale: Boolean(quote.stale),
+                fetchedAt: quote.fetchedAt,
+              } }
               : { status: 'rejected', reason: new Error(`quote unavailable for ${symbol}`) };
           });
         } else {
           results = await Promise.allSettled(stockSymbols.map(async (symbol) => {
             const res = await fetchFinnhub(`/api/v1/quote?symbol=${encodeURIComponent(symbol)}`);
             if (!res.ok) throw new Error(`quote ${res.status}`);
-            return { symbol, q: await res.json(), stale: false };
+            return { symbol, q: await res.json(), stale: false, fetchedAt: Date.now() };
           }));
         }
         if (stopped) return 0;
         let okCount = 0; // successful fetches this cycle — drives rate-limit backoff
         for (const r of results) {
           if (r.status !== 'fulfilled') continue;
-          const { symbol, q, stale } = r.value;
+          const { symbol, q, stale, fetchedAt } = r.value;
           if (!q || typeof q.c !== 'number' || q.c <= 0) {
             failCounts[symbol] = (failCounts[symbol] || 0) + 1;
             if (failCounts[symbol] >= 3) {
@@ -478,14 +485,30 @@ export const useStockData = (symbols, demoQuery = false) => {
             const dpFallback = (typeof q.dp === 'number' && q.dp !== 0) ? q.dp : cur.changePercent;
 
             if (session === 'REGULAR') {
-              // Overwrite unconditionally: ETFs missing from the websocket
-              // (e.g. SOXL) must refresh here, and q.c is live in regular hours.
-              next[symbol] = {
-                ...common,
-                price: q.c,
-                regularMarketPrice: q.c,
-                changePercent: calcChange(q.c, q.c, q.pc, 'REGULAR') ?? dpFallback,
-              };
+              // The shared REST cache is intentionally allowed to be a few
+              // seconds old. A later direct trade tick is more current, so a
+              // cached response must never make the displayed price jump
+              // backwards between WebSocket messages.
+              const liveTradeWins = typeof cur.lastTradeAt === 'number'
+                && typeof fetchedAt === 'number'
+                && cur.lastTradeAt > fetchedAt;
+              if (liveTradeWins && typeof cur.price === 'number') {
+                next[symbol] = {
+                  ...common,
+                  price: cur.price,
+                  regularMarketPrice: cur.price,
+                  changePercent: calcChange(cur.price, cur.price, q.pc, 'REGULAR') ?? cur.changePercent,
+                };
+              } else {
+                // ETFs missing from the websocket (e.g. SOXL) still refresh
+                // here, and q.c is the regular-hours fallback.
+                next[symbol] = {
+                  ...common,
+                  price: q.c,
+                  regularMarketPrice: q.c,
+                  changePercent: calcChange(q.c, q.c, q.pc, 'REGULAR') ?? dpFallback,
+                };
+              }
             } else if (typeof cur.price !== 'number') {
               // First paint before TradingView lands (or when it's blocked).
               next[symbol] = {

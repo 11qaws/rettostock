@@ -1,5 +1,9 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.20 Cached REST may not overwrite a newer live tick
+- **Latency bound:** regular-session WebSocket trade ticks still bypass the cache. The 5-second REST cache is normally 0–5 seconds old, with an almost-10-second conservative bound when its freshness boundary aligns with the browser's 5-second poll. The 60-second stale response is only an outage fallback.
+- **Guard:** each direct WebSocket trade records its receipt time. A REST response whose cache timestamp is older preserves the newer displayed trade price instead of making the card briefly jump backwards. This keeps the free shared cache from changing the live-tick experience.
+
 ## 2026-07-13: v1.0.19 Free shared market cache (Cloudflare Pages Function)
 - **Goal:** keep the OBS URL and the visible card experience unchanged while avoiding one Finnhub REST request per browser source. The optional `market-api/` Pages Function shares quote, metric, and market-status reads through Cloudflare Cache API.
 - **Cache policy:** quotes are fresh for 5 seconds and can fall back to a value up to 60 seconds old; 52-week metrics are 6 hours / 24 hours; market status is 60 seconds / 15 minutes. A same-isolate in-flight lock coalesces simultaneous cache misses. If the upstream fails, stale data is returned and refresh attempts wait 5 seconds before trying again.
