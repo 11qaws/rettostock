@@ -32,6 +32,8 @@ jobs:
         run: npm install
       - name: Build
         run: npm run build
+        env:
+          VITE_MARKET_API_BASE: ${{ vars.MARKET_API_BASE }}
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact

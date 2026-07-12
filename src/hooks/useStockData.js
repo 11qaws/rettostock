@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 
-const API_KEY = 'd97qbr1r01qng2np5cigd97qbr1r01qng2np5cj0';
+// This remains client-side while the widget is hosted on GitHub Pages. The
+// second key is a timeout/rate-limit standby. Authentication and permission
+// errors (401/403) never trigger rotation.
+const FINNHUB_API_KEYS = [
+  'd97qbr1r01qng2np5cigd97qbr1r01qng2np5cj0',
+  'd99v221r01qh9urlud9gd99v221r01qh9urluda0',
+];
+let activeFinnhubKeyIndex = 0;
+// Empty until the optional Cloudflare Pages Function is deployed. When set at
+// build time, REST reads use its shared edge cache without changing the widget URL.
+const MARKET_API_BASE = (import.meta.env.VITE_MARKET_API_BASE || '').replace(/\/+$/, '');
 const MAX_SPARK_POINTS = 48;
 
 // Yahoo enrichment (name, market state, sparkline) polling interval by market state (ms).
@@ -71,6 +81,43 @@ const fetchWithTimeout = (url, ms) => {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   return fetch(url, { cache: 'no-store', signal: ctrl.signal }).finally(() => clearTimeout(timer));
+};
+
+const fetchMarketApi = async (path) => {
+  const response = await fetchWithTimeout(`${MARKET_API_BASE}${path}`, FETCH_TIMEOUT_MS);
+  if (!response.ok) throw new Error(`market API ${response.status}`);
+  return response.json();
+};
+
+// Retry the request immediately with the standby key when it times out or the
+// provider returns 429. Other HTTP responses stay on their current key and
+// are handled by the caller as ordinary errors.
+const fetchFinnhub = async (path) => {
+  let keyIndex = activeFinnhubKeyIndex;
+  let lastError;
+
+  for (let attempt = 0; attempt < FINNHUB_API_KEYS.length; attempt++) {
+    const separator = path.includes('?') ? '&' : '?';
+    const url = `https://api.finnhub.io${path}${separator}token=${encodeURIComponent(FINNHUB_API_KEYS[keyIndex])}`;
+    try {
+      const response = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
+      if (response.status === 429 && attempt < FINNHUB_API_KEYS.length - 1) {
+        keyIndex = (keyIndex + 1) % FINNHUB_API_KEYS.length;
+        activeFinnhubKeyIndex = keyIndex;
+        continue;
+      }
+      activeFinnhubKeyIndex = keyIndex;
+      return response;
+    } catch (error) {
+      lastError = error;
+      const timedOut = error?.name === 'AbortError';
+      if (!timedOut || attempt === FINNHUB_API_KEYS.length - 1) throw error;
+      keyIndex = (keyIndex + 1) % FINNHUB_API_KEYS.length;
+      activeFinnhubKeyIndex = keyIndex;
+    }
+  }
+
+  throw lastError;
 };
 
 const fetchViaProxy = async (targetUrl) => {
@@ -344,7 +391,7 @@ export const useStockData = (symbols, demoQuery = false) => {
       const connectFinnhub = () => {
         if (stopped) return;
         try {
-          finnhubWs = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
+          finnhubWs = new WebSocket(`wss://ws.finnhub.io?token=${FINNHUB_API_KEYS[activeFinnhubKeyIndex]}`);
         } catch {
           finnhubReconnectTimer = setTimeout(connectFinnhub, WS_RECONNECT_MS);
           return;
@@ -390,19 +437,27 @@ export const useStockData = (symbols, demoQuery = false) => {
       //     Direct CORS fetch, no proxy involved, so cards fill in fast and
       //     keep working even when every public proxy is down.
       const fetchQuotes = async () => {
-        const results = await Promise.allSettled(stockSymbols.map(async (symbol) => {
-          const res = await fetch(
-            `https://api.finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${API_KEY}`,
-            { cache: 'no-store' }
-          );
-          if (!res.ok) throw new Error(`quote ${res.status}`);
-          return { symbol, q: await res.json() };
-        }));
+        let results;
+        if (MARKET_API_BASE) {
+          const payload = await fetchMarketApi(`/v1/quotes?symbols=${encodeURIComponent(stockSymbols.join(','))}`);
+          results = stockSymbols.map((symbol) => {
+            const quote = payload?.quotes?.[symbol];
+            return quote
+              ? { status: 'fulfilled', value: { symbol, q: quote.data, stale: Boolean(quote.stale) } }
+              : { status: 'rejected', reason: new Error(`quote unavailable for ${symbol}`) };
+          });
+        } else {
+          results = await Promise.allSettled(stockSymbols.map(async (symbol) => {
+            const res = await fetchFinnhub(`/api/v1/quote?symbol=${encodeURIComponent(symbol)}`);
+            if (!res.ok) throw new Error(`quote ${res.status}`);
+            return { symbol, q: await res.json(), stale: false };
+          }));
+        }
         if (stopped) return 0;
         let okCount = 0; // successful fetches this cycle — drives rate-limit backoff
         for (const r of results) {
           if (r.status !== 'fulfilled') continue;
-          const { symbol, q } = r.value;
+          const { symbol, q, stale } = r.value;
           if (!q || typeof q.c !== 'number' || q.c <= 0) {
             failCounts[symbol] = (failCounts[symbol] || 0) + 1;
             if (failCounts[symbol] >= 3) {
@@ -416,7 +471,7 @@ export const useStockData = (symbols, demoQuery = false) => {
             const next = { ...prev };
             const cur = next[symbol] || {};
             const session = usMarketState;
-            const common = { ...cur, previousClose: q.pc, name: cur.name || symbol, stale: false };
+            const common = { ...cur, previousClose: q.pc, name: cur.name || symbol, stale };
 
             // Finnhub's own dp (change % vs pc) backs up our calculation
             // when a response arrives with a transient pc=0
@@ -566,16 +621,27 @@ export const useStockData = (symbols, demoQuery = false) => {
       //       fetched once per boot and refreshed every 6h for marathon
       //       sessions. Missing data just means no banner, never an error.
       const fetchMetrics = async () => {
-        await Promise.allSettled(stockSymbols.map(async (symbol) => {
-          const res = await fetch(
-            `https://api.finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all&token=${API_KEY}`,
-            { cache: 'no-store' }
-          );
-          if (!res.ok) throw new Error(`metric ${res.status}`);
-          const m = (await res.json())?.metric;
-          const high = m?.['52WeekHigh'];
-          const low = m?.['52WeekLow'];
-          if (typeof high !== 'number' && typeof low !== 'number') return;
+        let results;
+        if (MARKET_API_BASE) {
+          const payload = await fetchMarketApi(`/v1/metrics?symbols=${encodeURIComponent(stockSymbols.join(','))}`);
+          results = stockSymbols.map((symbol) => {
+            const metric = payload?.metrics?.[symbol]?.data;
+            return metric
+              ? { status: 'fulfilled', value: { symbol, high: metric.week52High, low: metric.week52Low } }
+              : { status: 'rejected', reason: new Error(`metric unavailable for ${symbol}`) };
+          });
+        } else {
+          results = await Promise.allSettled(stockSymbols.map(async (symbol) => {
+            const res = await fetchFinnhub(`/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all`);
+            if (!res.ok) throw new Error(`metric ${res.status}`);
+            const metric = (await res.json())?.metric;
+            return { symbol, high: metric?.['52WeekHigh'], low: metric?.['52WeekLow'] };
+          }));
+        }
+        for (const result of results) {
+          if (result.status !== 'fulfilled') continue;
+          const { symbol, high, low } = result.value;
+          if (typeof high !== 'number' && typeof low !== 'number') continue;
           if (stopped) return;
           setData(prev => ({
             ...prev,
@@ -585,7 +651,7 @@ export const useStockData = (symbols, demoQuery = false) => {
               week52Low: typeof low === 'number' ? low : prev[symbol]?.week52Low,
             },
           }));
-        }));
+        }
       };
       const metricsLoop = async () => {
         if (stopped) return;
@@ -685,11 +751,12 @@ export const useStockData = (symbols, demoQuery = false) => {
         // and overnight, when the clock already decides CLOSED by itself.
         if (calcNySession() === 'REGULAR') {
           try {
-            const res = await fetch(
-              `https://api.finnhub.io/api/v1/stock/market-status?exchange=US&token=${API_KEY}`,
-              { cache: 'no-store' }
-            );
-            const s = await res.json();
+            const s = MARKET_API_BASE
+              ? (await fetchMarketApi('/v1/market-status')).data
+              : await (async () => {
+                const res = await fetchFinnhub('/api/v1/stock/market-status?exchange=US');
+                return res.ok ? res.json() : null;
+              })();
             if (s && typeof s.isOpen === 'boolean') {
               // isOpen=false during regular hours means a holiday / early close
               holidayClosed = !s.isOpen;

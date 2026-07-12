@@ -467,7 +467,27 @@ html, body, #root {
   100% { opacity: 0; }
 }
 
-/* fx intensity: soft = no shake/particles, off = no animations at all */
+/* FX intensity:
+   Calm Live (the new configurator default) has no routine motion: no tick
+   shake/flash, no zero-cross flip and no infinite surge/aura pulse. It DOES
+   retain the static 5/10/15% surge colours, including a subdued tier-2/3 card
+   tint, and rare target/52-week milestone banners. */
+.fx-calm .anim-pump,
+.fx-calm .anim-dump,
+.fx-calm .price-flash-up,
+.fx-calm .price-flash-down,
+.fx-calm .sign-flip { animation: none; }
+.fx-calm .is-surge-up,
+.fx-calm .is-surge-down {
+  animation: none;
+  box-shadow: 0 0 calc(var(--surge-max) * 0.55) var(--surge-glow), 0 2px 10px rgba(0, 0, 0, 0.28);
+}
+.fx-calm .surge-aura {
+  animation: none;
+  opacity: calc(var(--aura-lo) * 0.65);
+}
+
+/* Soft = no shake/particles; off = no animations at all. */
 .fx-soft .anim-pump { animation: pumpFlash 0.5s ease; }
 .fx-soft .fx-particle { display: none; }
 .fx-off .anim-pump, .fx-off .anim-dump { animation: none; }

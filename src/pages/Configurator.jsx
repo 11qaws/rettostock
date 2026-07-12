@@ -62,7 +62,7 @@ const pickThemeForScene = ({ lum, sat, domHue }) => {
 const THEMES = [
   { value: 'theme-amore-cute', label: '아모레 핑크', bg: '#fff0f3', border: '2px dashed #ffb6c1', text: '#4e342e', up: '#e91e63' },
   { value: 'theme-pastel-light', label: '파스텔 라이트', bg: '#ffffff', border: '2px solid #e3d5e2', text: '#2b1a2e', up: '#d6336c' },
-  { value: 'theme-eureka', label: '유레카 별밤', bg: '#0d162e', border: '1px solid #34e0a8', text: '#ffe9a8', up: '#ffd166' },
+  { value: 'theme-eureka', label: '오로라 별밤', bg: '#0d162e', border: '1px solid #34e0a8', text: '#ffe9a8', up: '#ffd166' },
   { value: 'theme-cyber-neon', label: '네온 바', bg: '#14001f', border: '2px solid #ff2a85', text: '#ffffff', up: '#39ff14' },
   { value: 'theme-led-board', label: 'LED 전광판', bg: '#06090c', border: '1px solid #2a3947', text: '#ffb300', up: '#ff5252' },
   { value: 'default', label: '다크 글래스', bg: 'rgba(25,25,38,0.9)', border: '1px solid rgba(255,255,255,0.35)', text: '#f0f0f0', up: '#4ade80' },
@@ -81,6 +81,7 @@ const COLOR_STYLES = [
 ];
 
 const FX_LEVELS = [
+  { value: 'calm', label: 'Calm Live' },
   { value: 'full', label: '전부' },
   { value: 'soft', label: '약하게' },
   { value: 'off', label: '끄기' },
@@ -106,7 +107,10 @@ const defaultConfig = {
 
   interval: 10,
   opacity: 1,
-  fx: 'full',
+  // The broadcast-safe default: keep large-move colour tiers visible, but
+  // remove routine tick motion. Existing OBS URLs without an `fx` parameter
+  // stay on the Widget's legacy `full` default (see Widget.jsx).
+  fx: 'calm',
   speed: 1,
   demo: false,
   demoTrans: false,
@@ -358,6 +362,8 @@ const Configurator = () => {
     if (config.displayMode === 'rotate' && config.interval !== 10) params.set('interval', config.interval);
     if (config.displayMode === 'scroll' && config.speed !== 1) params.set('speed', config.speed);
     if (config.opacity !== 1) params.set('opacity', config.opacity);
+    // Preserve the old no-param URL as Full for existing OBS sources. New
+    // Calm Live configs explicitly carry `fx=calm` so they are unambiguous.
     if (config.fx !== 'full') params.set('fx', config.fx);
     if (config.demo) params.set('demo', '1');
     if (config.demoTrans) params.set('demo_transition', '1');
@@ -1047,4 +1053,3 @@ const Configurator = () => {
 };
 
 export default Configurator;
-

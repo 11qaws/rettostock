@@ -164,7 +164,7 @@
   font-weight: normal;
 }
 
-/* ===== Theme: Eureka — VTuber 유레카 (gold hair + emerald tips, night sky) ===== */
+/* ===== Theme: Aurora Starry Night — gold, teal and midnight navy ===== */
 .theme-eureka {
   --bg-rgb: 13, 22, 46;            /* #0D162E deep midnight navy */
   --bg-a: 0.96;
@@ -172,14 +172,13 @@
   --text-main: #eaf3ff;            /* moonlit white */
   --text-muted: #93a6c8;           /* dusk blue-grey */
 
-  /* Character palette: gold hair (up) vs crystal blue (down) — warm/cool,
-     high-contrast and both drawn from 유레카's colours */
-  --color-up: #ffd166;             /* golden hair */
+  /* Aurora palette: gold (up) vs crystal blue (down) — warm/cool and high contrast. */
+  --color-up: #ffd166;             /* aurora gold */
   --color-up-glow: rgba(255, 209, 102, 0.55);
   --color-down: #4ea9f0;           /* crystal blue */
   --color-down-glow: rgba(78, 169, 240, 0.55);
 
-  --color-primary: #34e0a8;        /* emerald — hair tips & eyes (signature) */
+  --color-primary: #34e0a8;        /* aurora teal */
   --badge-ext: #4fe0b8;            /* emerald mint for pre/post */
 
   /* Celebrations on a night-sky plate */
@@ -201,12 +200,12 @@
   border: 1px solid var(--border-glass);
   border-radius: 16px;
   box-shadow: 0 6px 26px rgba(0, 0, 0, 0.5), inset 0 0 24px rgba(52, 224, 168, 0.06);
-  /* faint starfield over the midnight base */
+  /* Sparse starfield over the midnight base: 52px is 2× the former spacing. */
   background-image: radial-gradient(rgba(234, 243, 255, 0.5) 1px, transparent 1px);
-  background-size: 26px 26px;
+  background-size: 52px 52px;
 }
 
-/* Emerald hairline glow along the top edge — the character's signature tint */
+/* Aurora-teal hairline glow along the top edge. */
 .theme-eureka .tick-card::before {
   content: '';
   display: block;
