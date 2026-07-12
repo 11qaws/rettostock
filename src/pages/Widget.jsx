@@ -26,38 +26,50 @@ const Widget = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const symbolsParam = searchParams.get('symbols');
-  const themeParam = searchParams.get('theme') || '';
-  const colorsParam = normalizeColors(searchParams.get('colors'));
-  const modeParam = searchParams.get('mode') || 'list';
+  const urlThemeParam = searchParams.get('theme') || '';
+  const urlColorsParam = normalizeColors(searchParams.get('colors'));
+  const urlModeParam = searchParams.get('mode') || 'list';
   const roomParam = searchParams.get('room') || '';
   const keyParam = searchParams.get('k') || ''; // remote's public key (relay is signature-gated)
   const demoParam = searchParams.get('demo') === '1';
-  const eventFocusParam = searchParams.get('event_focus') !== '0';
+  const urlEventFocusParam = searchParams.get('event_focus') !== '0';
   const urlPreviewFxToken = searchParams.get('fx_preview') || '';
   // Keep parameter-less legacy OBS URLs on their original Full behavior.
   // Old Calm/Soft/Strong URLs map to the new Weak option.
   const rawFxParam = searchParams.get('fx');
   const urlFxParam = ['calm', 'soft', 'event'].includes(rawFxParam) ? 'card'
     : ['off', 'card', 'full'].includes(rawFxParam) ? rawFxParam : 'full';
-  const [previewControl, setPreviewControl] = useState(() => ({
-    fx: null,
-    token: urlPreviewFxToken,
-  }));
-  const fxParam = previewControl.fx || urlFxParam;
-  const previewFxToken = previewControl.token || urlPreviewFxToken;
+  const [previewControl, setPreviewControl] = useState(null);
 
-  // Configurator previews use a same-origin message so changing/replaying an
-  // effect does not destroy this iframe. OBS sources never receive this and
-  // continue to use only their URL settings.
+  // Configurator previews update all presentation settings in place. OBS
+  // sources never receive this message and continue to use only their URL.
   useEffect(() => {
     const onPreviewControl = (event) => {
       if (event.source !== window.parent || event.origin !== window.location.origin) return;
       const message = event.data;
-      if (message?.type !== 'RETTOSTOCK_PREVIEW_FX') return;
+      if (message?.type !== 'RETTOSTOCK_PREVIEW_CONFIG') return;
       const fx = ['full', 'card', 'off'].includes(message.fx) ? message.fx : 'full';
+      const mode = ['list', 'rotate', 'scroll'].includes(message.mode) ? message.mode : 'list';
+      const targets = {};
+      if (message.targets && typeof message.targets === 'object') {
+        for (const [symbol, value] of Object.entries(message.targets)) {
+          const price = Number(value);
+          if (/^[A-Z][A-Z0-9.-]{0,9}$/.test(symbol) && Number.isFinite(price) && price > 0) {
+            targets[symbol] = price;
+          }
+        }
+      }
       setPreviewControl({
+        theme: typeof message.theme === 'string' ? message.theme : '',
+        colors: typeof message.colors === 'string' ? normalizeColors(message.colors) : '',
+        mode,
+        interval: clampNum(message.interval, 3, 120, 10),
+        eventFocus: message.eventFocus !== false,
+        speed: clampNum(message.speed, 0.25, 3, 1),
+        opacity: clampNum(message.opacity, 0.1, 1, 1),
         fx,
-        token: message.token ? String(message.token) : '',
+        targets,
+        previewToken: message.previewToken ? String(message.previewToken) : '',
       });
     };
     window.addEventListener('message', onPreviewControl);
@@ -72,16 +84,11 @@ const Widget = () => {
     }
   }, []);
 
-  // Retain compatibility with manually opened old preview URLs.
-  useEffect(() => {
-    setPreviewControl(prev => ({ ...prev, token: urlPreviewFxToken }));
-  }, [urlPreviewFxToken]);
-
-  const intervalParam = clampNum(searchParams.get('interval'), 3, 120, 10);
-  const opacityParam = clampNum(searchParams.get('opacity'), 0.1, 1, 1);
-  const speedParam = clampNum(searchParams.get('speed'), 0.25, 3, 1);
+  const urlIntervalParam = clampNum(searchParams.get('interval'), 3, 120, 10);
+  const urlOpacityParam = clampNum(searchParams.get('opacity'), 0.1, 1, 1);
+  const urlSpeedParam = clampNum(searchParams.get('speed'), 0.25, 3, 1);
   // targets=SYM:price,SYM:price — optional per-symbol target lines
-  const targets = useMemo(() => {
+  const urlTargets = useMemo(() => {
     const out = {};
     for (const pair of (searchParams.get('targets') || '').split(',')) {
       const [sym, val] = pair.split(':');
@@ -90,6 +97,17 @@ const Widget = () => {
     }
     return out;
   }, [searchParams]);
+
+  const themeParam = previewControl?.theme ?? urlThemeParam;
+  const colorsParam = previewControl?.colors ?? urlColorsParam;
+  const modeParam = previewControl?.mode ?? urlModeParam;
+  const intervalParam = previewControl?.interval ?? urlIntervalParam;
+  const opacityParam = previewControl?.opacity ?? urlOpacityParam;
+  const speedParam = previewControl?.speed ?? urlSpeedParam;
+  const eventFocusParam = previewControl?.eventFocus ?? urlEventFocusParam;
+  const targets = previewControl?.targets ?? urlTargets;
+  const fxParam = previewControl?.fx ?? urlFxParam;
+  const previewFxToken = previewControl?.previewToken ?? urlPreviewFxToken;
 
   const [currentIndex, setCurrentIndex] = useState(0);
 

@@ -1,6 +1,10 @@
 # Retto Stock Widget - Development Log & Architecture
 
-## 2026-07-13: v1.0.29 Instant quote continuity across visual reloads
+## 2026-07-13: v1.0.30 No stale-quote fallback; visual settings update in place
+- **Correct broadcast behaviour:** removed the v1.0.29 short-lived quote snapshot. A visual setting must never have the option to display an old quote just to avoid `---`.
+- **Real fix:** the embedded Configurator preview now keeps one live widget instance for theme, colour scheme, display mode, opacity, rotation speed, event focus, targets, and effect controls. These values are updated in place over a same-origin message; only a genuine data-source change (symbols or demo mode) replaces the iframe. The existing live REST/WebSocket state therefore remains on screen throughout visual adjustments.
+
+## 2026-07-13: v1.0.29 Instant quote continuity across visual reloads (superseded)
 - **No `---` on a visual-only change:** the widget now keeps a short-lived same-tab quote snapshot (price, change, name, chart references, and market state). A remounted preview or browser source paints that last valid quote immediately, then replaces it with the live REST/WebSocket value as usual.
 - **Scope and safety:** snapshots expire after 15 minutes and only contain already public, displayed market values. Writes are throttled to once per 500ms, so high-frequency WebSocket ticks do not introduce synchronous-storage pressure.
 

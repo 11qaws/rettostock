@@ -394,28 +394,54 @@ const Configurator = () => {
     return `${baseUrl}#/widget?${params.toString()}`;
   }, [config, urlSymbolList, room, signingKeys]);
 
-  // The embedded preview deliberately omits `fx`: effect selection is sent by
-  // postMessage below so repeated preview clicks never reload the iframe and
-  // restart its price/WebSocket connections. The OBS URL keeps its real fx.
-  const previewWidgetUrl = useMemo(
-    () => widgetUrl.replace(/([?&])fx=[^&]*&?/, '$1').replace(/[?&]$/, ''),
-    [widgetUrl]
-  );
+  // The preview URL carries only data-source inputs. Every visual setting is
+  // delivered below as a same-origin message, so a theme/effect/layout change
+  // never tears down the iframe's current quote state or WebSocket.
+  const previewWidgetUrl = useMemo(() => {
+    const [baseUrl, hash = ''] = widgetUrl.split('#');
+    const [route, query = ''] = hash.split('?');
+    const source = new URLSearchParams(query);
+    const params = new URLSearchParams();
+    for (const key of ['symbols', 'demo', 'demo_transition', 'demo_cross', 'demo_target', 'demo_surge']) {
+      if (source.has(key)) params.set(key, source.get(key));
+    }
+    const dataSourceQuery = params.toString();
+    return `${baseUrl}#${route}${dataSourceQuery ? `?${dataSourceQuery}` : ''}`;
+  }, [widgetUrl]);
 
-  const postPreviewFx = (targetWindow = previewFrameRef.current?.contentWindow) => {
+  const previewControl = useMemo(() => {
+    const targets = {};
+    for (const [symbol, value] of Object.entries(config.targets || {})) {
+      const price = parseFloat(value);
+      if (Number.isFinite(price) && price > 0) targets[symbol.toUpperCase()] = price;
+    }
+    return {
+      theme: config.theme !== 'default' ? config.theme : '',
+      colors: config.colorStyle !== 'theme' ? config.colorStyle : '',
+      mode: config.displayMode,
+      interval: config.interval,
+      eventFocus: config.eventFocus !== false,
+      speed: config.speed,
+      opacity: config.opacity,
+      fx: config.fx,
+      targets,
+      previewToken: fxPreviewNonce ? String(fxPreviewNonce) : '',
+    };
+  }, [config, fxPreviewNonce]);
+
+  const postPreviewControl = (targetWindow = previewFrameRef.current?.contentWindow) => {
     if (!targetWindow) return;
     targetWindow.postMessage({
-      type: 'RETTOSTOCK_PREVIEW_FX',
-      fx: config.fx,
-      token: fxPreviewNonce ? String(fxPreviewNonce) : '',
+      type: 'RETTOSTOCK_PREVIEW_CONFIG',
+      ...previewControl,
     }, window.location.origin);
   };
 
-  // Repeated taps now reuse the same preview iframe. The child applies the
-  // visual immediately while its quote cache and WebSocket stay alive.
+  // Any visual control updates in place. The only preview reload is a real
+  // data-source change (symbols or demo mode), which uses a different URL.
   useEffect(() => {
-    postPreviewFx();
-  }, [config.fx, fxPreviewNonce]); // eslint-disable-line react-hooks/exhaustive-deps
+    postPreviewControl();
+  }, [previewControl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist settings + push to widget (same-browser channels + ntfy relay)
   useEffect(() => {
@@ -438,7 +464,7 @@ const Configurator = () => {
     const onMessage = (e) => {
       if (e.origin !== window.location.origin) return;
       if (e.data?.type === 'RETTOSTOCK_PREVIEW_READY') {
-        postPreviewFx(e.source);
+        postPreviewControl(e.source);
         return;
       }
       if (e.data?.type === 'TARGET_REACHED' && e.data?.symbol) {
@@ -452,7 +478,7 @@ const Configurator = () => {
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [config.fx, fxPreviewNonce]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [previewControl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCopy = () => {
     navigator.clipboard.writeText(widgetUrl);
@@ -1007,7 +1033,7 @@ const Configurator = () => {
                           key={previewWidgetUrl}
                           ref={previewFrameRef}
                           src={previewWidgetUrl}
-                          onLoad={(event) => postPreviewFx(event.currentTarget.contentWindow)}
+                          onLoad={(event) => postPreviewControl(event.currentTarget.contentWindow)}
                           style={{
                             width: `${actualDims.w}px`,
                             height: `${actualDims.h}px`,
@@ -1077,7 +1103,7 @@ const Configurator = () => {
                     key={previewWidgetUrl}
                     ref={previewFrameRef}
                     src={previewWidgetUrl}
-                    onLoad={(event) => postPreviewFx(event.currentTarget.contentWindow)}
+                    onLoad={(event) => postPreviewControl(event.currentTarget.contentWindow)}
                     style={{
                       width: `${frameW}px`,
                       height: `${frameH}px`,
