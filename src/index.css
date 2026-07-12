@@ -83,6 +83,8 @@ html, body, #root {
   color: var(--text-main);
   margin: 0;
 }
+/* 4-digit+ prices: one step smaller so a wide number never clips the ticker */
+.neon-price.price-lg { font-size: calc(var(--fs-price) * 0.84); }
 
 .neon-change {
   font-family: var(--font-num);

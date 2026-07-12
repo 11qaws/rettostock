@@ -17,6 +17,16 @@ const pickEnrichInterval = (state) => {
   return ENRICH_INTERVALS.CLOSED;
 };
 
+// Finnhub REST cadence (free = 60 req/min; one request per symbol per cycle):
+// interval scales with symbol count to stay ≤ 50/min, floored at 5s (the
+// websocket already gives sub-second ticks, so faster REST just wastes calls).
+const quoteIntervalMs = (n) => Math.max(5000, Math.ceil(n * 1.2) * 1000);
+const PREMARKET_INTERVAL = 5000; // PRE/POST scanner poll (extended hours)
+// Per-symbol merge stagger, as a fraction of the poll interval: keeps updates
+// from landing in one frame while always staying well below the interval (so
+// cycles never overlap and per-symbol ordering is preserved).
+const JITTER_FRACTION = 0.25;
+
 // Session by the New York clock — drives badges and baselines.
 // marketCalendar knows weekends, NYSE holidays (with substitute rules)
 // and 13:00 half days; Finnhub remains only as a backstop for ad-hoc
@@ -343,7 +353,7 @@ export const useStockData = (symbols, demo = false) => {
           }
           failCounts[symbol] = 0;
           okCount++;
-          applyJittered(symbol, 2500, () => setData(prev => {
+          applyJittered(symbol, quoteIntervalMs(stockSymbols.length) * JITTER_FRACTION, () => setData(prev => {
             const next = { ...prev };
             const cur = next[symbol] || {};
             const session = usMarketState;
@@ -482,7 +492,7 @@ export const useStockData = (symbols, demo = false) => {
         }
 
         for (const [symbol, updateData] of Object.entries(updates)) {
-          applyJittered(symbol, 2000, () => setData(prev => ({
+          applyJittered(symbol, PREMARKET_INTERVAL * JITTER_FRACTION, () => setData(prev => ({
             ...prev,
             [symbol]: { ...(prev[symbol] || {}), ...updateData },
           })));
@@ -526,15 +536,7 @@ export const useStockData = (symbols, demo = false) => {
       };
       metricsLoop();
 
-      // Rate-limit budget (Finnhub free = 60 req/min): the REST quote loop
-      // sends one request per symbol per cycle, so the safe interval scales
-      // with symbol count. N × 1.2s keeps quotes ≤ 50/min (headroom for the
-      // 5-min holiday + 6-hourly metrics calls); floor 5s so tiny lists don't
-      // hammer (the websocket already gives sub-second ticks for most stocks).
       let quoteBackoff = 1;
-      const quoteIntervalMs = () =>
-        Math.max(5000, Math.ceil(stockSymbols.length * 1.2) * 1000);
-
       const quoteLoop = async () => {
           if (stopped) return;
           let okCount = 0;
@@ -553,7 +555,7 @@ export const useStockData = (symbols, demo = false) => {
           // A fully-failed cycle (rate-limit/outage) backs the interval off up
           // to 4× so we stop hammering a throttled endpoint; any success resets.
           quoteBackoff = okCount === 0 ? Math.min(quoteBackoff * 2, 4) : 1;
-          quoteTimer = setTimeout(quoteLoop, quoteIntervalMs() * quoteBackoff);
+          quoteTimer = setTimeout(quoteLoop, quoteIntervalMs(stockSymbols.length) * quoteBackoff);
         };
         quoteLoop();
 
@@ -561,7 +563,7 @@ export const useStockData = (symbols, demo = false) => {
           if (stopped) return;
           try { await fetchPreMarket(); } catch (err) { console.error('extended-hours loop:', err); }
           if (stopped) return;
-          preMarketTimer = setTimeout(preMarketLoop, 5000); // 5s for faster pre/post updates
+          preMarketTimer = setTimeout(preMarketLoop, PREMARKET_INTERVAL); // extended-hours scanner poll
         };
         preMarketLoop();
 

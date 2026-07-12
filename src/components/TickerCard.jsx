@@ -246,6 +246,9 @@ const TickerCard = ({
   const colorClass = isUp ? 'text-up' : (isDown ? 'text-down' : '');
   const surged = typeof changePercent === 'number' && Math.abs(changePercent) >= SURGE_THRESHOLD;
   const surgeClass = surged ? (isUp ? 'is-surge-up' : 'is-surge-down') : '';
+  // 4-digit+ prices ($1000+) render one step smaller so the wide number never
+  // squeezes the ticker (stacks with fmtPrice dropping decimals).
+  const bigPrice = typeof price === 'number' && Math.abs(price) >= 1000;
 
   const market = MARKET_LABELS[marketState];
 
@@ -330,7 +333,7 @@ const TickerCard = ({
               )}
             </div>
           )}
-          <span className={`neon-price ${priceFlash}`}>
+          <span className={`neon-price ${priceFlash} ${bigPrice ? 'price-lg' : ''}`}>
             ${fmtPrice(price)}
           </span>
           <span className={`neon-change ${colorClass} ${crossFx ? 'sign-flip' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
