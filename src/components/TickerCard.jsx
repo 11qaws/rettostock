@@ -109,14 +109,20 @@ const TickerCard = ({
   const prevUpcomingRef = useRef(upcomingState);
   const [transitioning, setTransitioning] = useState(null);
 
+  const transitionTimerRef = useRef(null);
   useEffect(() => {
     if (prevUpcomingRef.current && !upcomingState && marketState !== prevMarketRef.current) {
       setTransitioning({ from: prevMarketRef.current, to: marketState });
-      setTimeout(() => setTransitioning(null), 1000); // 1초 뒤 애니메이션 초기화
+      clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = setTimeout(() => setTransitioning(null), 1000); // 1초 뒤 애니메이션 초기화
     }
     prevUpcomingRef.current = upcomingState;
     prevMarketRef.current = marketState;
   }, [upcomingState, marketState]);
+
+  useEffect(() => {
+    return () => clearTimeout(transitionTimerRef.current);
+  }, []);
 
   let changeAbs = null;
   if (typeof price === 'number' && typeof changePercent === 'number') {
