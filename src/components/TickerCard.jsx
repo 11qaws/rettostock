@@ -7,6 +7,14 @@ import { surgeTier } from '../utils/effects';
 
 const SURGE_THRESHOLD = 5; // |changePercent| >= 5% triggers surge state
 
+// Effect-reset delays: each clears its effect state just AFTER the matching CSS
+// animation finishes (keyframe duration + a small buffer, so nothing is torn
+// down mid-animation). Keep in sync with index.css if those durations change.
+const TICK_MS = 600;      // anim-pump / price-flash (CSS 0.5–0.6s)
+const PARTICLE_MS = 1400; // fxPop burst (CSS 1.15s + up to 0.15s stagger)
+const BANNER_MS = 2700;   // w52Pop / target banner (CSS 2.6s)
+const CROSS_MS = 1500;    // crossFlip zero-cross (CSS 1.4s)
+
 const MARKET_LABELS = {
   REGULAR: { text: '장중', cls: 'ms-open' },
   PRE: { text: '프리', cls: 'ms-pre' },
@@ -81,7 +89,7 @@ const TickerCard = ({
     t.done = true; // reached — auto-disarm until the target is changed
     clearTimeout(targetTimerRef.current);
     setTargetPop(p => ({ n: (p?.n || 0) + 1 }));
-    targetTimerRef.current = setTimeout(() => setTargetPop(null), 2700);
+    targetTimerRef.current = setTimeout(() => setTargetPop(null), BANNER_MS);
 
     // If running in the Configurator's preview iframe, notify it to clear the target UI
     if (window.parent && window.parent !== window) {
@@ -139,7 +147,7 @@ const TickerCard = ({
     const timer = setTimeout(() => {
       setAnimClass('');
       setPriceFlash('');
-    }, 600);
+    }, TICK_MS);
 
     prevPriceRef.current = price;
     return () => clearTimeout(timer);
@@ -167,7 +175,7 @@ const TickerCard = ({
         delay: `${Math.random() * 0.15}s`,
       }));
       setParticles(burst);
-      const timer = setTimeout(() => setParticles([]), 1400);
+      const timer = setTimeout(() => setParticles([]), PARTICLE_MS);
       prevSurgeRef.current = surged;
       return () => clearTimeout(timer);
     }
@@ -191,7 +199,7 @@ const TickerCard = ({
       // nonce key remounts the elements so the animation replays even for
       // back-to-back same-direction events (no rAF: it can be frozen)
       setW52Pop(p => ({ dir, n: (p?.n || 0) + 1 }));
-      w52TimerRef.current = setTimeout(() => setW52Pop(null), 2700);
+      w52TimerRef.current = setTimeout(() => setW52Pop(null), BANNER_MS);
     };
 
     if (typeof week52High === 'number' && week52High > 0) {
@@ -238,7 +246,7 @@ const TickerCard = ({
 
     clearTimeout(crossTimerRef.current);
     setCrossFx(p => ({ dir: sign > 0 ? 'up' : 'down', n: (p?.n || 0) + 1 }));
-    crossTimerRef.current = setTimeout(() => setCrossFx(null), 1500);
+    crossTimerRef.current = setTimeout(() => setCrossFx(null), CROSS_MS);
   }, [changePercent, fx]);
 
   const isUp = changePercent > 0;

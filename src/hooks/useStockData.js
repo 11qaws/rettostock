@@ -22,6 +22,13 @@ const pickEnrichInterval = (state) => {
 // websocket already gives sub-second ticks, so faster REST just wastes calls).
 const quoteIntervalMs = (n) => Math.max(5000, Math.ceil(n * 1.2) * 1000);
 const PREMARKET_INTERVAL = 5000; // PRE/POST scanner poll (extended hours)
+// Abort guard for one-off enrichment fetches (name/sparkline via dev proxy or a
+// public CORS proxy). Both paths ultimately hit the same slow upstreams, so a
+// single generous timeout applies — the previous 4s/5s split had no real basis.
+const FETCH_TIMEOUT_MS = 5000;
+// Self-reconnect delay for the Finnhub trade websocket after any drop or a
+// failed construction. One value: the old 8s/10s split was arbitrary.
+const WS_RECONNECT_MS = 8000;
 // Per-symbol merge stagger, as a fraction of the poll interval: keeps updates
 // from landing in one frame while always staying well below the interval (so
 // cycles never overlap and per-symbol ordering is preserved).
@@ -72,12 +79,12 @@ const fetchViaProxy = async (targetUrl) => {
     // Vite dev proxies are mounted at the server root, not under the app base
     if (targetUrl.includes('quote.cnbc.com')) {
       const localUrl = targetUrl.replace('https://quote.cnbc.com', '/api/cnbc');
-      const res = await fetchWithTimeout(localUrl, 4000).catch(() => null);
+      const res = await fetchWithTimeout(localUrl, FETCH_TIMEOUT_MS).catch(() => null);
       if (res && res.ok) return res.json();
     }
     if (targetUrl.includes('query1.finance.yahoo.com')) {
       const localUrl = targetUrl.replace('https://query1.finance.yahoo.com', '/api/yahoo');
-      const res = await fetchWithTimeout(localUrl, 4000).catch(() => null);
+      const res = await fetchWithTimeout(localUrl, FETCH_TIMEOUT_MS).catch(() => null);
       if (res && res.ok) return res.json();
     }
   }
@@ -86,7 +93,7 @@ const fetchViaProxy = async (targetUrl) => {
   for (const make of PROXIES) {
     try {
       const { url, unwrap } = make(targetUrl);
-      const res = await fetchWithTimeout(url, 5000);
+      const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
       if (!res.ok) throw new Error(`proxy ${res.status}`);
       return await unwrap(res);
     } catch (err) {
@@ -287,7 +294,7 @@ export const useStockData = (symbols, demo = false) => {
         try {
           finnhubWs = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
         } catch {
-          finnhubReconnectTimer = setTimeout(connectFinnhub, 10000);
+          finnhubReconnectTimer = setTimeout(connectFinnhub, WS_RECONNECT_MS);
           return;
         }
         finnhubWs.onopen = () => {
@@ -319,7 +326,7 @@ export const useStockData = (symbols, demo = false) => {
           } catch { /* malformed frame: skip */ }
         };
         finnhubWs.onclose = () => {
-          if (!stopped) finnhubReconnectTimer = setTimeout(connectFinnhub, 8000);
+          if (!stopped) finnhubReconnectTimer = setTimeout(connectFinnhub, WS_RECONNECT_MS);
         };
         finnhubWs.onerror = () => {
           try { finnhubWs.close(); } catch { /* ignore */ }

@@ -374,20 +374,17 @@ const Configurator = () => {
   // Persist settings + push to widget (same-browser channels + ntfy relay)
   useEffect(() => {
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch { /* ignore */ }
-    
-    // Debounce the network publish to prevent rate limiting
-    const timeoutId = setTimeout(() => {
-      publishSync({ url: widgetUrl, timestamp: Date.now() }, room, signingKeys?.privateKey);
-    }, 500);
+
+    // Same-browser channels apply immediately; the ntfy network publish is
+    // debounced once inside publishSync (single source — no extra wrapper here,
+    // which previously double-debounced the relay at 500ms + 800ms).
+    publishSync({ url: widgetUrl, timestamp: Date.now() }, room, signingKeys?.privateKey);
 
     setJustApplied(true);
     setCustomDims(null); // Reset custom dims when config changes significantly
     const t = setTimeout(() => setJustApplied(false), 1500);
-    
-    return () => {
-      clearTimeout(timeoutId);
-      clearTimeout(t);
-    };
+
+    return () => clearTimeout(t);
   }, [widgetUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for 'TARGET_REACHED' feedback from the preview iframe so we can auto-clear the input
