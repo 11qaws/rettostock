@@ -209,8 +209,11 @@ html, body, #root {
    too close to tier 1's hue to show the progression). The same --surge-glow
    drives the card-body aura below, so glow and mood share one colour. */
 .tick-card { --surge-glow: var(--color-up-glow); --surge-max: 10px; }
+/* Trough raised (2px → 6px) so the glow breathes gently instead of nearly
+   collapsing each cycle — a near-zero trough read as a flicker at the bottom
+   edge where it overlaps the sparkline. */
 @keyframes surgePulse {
-  0%, 100% { filter: drop-shadow(0 0 2px var(--surge-glow)); }
+  0%, 100% { filter: drop-shadow(0 0 6px var(--surge-glow)); }
   50% { filter: drop-shadow(0 0 var(--surge-max) var(--surge-glow)); }
 }
 .is-surge-up, .is-surge-down { animation: surgePulse 2.2s ease-in-out infinite; }
@@ -246,9 +249,11 @@ html, body, #root {
   background:
     radial-gradient(135% 78% at 50% 120%, var(--surge-glow), transparent 62%),
     linear-gradient(0deg, var(--surge-glow), transparent 48%);
-  --aura-lo: 0.42;
-  --aura-hi: 0.72;
-  animation: auraEmber 2.4s ease-in-out infinite;
+  --aura-lo: 0.5;
+  --aura-hi: 0.66;
+  /* Locked to surgePulse's 2.2s so the two glows pulse together instead of
+     beating (2.4s vs 2.2s drifted in/out of phase → flicker at the sparkline). */
+  animation: auraEmber 2.2s ease-in-out infinite;
 }
 @keyframes auraEmber {
   0%, 100% { opacity: var(--aura-lo); }
@@ -260,9 +265,11 @@ html, body, #root {
     radial-gradient(145% 85% at 50% -20%, var(--surge-glow), transparent 62%),
     radial-gradient(72% 64% at 0% 0%, var(--surge-glow), transparent 58%),
     radial-gradient(72% 64% at 100% 0%, var(--surge-glow), transparent 58%);
-  --aura-lo: 0.62;
-  --aura-hi: 0.92;
-  animation: auraFrost 4.6s ease-in-out infinite;
+  --aura-lo: 0.68;
+  --aura-hi: 0.9;
+  /* 4.4s = 2× surgePulse (2.2s): stays slow/still for "frozen" yet harmonically
+     phase-locked to the glow, so it never beats into a flicker. */
+  animation: auraFrost 4.4s ease-in-out infinite;
 }
 @keyframes auraFrost {
   0%, 100% { opacity: var(--aura-lo); }
