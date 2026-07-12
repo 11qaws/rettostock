@@ -1,5 +1,9 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.21 Effect guide and complete REST outage state
+- **Effect guide:** the compact Calm Live / Full / Soft / Off selector now has an always-visible, selected comparison guide. It states exactly which motion and milestone effects remain, so a streamer can choose without guessing from a one-word button label.
+- **Complete REST failure:** when the cache and REST path both fail, cards without a WebSocket trade in the last 15 seconds enter the existing dimmed stale state. Recent direct trades stay bright; partial quote failures also count toward the existing per-symbol stale handling.
+
 ## 2026-07-13: v1.0.20 Cached REST may not overwrite a newer live tick
 - **Latency bound:** regular-session WebSocket trade ticks still bypass the cache. The 5-second REST cache is normally 0–5 seconds old, with an almost-10-second conservative bound when its freshness boundary aligns with the browser's 5-second poll. The 60-second stale response is only an outage fallback.
 - **Guard:** each direct WebSocket trade records its receipt time. A REST response whose cache timestamp is older preserves the newer displayed trade price instead of making the card briefly jump backwards. This keeps the free shared cache from changing the live-tick experience.

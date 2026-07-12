@@ -39,6 +39,10 @@ const FETCH_TIMEOUT_MS = 5000;
 // Self-reconnect delay for the Finnhub trade websocket after any drop or a
 // failed construction. One value: the old 8s/10s split was arbitrary.
 const WS_RECONNECT_MS = 8000;
+// If the REST safety net fails completely, a recent direct trade still proves
+// that a card is live. Otherwise the existing dimmed stale state makes the
+// uncertainty visible instead of leaving a frozen value looking live.
+const LIVE_TRADE_GRACE_MS = 15000;
 // Per-symbol merge stagger, as a fraction of the poll interval: keeps updates
 // from landing in one frame while always staying well below the interval (so
 // cycles never overlap and per-symbol ordering is preserved).
@@ -365,6 +369,20 @@ export const useStockData = (symbols, demoQuery = false) => {
 
     // Stocks/ETFs only (crypto support was removed to keep the data layer lean)
     const stockSymbols = symbols;
+    const markRestUnavailable = (affectedSymbols = stockSymbols) => {
+      const now = Date.now();
+      setData(prev => {
+        const next = { ...prev };
+        for (const symbol of affectedSymbols) {
+          const current = next[symbol];
+          if (!current) continue;
+          const hasRecentTrade = typeof current.lastTradeAt === 'number'
+            && now - current.lastTradeAt <= LIVE_TRADE_GRACE_MS;
+          if (!hasRecentTrade) next[symbol] = { ...current, stale: true };
+        }
+        return next;
+      });
+    };
 
     if (stockSymbols.length > 0) {
       // 2-0. Instant charts: hydrate the last-known sparkline/name from the
@@ -462,9 +480,17 @@ export const useStockData = (symbols, demoQuery = false) => {
         }
         if (stopped) return 0;
         let okCount = 0; // successful fetches this cycle — drives rate-limit backoff
-        for (const r of results) {
-          if (r.status !== 'fulfilled') continue;
-          const { symbol, q, stale, fetchedAt } = r.value;
+        for (let index = 0; index < results.length; index += 1) {
+          const r = results[index];
+          const symbol = r.status === 'fulfilled' ? r.value.symbol : stockSymbols[index];
+          if (r.status !== 'fulfilled') {
+            failCounts[symbol] = (failCounts[symbol] || 0) + 1;
+            if (failCounts[symbol] >= 3) {
+              markRestUnavailable([symbol]);
+            }
+            continue;
+          }
+          const { q, stale, fetchedAt } = r.value;
           if (!q || typeof q.c !== 'number' || q.c <= 0) {
             failCounts[symbol] = (failCounts[symbol] || 0) + 1;
             if (failCounts[symbol] >= 3) {
@@ -498,6 +524,7 @@ export const useStockData = (symbols, demoQuery = false) => {
                   price: cur.price,
                   regularMarketPrice: cur.price,
                   changePercent: calcChange(cur.price, cur.price, q.pc, 'REGULAR') ?? cur.changePercent,
+                  stale: false,
                 };
               } else {
                 // ETFs missing from the websocket (e.g. SOXL) still refresh
@@ -688,7 +715,10 @@ export const useStockData = (symbols, demoQuery = false) => {
       const quoteLoop = async () => {
           if (stopped) return;
           let okCount = 0;
-          try { okCount = await fetchQuotes(); } catch (err) { console.error('quote loop:', err); }
+          try { okCount = await fetchQuotes(); } catch (err) {
+            console.error('quote loop:', err);
+            markRestUnavailable();
+          }
           if (stopped) return;
           // CLOSED: prices are frozen, so throttle way down (kept alive at
           // 10min for the overnight previous-close rollover and staleness

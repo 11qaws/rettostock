@@ -81,10 +81,10 @@ const COLOR_STYLES = [
 ];
 
 const FX_LEVELS = [
-  { value: 'calm', label: 'Calm Live' },
-  { value: 'full', label: '전부' },
-  { value: 'soft', label: '약하게' },
-  { value: 'off', label: '끄기' },
+  { value: 'calm', label: 'Calm Live', desc: '평소 움직임 없음 · ±5/10/15% 색상과 목표·52주 알림만' },
+  { value: 'full', label: '전부', desc: '흔들림·숫자 플래시·방향 전환·파티클까지 모두 표시' },
+  { value: 'soft', label: '약하게', desc: '가격 플래시·상승 펌프·등락 색상 유지 · 파티클·방향 전환·52주 링은 숨김' },
+  { value: 'off', label: '끄기', desc: '색상만 표시 · 움직임과 목표·52주 알림은 모두 끔' },
 ];
 
 const PREVIEW_BGS = [
@@ -744,7 +744,17 @@ const Configurator = () => {
                     key={f.value}
                     className={`segment ${config.fx === f.value ? 'selected' : ''}`}
                     onClick={() => set('fx', f.value)}
+                    aria-pressed={config.fx === f.value}
+                    title={f.desc}
                   >{f.label}</button>
+                ))}
+              </div>
+              <div className="fx-guide" aria-label="이벤트 이펙트별 차이">
+                {FX_LEVELS.map(f => (
+                  <div key={f.value} className={`fx-guide-item ${config.fx === f.value ? 'selected' : ''}`}>
+                    <b>{f.label}</b>
+                    <span>{f.desc}</span>
+                  </div>
                 ))}
               </div>
             </div>

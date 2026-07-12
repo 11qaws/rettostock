@@ -759,6 +759,28 @@ html, body, #root {
 .segment.selected small { color: #fff5f7; }
 .segmented.small .segment { padding: 6px 4px; font-size: 13px; flex-direction: row; }
 
+/* Always show the effect trade-offs beside the compact selector: button labels
+   alone cannot explain what is safe or lively during a live broadcast. */
+.fx-guide {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.fx-guide-item {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid #f1dce0;
+  border-radius: 9px;
+  background: #fffafb;
+  color: #7b625d;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.fx-guide-item b { display: block; margin-bottom: 2px; color: #6a4c47; font-size: 11px; }
+.fx-guide-item.selected { border-color: #ff9fb0; background: #fff0f3; }
+.fx-guide-item.selected b { color: #d94d70; }
+
 /* Sync status line */
 .sync-status { font-size: 13px; color: #b5a39c; margin: 10px 0 0; transition: color 0.2s; }
 .sync-status.active { color: #43a047; font-weight: bold; }
