@@ -297,6 +297,7 @@ const Widget = () => {
               ? ` ${ticker.changePercent > 0 ? '+' : ''}${ticker.changePercent.toFixed(2)}%`
               : ' ---'}
           </span>
+          {ticker?.recovering && <span className="recovery-inline" aria-label="저장 시세를 업데이트 중">↻</span>}
           {ticker?.closes && ticker.closes.length > 1 && (
             <span className={`inline-spark ${colorClass}`}>
               <Sparkline data={ticker.closes} baseline={ticker?.previousClose} />

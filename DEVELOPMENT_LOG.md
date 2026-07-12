@@ -1,5 +1,9 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.33 Recovery status uses the existing badge row
+- **No size change:** restored `업데이트 중` appears immediately to the left of the existing market-status badge, using the same fixed badge height. The marquee's recovery glyph is also restored.
+- **Stable OBS URL:** removed the automatic version query from copied OBS URLs; source URLs remain clean and unchanged.
+
 ## 2026-07-13: v1.0.32 Fixed-layout recovery and versioned OBS URLs
 - **No layout changes during recovery:** removed the temporary update text and marquee glyph. Recovery state may dim an existing card but never adds content or changes its dimensions.
 - **No stale deployment bundle:** newly copied OBS URLs carry the app version before the hash, bypassing GitHub Pages' 10-minute `index.html` cache on a new deployment.

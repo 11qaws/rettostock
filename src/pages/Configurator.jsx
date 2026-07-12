@@ -364,10 +364,7 @@ const Configurator = () => {
     // GitHub Pages caches index.html for up to ten minutes. Put the build
     // version before the hash so every newly copied OBS URL fetches the
     // matching asset manifest instead of a previous deployment's bundle.
-    const pageUrl = new URL(window.location.href);
-    pageUrl.hash = '';
-    pageUrl.searchParams.set('v', APP_VERSION);
-    const baseUrl = pageUrl.toString();
+    const baseUrl = window.location.href.split('#')[0];
     const params = new URLSearchParams();
     params.set('symbols', urlSymbolList.join(','));
     if (config.theme !== 'default') params.set('theme', config.theme);

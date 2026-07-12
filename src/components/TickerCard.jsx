@@ -454,6 +454,7 @@ const TickerCard = ({
               {countdown != null && (
                 <span className="market-countdown">{countdown}초</span>
               )}
+              {recovering && <span className="recovery-badge">업데이트 중</span>}
               <span className={`market-badge ${market.cls}`}>
                 {upcomingState && MARKET_LABELS[upcomingState] ? (
                   fx !== 'off' ? (

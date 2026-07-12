@@ -126,6 +126,26 @@ html, body, #root {
   opacity: 0.9;
   white-space: nowrap;
 }
+.recovery-badge {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  color: var(--text-muted);
+  font-size: clamp(10px, 3.3vw, 15px);
+  line-height: 1.5;
+  padding: 0 0.7em;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.recovery-inline {
+  color: var(--text-muted);
+  font-size: 0.75em;
+  opacity: 0.85;
+}
 .ms-open { color: var(--color-up); }
 .ms-pre, .ms-post { color: var(--badge-ext); }
 .ms-closed { color: var(--text-muted); }
@@ -335,6 +355,7 @@ html, body, #root {
   position: relative;
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 4px;
   margin-bottom: 2px;
 }
