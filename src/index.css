@@ -209,12 +209,16 @@ html, body, #root {
    too close to tier 1's hue to show the progression). The same --surge-glow
    drives the card-body aura below, so glow and mood share one colour. */
 .tick-card { --surge-glow: var(--color-up-glow); --surge-max: 10px; }
-/* Trough raised (2px → 6px) so the glow breathes gently instead of nearly
-   collapsing each cycle — a near-zero trough read as a flicker at the bottom
-   edge where it overlaps the sparkline. */
+/* box-shadow, NOT filter: an animating `filter` forces the whole card (incl. the
+   semi-transparent aura gradient + sparkline) into an offscreen buffer every
+   frame; on mobile GPUs (Samsung Internet) that buffer is low-precision, so the
+   stacked translucent layers dither into visible grain ("지지직") — desktop is
+   fine. box-shadow paints as a plain shadow without re-rasterizing children, so
+   the body composites at full precision. A subtle neutral depth shadow rides
+   along so surged cards keep their edge. Trough 6px so it breathes, not blinks. */
 @keyframes surgePulse {
-  0%, 100% { filter: drop-shadow(0 0 6px var(--surge-glow)); }
-  50% { filter: drop-shadow(0 0 var(--surge-max) var(--surge-glow)); }
+  0%, 100% { box-shadow: 0 0 6px var(--surge-glow), 0 2px 10px rgba(0, 0, 0, 0.28); }
+  50% { box-shadow: 0 0 var(--surge-max) var(--surge-glow), 0 2px 10px rgba(0, 0, 0, 0.28); }
 }
 .is-surge-up, .is-surge-down { animation: surgePulse 2.2s ease-in-out infinite; }
 .surge-up-1   { --surge-glow: var(--color-up-glow); --surge-max: 10px; }
@@ -447,7 +451,7 @@ html, body, #root {
 .fx-soft .fx-particle { display: none; }
 .fx-off .anim-pump, .fx-off .anim-dump { animation: none; }
 .fx-off .price-flash-up, .fx-off .price-flash-down { animation: none; }
-.fx-off .is-surge-up, .fx-off .is-surge-down { animation: none; filter: none; }
+.fx-off .is-surge-up, .fx-off .is-surge-down { animation: none; }
 .fx-off .fx-particle { display: none; }
 .fx-off .cross-wipe { display: none; }
 .fx-off .cross-arrow { display: none; }
