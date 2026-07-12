@@ -201,9 +201,13 @@ html, body, #root {
 .price-flash-down { animation: priceFlashDown 0.6s ease; }
 
 /* Surge tiers (persistent visual state, not a one-shot): the glow strengthens
-   and shifts colour as the move grows — tier 1 (±5%) in the up/down colour,
-   tier 3 (±15%) in the 52-week record colour (gold up / ice down), so an
-   extreme day visibly climbs toward "record territory". */
+   AND its hue heats/cools as the move grows. Up = metal heating: theme colour
+   (e.g. red) → orange → yellow (달아오름). Down = freezing: theme colour → ice
+   blue → icy white-blue (얼어붙음). Tier 1 stays the theme colour so the ramp
+   starts native; tiers 2-3 use fixed hot/cold anchors so "노랑/얼음" reads
+   clearly on every theme (a themed gold like --fx-high-glow was too amber and
+   too close to tier 1's hue to show the progression). The same --surge-glow
+   drives the card-body aura below, so glow and mood share one colour. */
 .tick-card { --surge-glow: var(--color-up-glow); --surge-max: 10px; }
 @keyframes surgePulse {
   0%, 100% { filter: drop-shadow(0 0 2px var(--surge-glow)); }
@@ -211,11 +215,63 @@ html, body, #root {
 }
 .is-surge-up, .is-surge-down { animation: surgePulse 2.2s ease-in-out infinite; }
 .surge-up-1   { --surge-glow: var(--color-up-glow); --surge-max: 10px; }
-.surge-up-2   { --surge-glow: var(--color-up);      --surge-max: 15px; }
-.surge-up-3   { --surge-glow: var(--fx-high-glow);  --surge-max: 22px; }
+.surge-up-2   { --surge-glow: #ff8f2e;  --surge-max: 16px; } /* orange — warming */
+.surge-up-3   { --surge-glow: #ffd23a;  --surge-max: 24px; } /* yellow — hot */
 .surge-down-1 { --surge-glow: var(--color-down-glow); --surge-max: 10px; }
-.surge-down-2 { --surge-glow: var(--color-down);      --surge-max: 15px; }
-.surge-down-3 { --surge-glow: var(--fx-low-glow);     --surge-max: 22px; }
+.surge-down-2 { --surge-glow: #56c2ff;  --surge-max: 16px; } /* bright ice */
+.surge-down-3 { --surge-glow: #bdefff;  --surge-max: 24px; } /* icy white-blue */
+
+/* ── Tier-3 card atmosphere (±15%) ──────────────────────────────────────
+   Beyond the outer glow, an extreme move fills the card BODY with a mood:
+   "달아오른"(heated, embers rising from the bottom, live flicker) on the way
+   up, "얼어붙은"(frozen, frost creeping from the top edge & upper corners,
+   slow and still) on the way down. Colour = the tier's own --surge-glow
+   (orange/yellow up, ice/white-blue down), so the body mood matches the outer
+   glow and heats/cools together across tiers. Plain alpha compositing (no blend
+   mode) so it also reads on the light themes' white cards. Content is lifted
+   above via z-index. */
+.surge-aura {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.tick-card > .card-row,
+.tick-card > .sparkline-wrap { position: relative; z-index: 1; }
+
+/* --aura-lo/--aura-hi drive the breath so tier 2 can reuse the same look at a
+   whisper (see .aura-mid). */
+.aura-hot {
+  background:
+    radial-gradient(135% 78% at 50% 120%, var(--surge-glow), transparent 62%),
+    linear-gradient(0deg, var(--surge-glow), transparent 48%);
+  --aura-lo: 0.42;
+  --aura-hi: 0.72;
+  animation: auraEmber 2.4s ease-in-out infinite;
+}
+@keyframes auraEmber {
+  0%, 100% { opacity: var(--aura-lo); }
+  50%      { opacity: var(--aura-hi); }
+}
+
+.aura-frozen {
+  background:
+    radial-gradient(130% 72% at 50% -18%, var(--surge-glow), transparent 60%),
+    radial-gradient(62% 58% at 0% 0%, var(--surge-glow), transparent 55%),
+    radial-gradient(62% 58% at 100% 0%, var(--surge-glow), transparent 55%);
+  --aura-lo: 0.5;
+  --aura-hi: 0.72;
+  animation: auraFrost 4.6s ease-in-out infinite;
+}
+@keyframes auraFrost {
+  0%, 100% { opacity: var(--aura-lo); }
+  50%      { opacity: var(--aura-hi); }
+}
+
+/* Tier 2 (±10%): intermediate — just a hint of the tier-3 colour, no strong
+   pooling. Same gradients, dialled way down so it reads as a warm/cool tint. */
+.aura-mid { --aura-lo: 0.16; --aura-hi: 0.28; }
 
 @keyframes surgeBounce {
   0%, 100% { transform: translateY(0); }

@@ -139,11 +139,20 @@ export const useStockData = (symbols, demo = false) => {
     const demoTrans = urlParams.get('demo_transition') === '1';
     const demoCross = urlParams.get('demo_cross') === '1';
     const demoTarget = urlParams.get('demo_target') === '1';
+    const demoSurge = urlParams.get('demo_surge') === '1';
+
+    // 급등/급락 데모: 종목을 순환 배정해 상승·하락 6개 글로우 등급을 한 화면에서
+    // 동시 확인(±5/10/15 = tier 1/2/3). surgeTier 경계(5/10/15%)보다 0.5%p 위에
+    // 고정해 밴드 내 미세 진동에도 tier가 흔들리지 않게 함.
+    const SURGE_TARGETS = [15.5, -15.5, 10.5, -10.5, 5.5, -5.5];
 
     const state = {};
-    symbols.forEach((symbol) => {
+    symbols.forEach((symbol, i) => {
       const base = 20 + (hashCode(symbol) % 780);
-      const changePercent = demoCross ? 0 : (((hashCode(symbol + 'c') % 900) / 100) - 4.5);
+      const surgeTarget = demoSurge ? SURGE_TARGETS[i % SURGE_TARGETS.length] : null;
+      const changePercent = demoSurge
+        ? surgeTarget
+        : (demoCross ? 0 : (((hashCode(symbol + 'c') % 900) / 100) - 4.5));
       const price = base * (1 + changePercent / 100);
       const closes = [];
       let p = base;
@@ -152,7 +161,7 @@ export const useStockData = (symbols, demo = false) => {
         closes.push(p);
       }
       closes[closes.length - 1] = price;
-      state[symbol] = { base, price, changePercent, closes };
+      state[symbol] = { base, price, changePercent, closes, surgeTarget };
     });
 
     const getDemoMarketState = () => {
@@ -189,7 +198,10 @@ export const useStockData = (symbols, demo = false) => {
     const jitter = new Set();
     const timer = setInterval(() => {
       for (const [sym, s] of Object.entries(state)) {
-        if (demoCross) {
+        if (demoSurge) {
+          // 배정된 등급 밴드 안에서만 ±0.4%p 진동 → tick 애니메이션은 살아있되 tier 고정
+          s.changePercent = s.surgeTarget + Math.sin(Date.now() / 1500 + hashCode(sym)) * 0.4;
+        } else if (demoCross) {
           s.changePercent = Math.sin(Date.now() / 2000 + hashCode(sym)) * 0.15;
         } else {
           let drift = (Math.random() - 0.5) * 0.4;

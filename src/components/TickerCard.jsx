@@ -88,7 +88,10 @@ const TickerCard = ({
 
     t.done = true; // reached — auto-disarm until the target is changed
     clearTimeout(targetTimerRef.current);
-    setTargetPop(p => ({ n: (p?.n || 0) + 1 }));
+    // Snapshot the reached target so the banner keeps its number through the
+    // whole animation even after the live target is disarmed/cleared (the
+    // Configurator wipes it on TARGET_REACHED, which would otherwise blank $).
+    setTargetPop(p => ({ n: (p?.n || 0) + 1, price: targetPrice }));
     targetTimerRef.current = setTimeout(() => setTargetPop(null), BANNER_MS);
 
     // If running in the Configurator's preview iframe, notify it to clear the target UI
@@ -254,8 +257,9 @@ const TickerCard = ({
   const Icon = isUp ? TrendingUp : (isDown ? TrendingDown : Minus);
   const colorClass = isUp ? 'text-up' : (isDown ? 'text-down' : '');
   // Persistent visual tier by move size (1: ±5%, 2: ±10%, 3: ±15%). The glow
-  // escalates and, at tier 3, borrows the 52-week record colour (gold up / ice
-  // down) so an extreme day visibly approaches "record territory".
+  // escalates and heats/cools its hue: up ramps theme colour → orange → yellow
+  // (달아오름), down ramps theme colour → ice → white-blue (얼어붙음). See the
+  // .surge-*-N rules in index.css.
   const tier = surgeTier(changePercent);
   const surged = tier >= 1;
   const dir = isUp ? 'up' : 'down';
@@ -272,6 +276,17 @@ const TickerCard = ({
       style={{ '--fx-i': fxIntensity, ...motionProps.style }}
       {...motionProps}
     >
+      {/* Body atmosphere for big moves. Tier 3 (±15%) fills the card with a
+          full mood — "달아오른"(heated) rising up, "얼어붙은"(frozen) coming
+          down. Tier 2 (±10%) is the same tint at a whisper (aura-mid), so the
+          card visibly warms/cools on the way to tier 3. Sits behind content. */}
+      {tier >= 2 && fx !== 'off' && (
+        <div
+          className={`surge-aura ${isUp ? 'aura-hot' : 'aura-frozen'} ${tier === 2 ? 'aura-mid' : ''}`}
+          aria-hidden="true"
+        />
+      )}
+
       {particles.map(p => (
         <span
           key={p.id}
@@ -310,7 +325,7 @@ const TickerCard = ({
         <React.Fragment key={`target-${targetPop.n}`}>
           <span className="w52-ring target-ring" aria-hidden="true" />
           <span className="w52-banner target-banner" aria-hidden="true">
-            🎯 목표가 ${typeof targetPrice === 'number' ? targetPrice.toFixed(2) : ''}
+            🎯 목표가 ${typeof targetPop.price === 'number' ? targetPop.price.toFixed(2) : ''}
           </span>
         </React.Fragment>
       )}

@@ -111,6 +111,7 @@ const defaultConfig = {
   demoTrans: false,
   demoCross: false,
   demoTarget: false,
+  demoSurge: false,
   remote: false, // cross-device relay is opt-in (currently disabled in UI)
   useTargets: false,
   targets: {},   // per-symbol target prices (empty = off)
@@ -357,6 +358,7 @@ const Configurator = () => {
     if (config.demoTrans) params.set('demo_transition', '1');
     if (config.demoCross) params.set('demo_cross', '1');
     if (config.demoTarget) params.set('demo_target', '1');
+    if (config.demoSurge) params.set('demo_surge', '1');
     const targetPairs = urlSymbolList
       .map(s => [s.toUpperCase(), parseFloat(config.targets?.[s])])
       .filter(([, v]) => Number.isFinite(v) && v > 0);
@@ -798,6 +800,10 @@ const Configurator = () => {
                   <label className="demo-toggle" style={{ fontSize: '0.9em', color: '#ddd' }}>
                     <input type="checkbox" checked={config.demoTarget || false} onChange={e => set('demoTarget', e.target.checked)} />
                     목표가 도달 테스트 (15초 주기 급등)
+                  </label>
+                  <label className="demo-toggle" style={{ fontSize: '0.9em', color: '#ddd' }}>
+                    <input type="checkbox" checked={config.demoSurge || false} onChange={e => set('demoSurge', e.target.checked)} />
+                    급등/급락 테스트 (±5·10·15% 글로우 동시)
                   </label>
                 </div>
               )}
