@@ -200,17 +200,22 @@ html, body, #root {
 .price-flash-up { animation: priceFlashUp 0.6s ease; }
 .price-flash-down { animation: priceFlashDown 0.6s ease; }
 
-/* Surge (|change| >= 5%): persistent glow + bouncing badge */
-@keyframes surgeGlowUp {
-  0%, 100% { filter: drop-shadow(0 0 2px var(--color-up-glow)); }
-  50% { filter: drop-shadow(0 0 10px var(--color-up)); }
+/* Surge tiers (persistent visual state, not a one-shot): the glow strengthens
+   and shifts colour as the move grows — tier 1 (±5%) in the up/down colour,
+   tier 3 (±15%) in the 52-week record colour (gold up / ice down), so an
+   extreme day visibly climbs toward "record territory". */
+.tick-card { --surge-glow: var(--color-up-glow); --surge-max: 10px; }
+@keyframes surgePulse {
+  0%, 100% { filter: drop-shadow(0 0 2px var(--surge-glow)); }
+  50% { filter: drop-shadow(0 0 var(--surge-max) var(--surge-glow)); }
 }
-@keyframes surgeGlowDown {
-  0%, 100% { filter: drop-shadow(0 0 2px var(--color-down-glow)); }
-  50% { filter: drop-shadow(0 0 10px var(--color-down)); }
-}
-.is-surge-up { animation: surgeGlowUp 2.2s ease-in-out infinite; }
-.is-surge-down { animation: surgeGlowDown 2.2s ease-in-out infinite; }
+.is-surge-up, .is-surge-down { animation: surgePulse 2.2s ease-in-out infinite; }
+.surge-up-1   { --surge-glow: var(--color-up-glow); --surge-max: 10px; }
+.surge-up-2   { --surge-glow: var(--color-up);      --surge-max: 15px; }
+.surge-up-3   { --surge-glow: var(--fx-high-glow);  --surge-max: 22px; }
+.surge-down-1 { --surge-glow: var(--color-down-glow); --surge-max: 10px; }
+.surge-down-2 { --surge-glow: var(--color-down);      --surge-max: 15px; }
+.surge-down-3 { --surge-glow: var(--fx-low-glow);     --surge-max: 22px; }
 
 @keyframes surgeBounce {
   0%, 100% { transform: translateY(0); }

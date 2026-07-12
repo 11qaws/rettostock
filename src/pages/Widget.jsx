@@ -5,6 +5,7 @@ import Sparkline from '../components/Sparkline';
 import { useStockData } from '../hooks/useStockData';
 import { useWidgetSync } from '../hooks/useRemoteSync';
 import { fmtPrice } from '../utils/format';
+import { surgeTier } from '../utils/effects';
 import { AnimatePresence } from 'framer-motion';
 
 // Backwards compat: old URLs used color-red-blue / color-green-red
@@ -90,6 +91,7 @@ const Widget = () => {
   // Rotation logic
   const snapshotPrices = useRef({});
   const dataRef = useRef(data);
+  const [focusNonce, setFocusNonce] = useState(0); // bumps to restart the dwell timer after an auto-focus
 
   useEffect(() => {
     dataRef.current = data;
@@ -98,6 +100,8 @@ const Widget = () => {
   useEffect(() => {
     if (modeParam !== 'rotate' || symbols.length <= 1) return;
 
+    // focusNonce in deps: an auto-focus restarts this timer so the cut-to
+    // card gets a full dwell before the rotation resumes.
     const interval = setInterval(() => {
       setCurrentIndex(prev => {
         // Snapshot the price of the current symbol before it disappears
@@ -110,7 +114,49 @@ const Widget = () => {
     }, intervalParam * 1000);
 
     return () => clearInterval(interval);
-  }, [modeParam, symbols, intervalParam]);
+  }, [modeParam, symbols, intervalParam, focusNonce]);
+
+  // Rotate mode auto-focus ("cut to the action"): every symbol is polled even
+  // while its card is off-screen, so when a big moment fires on a hidden symbol
+  // we jump the rotation to it. Only rare/big events qualify (surge tier climb,
+  // 52-week record, target reached); a 6s cooldown prevents thrashing. Minor
+  // effects (zero-cross, shake) are intentionally NOT focus-worthy.
+  const eventStateRef = useRef({}); // per-symbol { tier, price }
+  const lastFocusRef = useRef(0);
+  const focusBornRef = useRef(null);
+  useEffect(() => {
+    if (modeParam !== 'rotate' || symbols.length <= 1) return;
+    const prev = eventStateRef.current;
+    // Warm-up: at boot every symbol's value lands at once (and can wobble as
+    // Finnhub/Yahoo/cache sources settle). Spend the first 5s only recording a
+    // baseline — never focusing — so the initial mass-set can't masquerade as a
+    // live surge. A symbol that boots already surged becomes the baseline; only
+    // a genuine climb afterward earns a cut.
+    if (focusBornRef.current === null) focusBornRef.current = Date.now();
+    const warm = Date.now() - focusBornRef.current > 5000;
+    const curSym = symbols[currentIndex % symbols.length];
+    let focusSym = null;
+    for (const sym of symbols) {
+      const d = data[sym];
+      if (!d || typeof d.price !== 'number') continue;
+      const tier = surgeTier(d.changePercent);
+      const pv = prev[sym];
+      if (pv) {
+        const surgeUp = tier > pv.tier && tier >= 1;
+        const hi = typeof d.week52High === 'number' && d.week52High > 0 && d.price > d.week52High && pv.price <= d.week52High;
+        const lo = typeof d.week52Low === 'number' && d.week52Low > 0 && d.price < d.week52Low && pv.price >= d.week52Low;
+        const t = targets[sym];
+        const tgt = typeof t === 'number' && ((pv.price < t && d.price >= t) || (pv.price > t && d.price <= t));
+        if (!focusSym && sym !== curSym && (surgeUp || hi || lo || tgt)) focusSym = sym;
+      }
+      prev[sym] = { tier, price: d.price };
+    }
+    if (focusSym && warm && Date.now() - lastFocusRef.current > 6000) {
+      lastFocusRef.current = Date.now();
+      const idx = symbols.indexOf(focusSym);
+      if (idx >= 0) { setCurrentIndex(idx); setFocusNonce(n => n + 1); }
+    }
+  }, [data, modeParam, symbols, currentIndex, targets]);
 
   useEffect(() => {
     setCurrentIndex(0);

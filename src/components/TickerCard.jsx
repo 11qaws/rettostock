@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Sparkline from './Sparkline';
 import { fmtPrice } from '../utils/format';
+import { surgeTier } from '../utils/effects';
 
 const SURGE_THRESHOLD = 5; // |changePercent| >= 5% triggers surge state
 
@@ -244,8 +245,13 @@ const TickerCard = ({
   const isDown = changePercent < 0;
   const Icon = isUp ? TrendingUp : (isDown ? TrendingDown : Minus);
   const colorClass = isUp ? 'text-up' : (isDown ? 'text-down' : '');
-  const surged = typeof changePercent === 'number' && Math.abs(changePercent) >= SURGE_THRESHOLD;
-  const surgeClass = surged ? (isUp ? 'is-surge-up' : 'is-surge-down') : '';
+  // Persistent visual tier by move size (1: ±5%, 2: ±10%, 3: ±15%). The glow
+  // escalates and, at tier 3, borrows the 52-week record colour (gold up / ice
+  // down) so an extreme day visibly approaches "record territory".
+  const tier = surgeTier(changePercent);
+  const surged = tier >= 1;
+  const dir = isUp ? 'up' : 'down';
+  const surgeClass = surged ? `is-surge-${dir} surge-${dir}-${tier}` : '';
   // 4-digit+ prices ($1000+) render one step smaller so the wide number never
   // squeezes the ticker (stacks with fmtPrice dropping decimals).
   const bigPrice = typeof price === 'number' && Math.abs(price) >= 1000;
