@@ -215,6 +215,30 @@ html, body, #root {
 .anim-pump { animation: pumpShake 0.5s cubic-bezier(.36, .07, .19, .97) both, pumpFlash 0.5s ease; }
 .anim-dump { animation: dumpFlash 0.5s ease; }
 
+/* Configurator-only Full preview: unlike a real tick (one quick cue), this
+   deliberately lasts for the entire three-second preview so it is visibly
+   distinct from Card effects. The motion stays small enough for OBS framing. */
+@keyframes previewFullShake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  18% { transform: translate(-1.3px, 0.7px) rotate(-0.3deg); }
+  38% { transform: translate(1.1px, -0.6px) rotate(0.25deg); }
+  58% { transform: translate(-0.8px, -0.4px) rotate(-0.2deg); }
+  78% { transform: translate(0.7px, 0.4px) rotate(0.15deg); }
+}
+@keyframes previewFullPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px var(--surge-glow), 0 2px 10px rgba(0, 0, 0, 0.28);
+    border-color: var(--border-glass);
+  }
+  50% {
+    box-shadow: 0 0 24px var(--surge-glow), inset 0 0 18px var(--surge-glow), 0 2px 10px rgba(0, 0, 0, 0.28);
+    border-color: var(--color-up);
+  }
+}
+.fx-full .tick-card.preview-full-motion {
+  animation: previewFullShake 0.72s ease-in-out infinite, previewFullPulse 1.05s ease-in-out infinite;
+}
+
 /* Price number flash on tick */
 @keyframes priceFlashUp { 30% { color: var(--color-up); text-shadow: 0 0 12px var(--color-up-glow); } }
 @keyframes priceFlashDown { 30% { color: var(--color-down); text-shadow: 0 0 12px var(--color-down-glow); } }

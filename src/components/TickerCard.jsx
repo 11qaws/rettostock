@@ -42,6 +42,22 @@ const makeParticleBurst = (changePercent) => {
   }));
 };
 
+// Preview particles render from props rather than a transient state update.
+// Three short waves cover the whole three-second preview, keeping Full visibly
+// distinct from Card effects from start to finish.
+const makePreviewParticleBurst = (token) => Array.from({ length: 18 }, (_, index) => {
+  const wave = Math.floor(index / 6);
+  const slot = index % 6;
+  return {
+    id: `preview-${token}-${index}`,
+    char: UP_PARTICLES[index % UP_PARTICLES.length],
+    dx: `${(slot - 2.5) * 28}px`,
+    dy: `${-(38 + ((index * 17) % 58))}px`,
+    rot: `${-115 + ((index * 43) % 230)}deg`,
+    delay: `${wave * 0.84 + slot * 0.035}s`,
+  };
+});
+
 const TickerCard = ({
   symbol, price, changePercent, previousClose, name, marketState, upcomingState, countdown, closes, stale,
   week52High, week52Low, targetPrice,
@@ -51,7 +67,7 @@ const TickerCard = ({
   const [animClass, setAnimClass] = useState('');
   const [priceFlash, setPriceFlash] = useState('');
   const [particles, setParticles] = useState([]);
-  const [previewActive, setPreviewActive] = useState(false);
+  const [previewExpired, setPreviewExpired] = useState(false);
   const [crossFx, setCrossFx] = useState(null); // 'up' (양전) | 'down' (음전)
   const [fxIntensity, setFxIntensity] = useState(1); // tick effect strength ∝ move size
   const [w52Pop, setW52Pop] = useState(null); // 'high' | 'low' — 52-week record broken
@@ -121,42 +137,22 @@ const TickerCard = ({
   const prevSignRef = useRef(null);
   const lastCrossRef = useRef(0);
 
-  // The configurator passes a token only to its embedded preview. It never
-  // changes a quote: a three-second visual layer is shown over the live card.
+  // The configurator passes a token only to its embedded preview. The visual
+  // itself is derived directly from that token below: production builds were
+  // dropping state-driven overlays on cards after the first one. This timer
+  // only controls when that deterministic layer expires.
   useEffect(() => {
-    if (!previewFxToken || previewTokenRef.current === previewFxToken) return;
-    previewTokenRef.current = previewFxToken;
-
     clearTimeout(previewTimerRef.current);
-    const isSurgePreview = previewFxVariant === 'surge';
-    setPriceFlash(isSurgePreview ? 'price-flash-up' : '');
-    setAnimClass(fx === 'full' && isSurgePreview ? 'anim-pump' : '');
-    setPreviewActive(fx !== 'off');
-
-    if (fx !== 'off') {
-      clearTimeout(crossTimerRef.current);
-      clearTimeout(w52TimerRef.current);
-      clearTimeout(targetTimerRef.current);
-      if (previewFxVariant === 'cross') {
-        setCrossFx(p => ({ dir: 'up', n: (p?.n || 0) + 1 }));
-      } else if (previewFxVariant === 'record') {
-        setW52Pop(p => ({ dir: 'high', n: (p?.n || 0) + 1 }));
-      } else if (previewFxVariant === 'target') {
-        setTargetPop(p => ({ n: (p?.n || 0) + 1, price: targetPrice ?? price }));
-      }
-      if (fx === 'full' && isSurgePreview) setParticles(makeParticleBurst(1));
+    if (!previewFxToken) {
+      previewTokenRef.current = '';
+      setPreviewExpired(false);
+      return;
     }
-
-    previewTimerRef.current = setTimeout(() => {
-      setPreviewActive(false);
-      setAnimClass('');
-      setPriceFlash('');
-      setParticles([]);
-      setCrossFx(null);
-      setW52Pop(null);
-      setTargetPop(null);
-    }, PREVIEW_MS);
-  }, [previewFxToken, previewFxVariant, fx, price, targetPrice]);
+    if (previewTokenRef.current === previewFxToken) return;
+    previewTokenRef.current = previewFxToken;
+    setPreviewExpired(false);
+    previewTimerRef.current = setTimeout(() => setPreviewExpired(true), PREVIEW_MS);
+  }, [previewFxToken]);
 
   // Transition animation state
   const prevMarketRef = useRef(marketState);
@@ -316,7 +312,27 @@ const TickerCard = ({
   const tier = surgeTier(changePercent);
   const surged = tier >= 1;
   const dir = isUp ? 'up' : 'down';
-  const previewSurge = previewActive && fx !== 'off' && previewFxVariant === 'surge';
+  const previewVisible = Boolean(previewFxToken) && !previewExpired && fx !== 'off';
+  const previewSurge = previewVisible && previewFxVariant === 'surge';
+  const previewFullMotion = previewSurge && fx === 'full';
+  const previewParticles = previewFullMotion ? makePreviewParticleBurst(previewFxToken) : [];
+  const previewCrossFx = previewVisible && previewFxVariant === 'cross'
+    ? { dir: 'up', n: previewFxToken }
+    : null;
+  const previewW52Pop = previewVisible && previewFxVariant === 'record'
+    ? { dir: 'high', n: previewFxToken }
+    : null;
+  const previewTargetPop = previewVisible && previewFxVariant === 'target'
+    ? { n: previewFxToken, price: targetPrice ?? price }
+    : null;
+  // A live event must not mask the assigned demonstration during its three
+  // seconds; each card owns one independently derived preview variant.
+  const visibleAnimClass = previewVisible ? '' : animClass;
+  const visiblePriceFlash = previewVisible ? (previewSurge ? 'price-flash-up' : '') : priceFlash;
+  const visibleParticles = previewVisible ? previewParticles : particles;
+  const visibleCrossFx = previewVisible ? previewCrossFx : crossFx;
+  const visibleW52Pop = previewVisible ? previewW52Pop : w52Pop;
+  const visibleTargetPop = previewVisible ? previewTargetPop : targetPop;
   const visualTier = previewSurge ? Math.max(tier, 2) : tier;
   const visualDir = previewSurge ? 'up' : dir;
   const cardFxEnabled = fx === 'full' || fx === 'card';
@@ -329,7 +345,7 @@ const TickerCard = ({
 
   return (
     <motion.div
-      className={`glass-card tick-card ${animClass} ${surgeClass} ${stale ? 'is-stale' : ''}`}
+      className={`glass-card tick-card ${visibleAnimClass} ${previewFullMotion ? 'preview-full-motion' : ''} ${surgeClass} ${stale ? 'is-stale' : ''}`}
       style={{ '--fx-i': fxIntensity, ...motionProps.style }}
       {...motionProps}
     >
@@ -344,7 +360,7 @@ const TickerCard = ({
         />
       )}
 
-      {(fx === 'full' ? particles : []).map(p => (
+      {(fx === 'full' ? visibleParticles : []).map(p => (
         <span
           key={p.id}
           className="fx-particle"
@@ -356,33 +372,33 @@ const TickerCard = ({
 
       {/* Zero-cross: shimmer wipe + an arrow passing through the card,
           easing off at the center before shooting out (Weak and Full only) */}
-      {crossFx && fx !== 'off' && (
-        <React.Fragment key={`cross-${crossFx.n}`}>
-          <span className={`cross-wipe wipe-${crossFx.dir}`} aria-hidden="true" />
+      {visibleCrossFx && fx !== 'off' && (
+        <React.Fragment key={`cross-${visibleCrossFx.n}`}>
+          <span className={`cross-wipe wipe-${visibleCrossFx.dir}`} aria-hidden="true" />
           {/* Render the OLD-direction glyph; the scaleY flip reveals the new
               one (▼→▲ for 양전, ▲→▼ for 음전) mid-animation. */}
-          <span className={`cross-arrow arrow-${crossFx.dir}`} aria-hidden="true">
-            {crossFx.dir === 'up' ? '▼' : '▲'}
+          <span className={`cross-arrow arrow-${visibleCrossFx.dir}`} aria-hidden="true">
+            {visibleCrossFx.dir === 'up' ? '▼' : '▲'}
           </span>
         </React.Fragment>
       )}
 
       {/* 52-week record celebration */}
-      {w52Pop && (
-        <React.Fragment key={`w52-${w52Pop.n}`}>
-          <span className={`w52-ring w52-ring-${w52Pop.dir}`} aria-hidden="true" />
-          <span className={`w52-banner w52-${w52Pop.dir}`} aria-hidden="true">
-            {w52Pop.dir === 'high' ? '🏆 52주 신고가' : '❄️ 52주 신저가'}
+      {visibleW52Pop && (
+        <React.Fragment key={`w52-${visibleW52Pop.n}`}>
+          <span className={`w52-ring w52-ring-${visibleW52Pop.dir}`} aria-hidden="true" />
+          <span className={`w52-banner w52-${visibleW52Pop.dir}`} aria-hidden="true">
+            {visibleW52Pop.dir === 'high' ? '🏆 52주 신고가' : '❄️ 52주 신저가'}
           </span>
         </React.Fragment>
       )}
 
       {/* Target price reached (opt-in) */}
-      {targetPop && (
-        <React.Fragment key={`target-${targetPop.n}`}>
+      {visibleTargetPop && (
+        <React.Fragment key={`target-${visibleTargetPop.n}`}>
           <span className="w52-ring target-ring" aria-hidden="true" />
           <span className="w52-banner target-banner" aria-hidden="true">
-            🎯 목표가 ${typeof targetPop.price === 'number' ? targetPop.price.toFixed(2) : ''}
+            🎯 목표가 ${typeof visibleTargetPop.price === 'number' ? visibleTargetPop.price.toFixed(2) : ''}
           </span>
         </React.Fragment>
       )}
@@ -421,10 +437,10 @@ const TickerCard = ({
               </span>
             </div>
           )}
-          <span className={`neon-price ${priceFlash} ${bigPrice ? 'price-lg' : ''}`}>
+          <span className={`neon-price ${visiblePriceFlash} ${bigPrice ? 'price-lg' : ''}`}>
             ${fmtPrice(price)}
           </span>
-          <span className={`neon-change ${colorClass} ${crossFx ? 'sign-flip' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
+          <span className={`neon-change ${colorClass} ${visibleCrossFx ? 'sign-flip' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
             {Icon && <Icon size={14} className="change-icon" style={{ flexShrink: 0 }} />}
             <span style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
               {typeof changeAbs === 'number' && (

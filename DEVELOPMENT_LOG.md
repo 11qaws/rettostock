@@ -1,5 +1,9 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.27 Reliable four-card preview and Full preview duration
+- **All cards reliably render:** preview overlays are now derived directly from the preview token instead of depending on short-lived state updates. This fixes the deployed Pages build where only the first card's visual survived; surge/card glow, zero-cross, target reached, and 52-week record now stay on their respectively assigned cards for the full preview window.
+- **Full remains unmistakable:** the Full-only first card now keeps a subtle pulse and shake for all three seconds, with three particle waves spread across that same window. Card effects retain the card glow but none of those Full-only moving cues.
+
 ## 2026-07-13: v1.0.26 Distributed effect preview
 - **Card-specific preview:** selecting an effect level now distributes the preview across cards instead of stacking every effect on the first card: surge/card glow (plus Full-only pulse, shake, and particles), zero-cross, target reached, and 52-week record. The sequence repeats for additional cards; Rotate uses the currently shown card's sequence position.
 
