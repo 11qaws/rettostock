@@ -20,6 +20,8 @@ const clampNum = (value, min, max, fallback) => {
   return Math.min(max, Math.max(min, n));
 };
 
+const PREVIEW_VARIANTS = ['surge', 'cross', 'target', 'record'];
+
 const Widget = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -183,9 +185,10 @@ const Widget = () => {
     );
   }
 
-  const renderCard = (symbol) => {
+  const renderCard = (symbol, previewIndex = 0) => {
     const ticker = data[symbol];
     const loopPrevPrice = snapshotPrices.current[symbol];
+    const previewVariant = PREVIEW_VARIANTS[previewIndex % PREVIEW_VARIANTS.length];
     return (
       <TickerCard
         key={symbol}
@@ -204,7 +207,8 @@ const Widget = () => {
         closes={ticker?.closes}
         stale={ticker?.stale}
         fx={fxParam}
-        previewFxToken={symbol === (modeParam === 'rotate' ? symbols[currentIndex % symbols.length] : symbols[0]) ? previewFxToken : ''}
+        previewFxToken={previewFxToken}
+        previewFxVariant={previewVariant}
         loopPrevPrice={loopPrevPrice}
         initial={modeParam === 'rotate' ? { opacity: 0, y: 20 } : undefined}
         animate={{ opacity: 1, y: 0 }}
@@ -265,10 +269,10 @@ const Widget = () => {
       <div style={{ position: 'relative', width: '100%' }}>
         {modeParam === 'rotate' ? (
           <AnimatePresence mode="popLayout">
-            {renderCard(symbols[currentIndex % symbols.length])}
+            {renderCard(symbols[currentIndex % symbols.length], currentIndex)}
           </AnimatePresence>
         ) : (
-          symbols.map(symbol => renderCard(symbol))
+          symbols.map((symbol, index) => renderCard(symbol, index))
         )}
       </div>
     </div>

@@ -1,5 +1,8 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.26 Distributed effect preview
+- **Card-specific preview:** selecting an effect level now distributes the preview across cards instead of stacking every effect on the first card: surge/card glow (plus Full-only pulse, shake, and particles), zero-cross, target reached, and 52-week record. The sequence repeats for additional cards; Rotate uses the currently shown card's sequence position.
+
 ## 2026-07-13: v1.0.25 Effect preview no longer waits for live events
 - **Preview reliability:** selecting 전체 or 약한 연출 now starts its visual preview immediately. It no longer waits for a live price, surge, crossing, or target event, so the card glow/overlays and (at 전체) particles, pulse, and shake always appear for the three-second preview.
 

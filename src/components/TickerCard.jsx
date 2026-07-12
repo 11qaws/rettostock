@@ -45,7 +45,7 @@ const makeParticleBurst = (changePercent) => {
 const TickerCard = ({
   symbol, price, changePercent, previousClose, name, marketState, upcomingState, countdown, closes, stale,
   week52High, week52Low, targetPrice,
-  fx = 'full', showSparkline = true, loopPrevPrice, previewFxToken = '',
+  fx = 'full', showSparkline = true, loopPrevPrice, previewFxToken = '', previewFxVariant = 'surge',
   ...motionProps
 }) => {
   const [animClass, setAnimClass] = useState('');
@@ -128,20 +128,23 @@ const TickerCard = ({
     previewTokenRef.current = previewFxToken;
 
     clearTimeout(previewTimerRef.current);
-    setPriceFlash('price-flash-up');
-    setAnimClass(fx === 'full' ? 'anim-pump' : '');
+    const isSurgePreview = previewFxVariant === 'surge';
+    setPriceFlash(isSurgePreview ? 'price-flash-up' : '');
+    setAnimClass(fx === 'full' && isSurgePreview ? 'anim-pump' : '');
     setPreviewActive(fx !== 'off');
 
     if (fx !== 'off') {
       clearTimeout(crossTimerRef.current);
       clearTimeout(w52TimerRef.current);
       clearTimeout(targetTimerRef.current);
-      setCrossFx(p => ({ dir: 'up', n: (p?.n || 0) + 1 }));
-      setW52Pop(p => ({ dir: 'high', n: (p?.n || 0) + 1 }));
-      if (typeof targetPrice === 'number' || typeof price === 'number') {
+      if (previewFxVariant === 'cross') {
+        setCrossFx(p => ({ dir: 'up', n: (p?.n || 0) + 1 }));
+      } else if (previewFxVariant === 'record') {
+        setW52Pop(p => ({ dir: 'high', n: (p?.n || 0) + 1 }));
+      } else if (previewFxVariant === 'target') {
         setTargetPop(p => ({ n: (p?.n || 0) + 1, price: targetPrice ?? price }));
       }
-      if (fx === 'full') setParticles(makeParticleBurst(1));
+      if (fx === 'full' && isSurgePreview) setParticles(makeParticleBurst(1));
     }
 
     previewTimerRef.current = setTimeout(() => {
@@ -153,7 +156,7 @@ const TickerCard = ({
       setW52Pop(null);
       setTargetPop(null);
     }, PREVIEW_MS);
-  }, [previewFxToken, fx, price, targetPrice]);
+  }, [previewFxToken, previewFxVariant, fx, price, targetPrice]);
 
   // Transition animation state
   const prevMarketRef = useRef(marketState);
@@ -313,7 +316,7 @@ const TickerCard = ({
   const tier = surgeTier(changePercent);
   const surged = tier >= 1;
   const dir = isUp ? 'up' : 'down';
-  const previewSurge = previewActive && fx !== 'off';
+  const previewSurge = previewActive && fx !== 'off' && previewFxVariant === 'surge';
   const visualTier = previewSurge ? Math.max(tier, 2) : tier;
   const visualDir = previewSurge ? 'up' : dir;
   const cardFxEnabled = fx === 'full' || fx === 'card';
