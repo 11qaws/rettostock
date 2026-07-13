@@ -6,6 +6,8 @@ import { useState, useEffect, useRef } from 'react';
 const FINNHUB_API_KEYS = [
   'd97qbr1r01qng2np5cigd97qbr1r01qng2np5cj0',
   'd99v221r01qh9urlud9gd99v221r01qh9urluda0',
+  'd9aeap1r01qp54ej12u0d9aeap1r01qp54ej12ug',
+  'd9aeb9hr01qp54ej14n0d9aeb9hr01qp54ej14ng',
 ];
 let activeFinnhubKeyIndex = 0;
 // Empty until the optional Cloudflare Pages Function is deployed. When set at
