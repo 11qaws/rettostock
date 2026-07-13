@@ -99,7 +99,7 @@ export function saveRoom(room) {
 // Single debounce for the ntfy network publish: coalesces bursts of config
 // changes into one POST so the free relay isn't rate-limited. The same-browser
 // channels below are NOT debounced (local, instant, no rate limit).
-const RELAY_DEBOUNCE_MS = 800;
+const RELAY_DEBOUNCE_MS = 3000;
 let ntfyTimer = null;
 
 export function publishSync(payload, room, privateKey) {
