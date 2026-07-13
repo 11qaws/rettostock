@@ -26,8 +26,11 @@
 * **카드 비율 (상자형 / 카드형)**: 
   * `상자형`: 아담하고 둥글둥글한 박스 모양입니다.
   * `카드형`: 가로가 조금 더 긴 세련된 와이드 형태입니다. (두 형태 모두 세로 높이는 완벽하게 동일합니다.)
-* **데모 모드**: 주식 시장이 닫혀있는 주말이나 야간에도 가짜 시세를 발생시켜, 방송 전에 디자인과 애니메이션이 어떻게 작동하는지 미리 테스트해 볼 수 있습니다.
-
+* **고급 설정**: 
+  * `디테일 (Detail)`: 기본값은 **단순하게**. '풍부하게'로 변경 시 카드 내부에 미세한 빛 반사나 장식 효과가 추가됩니다.
+  * `투명도 (Opacity)`: 기본값은 **100%**. 위젯 전체의 불투명도를 조절합니다. 단, 테마 디자인 자체에 이미 반투명한 유리 질감이 적용되어 있으므로 100%로 두어도 기본적으로 뒷 배경이 은은하게 비칩니다.
+  * `재생 속도 (Speed)`: 기본값은 **1.0배**. 로테이트나 마퀴 모드에서 카드가 움직이는 애니메이션 속도를 조절합니다.
+  * `재생 간격 (Interval)`: 기본값은 **10초**. 로테이트 모드에서 하나의 카드가 화면에 머무는 시간을 초 단위로 설정합니다.
 ---
 
 <h2 id="english">🇺🇸 English Manual</h2>
@@ -53,7 +56,10 @@ A real-time US Stock/ETF ticker widget and configurator built for OBS Studio str
 * **Card Ratio (Box / Card)**:
   * `Box`: A compact, rounded square shape.
   * `Card`: A slightly wider, modern card shape. (Both shapes maintain the exact same vertical height).
-* **Demo Mode**: Allows you to test themes and animations with fake ticking prices when the real stock market is closed.
-
+* **Advanced Settings**:
+  * `Theme Detail`: Default is **Basic**. Setting to 'Rich' adds subtle light reflections and extra aesthetic depth inside the cards.
+  * `Opacity`: Default is **100%**. Adjusts the overall widget opacity. Note that all themes already feature built-in glassmorphism (semi-transparent backgrounds), so the widget is naturally translucent even at 100%.
+  * `Animation Speed`: Default is **1.0x**. Controls the transition/scrolling speed for Rotate and Marquee modes.
+  * `Rotate Interval`: Default is **10s**. Sets how long each card stays on screen in Rotate mode before moving to the next.
 ---
 *(For developers, data architecture and troubleshooting notes are kept in [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md))*
