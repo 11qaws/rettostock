@@ -7,10 +7,17 @@ This is a Cloudflare Pages Function that sits between the public OBS widget and 
 | Route | Fresh response | Fallback on an upstream failure |
 | --- | ---: | ---: |
 | `/v1/quotes` | 5 seconds | up to 60 seconds old |
+| `/v1/charts` | 2 minutes | up to 15 minutes old |
 | `/v1/metrics` | 6 hours | up to 24 hours old |
 | `/v1/market-status` | 60 seconds | up to 15 minutes old |
 
 Only Finnhub HTTP 429 responses and 5-second upstream timeouts move to the standby key. A 401 or 403 is returned as an ordinary failure so a misconfigured key is not hidden.
+
+## Trend-chart path
+
+`/v1/charts` returns five-minute Finnhub candles for the mini trend chart. It is presentation data only: it never changes the displayed price or the direct WebSocket path. The Function refreshes an individual symbol from Finnhub at most once per two minutes in a Cloudflare location, then can use its last chart for up to 15 minutes only if the candle upstream is temporarily unavailable.
+
+This avoids making an on-screen chart depend on Yahoo Finance and public CORS proxies, which can rate-limit a browser request independently of the quote feed. A chart outage is intentionally isolated from the live quote loop.
 
 ## What this means for on-screen delay
 
@@ -67,7 +74,20 @@ You do **not** need to find a special Cloudflare menu before starting. The dashb
 
 The app deliberately keeps its current direct REST route while the variable is empty, so deploying this branch alone cannot interrupt an existing OBS source. Once the variable is set, quote, metric, and market-status REST traffic uses this service and does not fall back to direct REST on failure; that prevents an outage from causing a browser-side request stampede.
 
+## Updating this Function
+
+GitHub Pages deploys the widget automatically after a repository push, but Pages Functions are a separate Cloudflare deployment. After pulling a change under `market-api/functions/`, open PowerShell and run:
+
+```powershell
+cd C:\Users\Qumin\rettostock\market-api
+npx wrangler pages deploy public --project-name rettostock-market
+```
+
+The existing encrypted secrets remain in Cloudflare; do not enter them again for this update. The new `/v1/charts` route needs this one deployment before the widget can use the reliable Finnhub chart path.
+
 ## Free-plan boundary
+
+The chart route adds one Function request per minute from a continuously running overlay (about 1,440/day), plus its cached Finnhub-candle refreshes. It is deliberately slower than the live quote path and remains a small additional cost beside the existing quote loop.
 
 Cloudflare Pages Functions use the Workers Free dynamic-request allowance (100,000 requests/day, account-wide). A constantly running overlay calls the quote route about 17,280 times/day, so this design is appropriate for a small beta (roughly five always-on overlays before allowing headroom), not an unrestricted public relay. Cache API is location-local, so users in separate Cloudflare locations do not share a single global cache entry.
 

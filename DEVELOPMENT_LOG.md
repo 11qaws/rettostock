@@ -1,5 +1,9 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.34 Reliable charts and viewport-safe five-card preview
+- **SPCX and newly listed symbols:** the optional Cloudflare market API now serves five-minute Finnhub candles through `/v1/charts`, cached for two minutes (up to 15 minutes only when its chart upstream is unavailable). This removes the chart's dependency on Yahoo/public CORS proxy availability; the displayed price and its WebSocket path are unchanged. Yahoo remains a non-critical fallback until the Function is redeployed.
+- **Five-card review in the configurator:** the sticky preview retains its viewport height and gains its own scrollbar whenever needed. Its fifth card no longer escapes below a 1080p browser window or requires scrolling the settings page to inspect it.
+
 ## 2026-07-13: v1.0.33 Recovery status uses the existing badge row
 - **No size change:** restored `업데이트 중` appears immediately to the left of the existing market-status badge, using the same fixed badge height. The marquee's recovery glyph is also restored.
 - **Stable OBS URL:** removed the automatic version query from copied OBS URLs; source URLs remain clean and unchanged.

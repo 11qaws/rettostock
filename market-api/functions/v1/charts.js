@@ -1,0 +1,50 @@
+import { cached, finnhub, json, options, originIsAllowed, symbolsFrom } from '../_lib/market.js';
+
+// Charts are presentation data, not the live price path. Two-minute freshness
+// keeps the trend current while leaving room under Finnhub's free request cap
+// for the 5-second quote correction loop.
+const CHART_FRESH_MS = 2 * 60 * 1000;
+const CHART_STALE_MS = 15 * 60 * 1000;
+const CHART_LOOKBACK_SECONDS = 30 * 60 * 60;
+const MIN_POINTS = 2;
+
+export const onRequestOptions = ({ request, env }) => options(request, env);
+
+export const onRequestGet = async ({ request, env }) => {
+  if (!originIsAllowed(request, env)) return json(request, env, { error: 'origin_not_allowed' }, 403);
+  const symbols = symbolsFrom(request);
+  if (!symbols) return json(request, env, { error: 'invalid_symbols' }, 400);
+
+  const now = Math.floor(Date.now() / 1000);
+  const from = now - CHART_LOOKBACK_SECONDS;
+  const settled = await Promise.allSettled(symbols.map(async (symbol) => ({
+    symbol,
+    ...(await cached({
+      request,
+      namespace: 'chart',
+      key: symbol,
+      freshMs: CHART_FRESH_MS,
+      staleMs: CHART_STALE_MS,
+      load: async () => {
+        const candle = await finnhub(
+          `/api/v1/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=5&from=${from}&to=${now}`,
+          env,
+        );
+        const closes = Array.isArray(candle?.c)
+          ? candle.c.filter((value) => typeof value === 'number' && Number.isFinite(value) && value > 0)
+          : [];
+        if (candle?.s !== 'ok' || closes.length < MIN_POINTS) throw new Error('insufficient Finnhub candle data');
+        return { closes };
+      },
+    })),
+  })));
+
+  const charts = {};
+  const failed = [];
+  settled.forEach((result, index) => {
+    if (result.status === 'fulfilled') charts[result.value.symbol] = result.value;
+    else failed.push(symbols[index]);
+  });
+  if (!Object.keys(charts).length) return json(request, env, { error: 'chart_unavailable', failed }, 502);
+  return json(request, env, { charts, failed });
+};

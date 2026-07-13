@@ -919,7 +919,37 @@ export const useStockData = (symbols, demoQuery = false) => {
 
       // 2c. Yahoo enrichment via public proxies (slow, non-critical):
       //     company name, market state badge, sparkline closes.
+      //     When the optional market API is present, charts use its Finnhub
+      //     candle route first. Yahoo currently rate-limits browser/proxy
+      //     traffic unpredictably (including new tickers such as SPCX), so a
+      //     failed Yahoo request must never mean an empty trend line.
+      const fetchMarketCharts = async () => {
+        if (!MARKET_API_BASE) return;
+        const payload = await fetchMarketApi(`/v1/charts?symbols=${encodeURIComponent(stockSymbols.join(','))}`);
+        if (stopped) return;
+        const charts = payload?.charts || {};
+        const updates = {};
+        for (const symbol of stockSymbols) {
+          const closes = charts[symbol]?.data?.closes;
+          if (!Array.isArray(closes) || closes.length < 2) continue;
+          updates[symbol] = downsample(closes, MAX_SPARK_POINTS);
+          writeSparkCache(symbol, { closes: updates[symbol], name: symbol, t: Date.now() });
+        }
+        if (Object.keys(updates).length === 0) return;
+        setData(prev => {
+          const next = { ...prev };
+          for (const [symbol, closes] of Object.entries(updates)) {
+            next[symbol] = { ...(next[symbol] || {}), closes };
+          }
+          return next;
+        });
+      };
+
       const fetchEnrichment = async () => {
+        // The chart route is deliberately best-effort. An older deployed
+        // market API simply falls through to the existing Yahoo path until it
+        // is redeployed; a chart failure never affects the live quote loop.
+        try { await fetchMarketCharts(); } catch { /* Yahoo remains the fallback */ }
         // All symbols in parallel: chart latency = one proxy round-trip,
         // not one round-trip per symbol stacked end to end
         await Promise.allSettled(stockSymbols.map(async (symbol) => {

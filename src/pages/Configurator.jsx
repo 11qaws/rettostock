@@ -909,9 +909,9 @@ const Configurator = () => {
         {/* Right Side: Preview */}
         <div
           className="config-preview-wrapper"
-          // List/rotate preview owns its own scroll (see the preview box below),
-          // so the panel grows freely up to 5 cards; scene mode keeps the CSS cap.
-          style={!sceneMode ? { maxHeight: 'none', overflowY: 'visible' } : undefined}
+          // Keep list previews inside the viewport. Five full-size cards are
+          // useful to inspect, but must scroll in this sticky panel rather
+          // than extending below a 1080p screen with the page itself.
         >
           <label className="preview-label">🖥️ 미리보기</label>
 
