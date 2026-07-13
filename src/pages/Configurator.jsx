@@ -363,16 +363,21 @@ const Configurator = () => {
     };
   }, [sceneMode, config.displayMode, symbolList.length]);
 
-  // The compact five-card preview is a normal list size, not an overflow case. Fit only the
-  // configurator preview to the actual visible browser viewport; measuring
-  // the preview wrapper itself created a circular layout measurement, which
-  // made cards unnecessarily tiny. The copied OBS size stays exact.
+  // The compact five-card preview is a normal list size, not an overflow case.
+  // Fit it only in the desktop sticky layout. In the narrow stacked layout,
+  // measuring against the scroll position makes the preview grow while the
+  // user scrolls down to it, pushing its own bottom away like a treadmill.
+  // The copied OBS size stays exact in either layout.
   useEffect(() => {
     if (sceneMode || config.displayMode !== 'list') {
       setPreviewAvailableHeight(0);
       return undefined;
     }
     const measure = () => {
+      if (window.matchMedia('(max-width: 800px)').matches) {
+        setPreviewAvailableHeight(prev => prev === 0 ? prev : 0);
+        return;
+      }
       const wrapper = previewWrapperRef.current;
       const box = previewBoxRef.current;
       if (!wrapper || !box) return;
@@ -389,14 +394,11 @@ const Configurator = () => {
     const frame = requestAnimationFrame(measure);
     const observer = new ResizeObserver(measure);
     if (previewWrapperRef.current) observer.observe(previewWrapperRef.current);
-    const settingsScroller = document.querySelector('.config-bg');
     window.addEventListener('resize', measure);
-    settingsScroller?.addEventListener('scroll', measure, { passive: true });
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
       window.removeEventListener('resize', measure);
-      settingsScroller?.removeEventListener('scroll', measure);
     };
   }, [sceneMode, config.displayMode, symbolList.length, previewContentWidth, previewBg, sceneImage, matchResult]);
 

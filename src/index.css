@@ -974,10 +974,8 @@ html, body, #root {
   flex-direction: column;
   align-items: center;
   transition: width 0.25s ease;
-  /* Follow the scroll: stays in view while the sidebar (settings) scrolls,
-     so preview changes are visible even from the advanced panel far down.
-     align-self:flex-start un-stretches the flex child so sticky has travel
-     room; the scene-placement mode alone may use vertical overflow. */
+  /* Follow the scroll on desktop so preview changes stay visible while the
+     sidebar moves. The preview itself never owns a vertical scroll area. */
   position: sticky;
   top: 20px;
   align-self: flex-start;

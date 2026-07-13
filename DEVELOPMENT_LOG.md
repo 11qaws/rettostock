@@ -1,5 +1,9 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.43 Narrow-screen preview scroll stability
+- **Before → after:** on a phone or narrow responsive viewport, the five-card preview recalculated its scale from its changing on-screen position for every scroll event. As the user approached the preview, it grew and pushed its own bottom farther down, creating a shaking/treadmill scroll. Narrow layouts now keep the preview at a fixed scale and let the one settings-page scroller reach it normally.
+- **Desktop unchanged:** the 1080p desktop sticky preview still fits up to five cards in the available viewport. OBS dimensions and the copied OBS URL are unchanged in both layouts.
+
 ## 2026-07-13: v1.0.42 Single scene-placement view
 - **Before → after:** the scene preview offered both screen-fit and 100% actual-size modes. The latter needed its own panning scrollbar but did not help the normal OBS setup flow. The actual-size control and its scrolling canvas are removed; scene placement now has one screen-fit view with drag and resize only.
 
