@@ -592,6 +592,8 @@ body.theme-detail-rich:not(.theme-cyber-neon):not(.theme-amore-cute):not(.theme-
   align-items: center;
   height: calc(100vh - 12px);
   overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, black max(20px, 3vw), black calc(100% - max(20px, 3vw)), transparent);
+  mask-image: linear-gradient(to right, transparent, black max(20px, 3vw), black calc(100% - max(20px, 3vw)), transparent);
 }
 
 .marquee-track {
