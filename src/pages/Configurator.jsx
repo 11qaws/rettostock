@@ -691,7 +691,7 @@ const Configurator = () => {
         <div className="app-header">
           <span className="app-title">
             🍸 💝
-            아모레또 위젯 리모컨
+            레또스톡 위젯 리모컨
           </span>
           <span className={`header-status ${justApplied ? 'active' : ''}`}>
             {justApplied ? '✓ 주소 갱신됨 · 다시 복사해 붙여넣기' : '● OBS에 붙여넣을 준비 완료'}

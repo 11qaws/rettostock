@@ -1,4 +1,4 @@
-# 📈 Rettostock (레토스탁) - OBS 주식 위젯
+# 📈 Rettostock (레또스톡) - OBS 주식 위젯
 [![English](https://img.shields.io/badge/Language-English-blue)](#english) [![Korean](https://img.shields.io/badge/Language-Korean-red)](#korean)
 
 ---
