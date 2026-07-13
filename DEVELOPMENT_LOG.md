@@ -1,5 +1,9 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.36 Server-cached chart source
+- **Working free-plan route:** the current Finnhub plan returns 403 for its candle endpoint, so v1.0.35's server candle source could not draw a line. Charts now use Yahoo only inside the Cloudflare Function: one server-side request per symbol at most every two minutes per Cloudflare location, never a browser request and never a public CORS proxy request.
+- **What is actually prevented:** the shared public-proxy `429 Too Many Requests` failure is removed. Yahoo itself can still be unavailable, but the Function serves the last chart for up to 15 minutes and then leaves only the trend line empty; it never affects the live price card.
+
 ## 2026-07-13: v1.0.35 Yahoo chart path removed
 - **Root-cause removal:** production widgets no longer call Yahoo Finance or public CORS proxies for charts. The Cloudflare Function serves both cached Finnhub five-minute candles and a separately cached Finnhub company profile, so a shared-proxy Yahoo 429 cannot occur or take away a mini chart.
 - **Honest failure mode:** if Finnhub has no two valid candle points yet (for example, immediately after a new listing) the line stays empty; the card price remains on its independent live path. The app never falls back to synthetic or unrelated historical values.

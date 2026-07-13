@@ -15,9 +15,9 @@ Only Finnhub HTTP 429 responses and 5-second upstream timeouts move to the stand
 
 ## Trend-chart path
 
-`/v1/charts` returns five-minute Finnhub candles and the cached Finnhub company name for the mini trend chart. It is presentation data only: it never changes the displayed price or the direct WebSocket path. The Function refreshes an individual symbol from Finnhub at most once per two minutes in a Cloudflare location, then can use its last chart for up to 15 minutes only if the candle upstream is temporarily unavailable. Company profiles are cached for seven days, so a chart refresh does not repeatedly request the same name.
+`/v1/charts` returns five-minute Yahoo chart data and its company name for the mini trend chart. It is presentation data only: it never changes the displayed price or the direct WebSocket path. The Function refreshes an individual symbol from Yahoo at most once per two minutes in a Cloudflare location, then can use its last chart for up to 15 minutes only if the chart upstream is temporarily unavailable.
 
-This removes Yahoo Finance and public CORS proxies from the production chart path, so shared-proxy 429 responses cannot occur. A chart outage is intentionally isolated from the live quote loop: if Finnhub has fewer than two valid candles, the line stays empty rather than inventing a trend.
+Browsers never call Yahoo Finance or public CORS proxies. This removes the shared-proxy 429 failure that caused the SPCX chart to disappear. Yahoo itself can still be temporarily unavailable; in that case a chart outage is isolated from the live quote loop, and the line stays empty after its 15-minute cached fallback expires rather than inventing a trend.
 
 ## What this means for on-screen delay
 

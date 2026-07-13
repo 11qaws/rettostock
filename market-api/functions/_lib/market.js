@@ -140,6 +140,24 @@ const fetchWithTimeout = async (url) => {
   }
 };
 
+// Yahoo is only used from this server-side, cached path. Browsers never call
+// it directly or through a public CORS proxy, which prevents shared-proxy
+// traffic from turning a chart refresh into a 429 storm.
+export const yahooChart = async (symbol) => {
+  const response = await fetchWithTimeout(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=5m&range=1d&includePrePost=true`,
+  );
+  if (!response.ok) throw new Error(`Yahoo chart returned ${response.status}`);
+  const result = await response.json();
+  const chart = result?.chart?.result?.[0];
+  const closes = Array.isArray(chart?.indicators?.quote?.[0]?.close)
+    ? chart.indicators.quote[0].close.filter((value) => typeof value === 'number' && Number.isFinite(value) && value > 0)
+    : [];
+  if (closes.length < 2) throw new Error('insufficient Yahoo chart data');
+  const name = typeof chart?.meta?.shortName === 'string' ? chart.meta.shortName.trim() : '';
+  return { closes, ...(name ? { name } : {}) };
+};
+
 // Finnhub's 429 and a network timeout can be recovered by trying the standby
 // key. Authentication/authorization failures deliberately do not rotate: a
 // second key cannot fix a malformed or revoked credential.
