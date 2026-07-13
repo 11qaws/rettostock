@@ -34,7 +34,7 @@ const pickEnrichInterval = (state) => {
 // Finnhub REST cadence (free = 60 req/min; one request per symbol per cycle):
 // interval scales with symbol count to stay ≤ 50/min, floored at 5s (the
 // websocket already gives sub-second ticks, so faster REST just wastes calls).
-const quoteIntervalMs = (n) => Math.max(5000, Math.ceil(n * 1.2) * 1000);
+const quoteIntervalMs = (n) => Math.max(5000, Math.ceil(n * (1.2 / FINNHUB_API_KEYS.length)) * 1000);
 const PREMARKET_INTERVAL = 5000; // PRE/POST scanner poll (extended hours)
 // Abort guard for one-off enrichment fetches (name/sparkline via dev proxy or a
 // public CORS proxy). Both paths ultimately hit the same slow upstreams, so a
