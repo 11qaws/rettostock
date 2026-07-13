@@ -39,7 +39,7 @@ const PREMARKET_INTERVAL = 5000; // PRE/POST scanner poll (extended hours)
 // Abort guard for one-off enrichment fetches (name/sparkline via dev proxy or a
 // public CORS proxy). Both paths ultimately hit the same slow upstreams, so a
 // single generous timeout applies — the previous 4s/5s split had no real basis.
-const FETCH_TIMEOUT_MS = 5000;
+const FETCH_TIMEOUT_MS = 10000;
 // Self-reconnect delay for the Finnhub trade websocket after any drop or a
 // failed construction. One value: the old 8s/10s split was arbitrary.
 const WS_RECONNECT_MS = 8000;
