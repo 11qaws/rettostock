@@ -167,6 +167,7 @@ const Configurator = () => {
   const [config, setConfig] = useState(loadConfig);
   const [room] = useState(() => getOrCreateRoom());
   const [signingKeys, setSigningKeys] = useState(null);
+  const previewThemeAccent = (THEMES.find(t => t.value === config.theme) || {}).up || '#ffb6c1';
 
   // Key pair exists only in this browser; created lazily
   useEffect(() => {
@@ -194,6 +195,10 @@ const Configurator = () => {
   const sceneBoxRef = useRef(null);
   const sceneScrollRef = useRef(null);
   const previewFrameRef = useRef(null);
+  const previewWrapperRef = useRef(null);
+  const previewBoxRef = useRef(null);
+  const [previewAvailableHeight, setPreviewAvailableHeight] = useState(0);
+  const [previewContentWidth, setPreviewContentWidth] = useState(332);
 
   const [showWipeToast, setShowWipeToast] = useState(false);
 
@@ -337,6 +342,9 @@ const Configurator = () => {
 
   // Widget caps symbols at 10 (Finnhub free-tier rate limit); mirror that here.
   const MAX_SYMBOLS = 10;
+  // The configurator is a quick visual check, not a second OBS canvas. Keep
+  // it compact even when the real widget carries more registered symbols.
+  const MAX_PREVIEW_SYMBOLS = 5;
   const symbolList = useMemo(
     () => config.symbolsInput.split(',').map(s => s.trim()).filter(s => s).slice(0, MAX_SYMBOLS),
     [config.symbolsInput]
@@ -345,6 +353,62 @@ const Configurator = () => {
     () => config.symbolsInput.split(',').map(s => s.trim()).filter(s => s).length > MAX_SYMBOLS,
     [config.symbolsInput]
   );
+
+  // The frame measures its usable inner width, not its nominal CSS width.
+  // This leaves room for a classic (non-overlay) vertical scrollbar and keeps
+  // the embedded card from ever creating a horizontal scrollbar.
+  useEffect(() => {
+    const measure = () => {
+      const wrapper = previewWrapperRef.current;
+      const box = previewBoxRef.current;
+      const width = box?.clientWidth || Math.max(0, (wrapper?.clientWidth || 340) - 8);
+      setPreviewContentWidth(prev => prev === width ? prev : width);
+    };
+    const frame = requestAnimationFrame(measure);
+    const observer = new ResizeObserver(measure);
+    if (previewWrapperRef.current) observer.observe(previewWrapperRef.current);
+    if (previewBoxRef.current) observer.observe(previewBoxRef.current);
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [sceneMode, config.displayMode, symbolList.length]);
+
+  // The compact five-card preview is a normal list size, not an overflow case. Fit only the
+  // configurator preview to the actual visible browser viewport; measuring
+  // the preview wrapper itself created a circular layout measurement, which
+  // made cards unnecessarily tiny. The copied OBS size stays exact.
+  useEffect(() => {
+    if (sceneMode || config.displayMode !== 'list') {
+      setPreviewAvailableHeight(0);
+      return undefined;
+    }
+    const measure = () => {
+      const wrapper = previewWrapperRef.current;
+      const box = previewBoxRef.current;
+      if (!wrapper || !box) return;
+      // Caption + its margin stay below the frame without creating a second
+      // scrollbar on a typical 1080p browser viewport. getBoundingClientRect
+      // is deliberate: the sticky preview can move as the settings panel
+      // scrolls, while offsetTop cannot describe its visible position.
+      const available = Math.max(0, window.innerHeight - box.getBoundingClientRect().top - 42);
+      setPreviewAvailableHeight(prev => prev === available ? prev : available);
+    };
+    const frame = requestAnimationFrame(measure);
+    const observer = new ResizeObserver(measure);
+    if (previewWrapperRef.current) observer.observe(previewWrapperRef.current);
+    const settingsScroller = document.querySelector('.config-bg');
+    window.addEventListener('resize', measure);
+    settingsScroller?.addEventListener('scroll', measure, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+      settingsScroller?.removeEventListener('scroll', measure);
+    };
+  }, [sceneMode, config.displayMode, symbolList.length, previewContentWidth, previewBg, sceneImage, matchResult]);
 
   // Only the free-text symbols field is debounced (for URL/preview): typing
   // "AAPL" one letter at a time must not make the preview widget subscribe to
@@ -359,6 +423,11 @@ const Configurator = () => {
     () => dbSymbolsInput.split(',').map(s => s.trim()).filter(s => s).slice(0, MAX_SYMBOLS),
     [dbSymbolsInput]
   );
+  const previewSymbolList = useMemo(
+    () => urlSymbolList.slice(0, MAX_PREVIEW_SYMBOLS),
+    [urlSymbolList]
+  );
+  const previewSymbolCount = Math.min(symbolList.length, MAX_PREVIEW_SYMBOLS);
 
   const widgetUrl = useMemo(() => {
     // GitHub Pages caches index.html for up to ten minutes. Put the build
@@ -405,12 +474,15 @@ const Configurator = () => {
     const [route, query = ''] = hash.split('?');
     const source = new URLSearchParams(query);
     const params = new URLSearchParams();
-    for (const key of ['symbols', 'demo', 'demo_transition', 'demo_cross', 'demo_target', 'demo_surge']) {
+    // A configurator preview stays intentionally compact. The copied OBS URL
+    // above still contains every registered symbol (up to MAX_SYMBOLS).
+    params.set('symbols', previewSymbolList.join(','));
+    for (const key of ['demo', 'demo_transition', 'demo_cross', 'demo_target', 'demo_surge']) {
       if (source.has(key)) params.set(key, source.get(key));
     }
     const dataSourceQuery = params.toString();
     return `${baseUrl}#${route}${dataSourceQuery ? `?${dataSourceQuery}` : ''}`;
-  }, [widgetUrl]);
+  }, [widgetUrl, previewSymbolList]);
 
   const previewControl = useMemo(() => {
     const targets = {};
@@ -908,10 +980,9 @@ const Configurator = () => {
 
         {/* Right Side: Preview */}
         <div
+          ref={previewWrapperRef}
           className="config-preview-wrapper"
-          // Keep list previews inside the viewport. Five full-size cards are
-          // useful to inspect, but must scroll in this sticky panel rather
-          // than extending below a 1080p screen with the page itself.
+          style={{ '--sb-color': previewThemeAccent }}
         >
           <label className="preview-label">🖥️ 미리보기</label>
 
@@ -978,13 +1049,18 @@ const Configurator = () => {
           </div>
 
           {sceneMode ? (() => {
-            const rec = recommendedDims(config.displayMode, symbolList.length);
+            const rec = recommendedDims(config.displayMode, previewSymbolCount);
             const actualDims = customDims || rec;
             const isFull = sceneZoom === 'full';
             const k = isFull ? 1 : (sceneBoxW ? sceneBoxW / sceneDims.w : 0);
             const frac = { w: actualDims.w / sceneDims.w, h: actualDims.h / sceneDims.h };
             return (
               <>
+                {symbolList.length > MAX_PREVIEW_SYMBOLS && (
+                  <p style={{ fontSize: '13px', color: '#8d6e63', margin: '0 0 8px', textAlign: 'center' }}>
+                    미리보기에는 처음 {MAX_PREVIEW_SYMBOLS}개 카드만 표시해요
+                  </p>
+                )}
                 <div className="segmented small" style={{ width: '100%', marginBottom: '8px' }}>
                   <button className={`segment ${!isFull ? 'selected' : ''}`} onClick={() => setSceneZoom('fit')}>
                     화면 맞춤
@@ -1067,34 +1143,32 @@ const Configurator = () => {
           })() : (() => {
             // Render the widget at the exact recommended OBS size,
             // then scale it down to fit the preview panel
-            const PREVIEW_W = 332; // wrapper 340 - 4px border each side
-            const rec = recommendedDims(config.displayMode, symbolList.length);
+            const PREVIEW_W = previewContentWidth;
+            const rec = recommendedDims(config.displayMode, previewSymbolCount);
             const frameW = config.displayMode === 'scroll' ? PREVIEW_W : rec.w;
             const frameH = rec.h;
-            // Card size must NOT shrink as symbols grow. The streamer only
-            // re-pastes the URL and sizes the OBS source to the (growing)
-            // recommended height, so the preview shows real card size — scale by
-            // width only. Up to 5 cards the panel simply grows; from 6 the
-            // preview box caps at 5 cards' height and scrolls inside (cards keep
-            // their real size either way).
-            const scale = Math.min(1, PREVIEW_W / frameW);
-            const MAX_VISIBLE_CARDS = 5;
-            const scrolls = config.displayMode === 'list' && symbolList.length > MAX_VISIBLE_CARDS;
-            const boxH = scrolls ? recommendedDims('list', MAX_VISIBLE_CARDS).h : frameH;
-            const themeAccent = (THEMES.find(t => t.value === config.theme) || {}).up || '#ffb6c1';
+            // The first five cards are fitted uniformly to the visible settings
+            // panel. This never changes the OBS source dimensions; it only
+            // prevents a normal five-card preview from becoming a scrollbar.
+            const fitHeightScale = config.displayMode === 'list' && previewAvailableHeight > 0
+              ? previewAvailableHeight / frameH
+              : 1;
+            const scale = Math.min(1, PREVIEW_W / frameW, fitHeightScale);
             return (
               <>
-                <div className="preview-frame-box" style={{
-                  width: `${PREVIEW_W}px`,
-                  maxWidth: '100%',
+                <div ref={previewBoxRef} className="preview-frame-box" style={{
+                  // The border accounts for 8px, so the outside of the frame
+                  // always fits within the preview column.
+                  width: 'calc(100% - 8px)',
+                  maxWidth: 'calc(100% - 8px)',
                   margin: '0 auto',
-                  height: `${Math.round(boxH * scale)}px`,
+                  height: `${Math.round(frameH * scale)}px`,
                   flexShrink: 0, // keep real height; cards never get squished
                   border: '4px solid #ffb6c1',
                   borderRadius: '16px',
                   overflowX: 'hidden',
-                  overflowY: scrolls ? 'auto' : 'hidden', // 6+ cards: scroll inside the box
-                  '--sb-color': themeAccent, // scrollbar tinted to the selected widget theme
+                  overflowY: 'hidden',
+                  '--sb-color': previewThemeAccent,
                   position: 'relative',
                   boxSizing: 'content-box',
                   boxShadow: '0 8px 16px rgba(255,182,193,0.3)',
@@ -1102,25 +1176,38 @@ const Configurator = () => {
                     ? { background: `url(${sceneImage}) center / cover` }
                     : (PREVIEW_BGS.find(b => b.value === previewBg) || PREVIEW_BGS[0]).style),
                 }}>
-                  <iframe
-                    key={previewWidgetUrl}
-                    ref={previewFrameRef}
-                    src={previewWidgetUrl}
-                    onLoad={(event) => postPreviewControl(event.currentTarget.contentWindow)}
-                    style={{
-                      width: `${frameW}px`,
-                      height: `${frameH}px`,
-                      border: 'none',
-                      transform: `scale(${scale})`,
-                      transformOrigin: 'top left',
-                      marginLeft: `${Math.max(0, Math.round((PREVIEW_W - frameW * scale) / 2))}px`,
-                      pointerEvents: 'none', // let wheel scroll the sticky preview panel, not the widget
-                    }}
-                    title="Widget Preview"
-                  />
+                  <div style={{
+                    // A transformed iframe keeps its unscaled layout width.
+                    // This viewport reports the scaled dimensions instead, so
+                    // the card frame cannot acquire even a 1px horizontal
+                    // overflow while preserving the widget's real viewport.
+                    width: `${Math.round(frameW * scale)}px`,
+                    height: `${Math.round(frameH * scale)}px`,
+                    marginLeft: `${Math.max(0, Math.round((PREVIEW_W - frameW * scale) / 2))}px`,
+                    overflow: 'hidden',
+                    position: 'relative',
+                  }}>
+                    <iframe
+                      key={previewWidgetUrl}
+                      ref={previewFrameRef}
+                      src={previewWidgetUrl}
+                      onLoad={(event) => postPreviewControl(event.currentTarget.contentWindow)}
+                      style={{
+                        width: `${frameW}px`,
+                        height: `${frameH}px`,
+                        border: 'none',
+                        display: 'block',
+                        transform: `scale(${scale})`,
+                        transformOrigin: 'top left',
+                        pointerEvents: 'none', // let wheel scroll the sticky preview panel, not the widget
+                      }}
+                      title="Widget Preview"
+                    />
+                  </div>
                 </div>
                 <p style={{ fontSize: '13px', color: '#b5a39c', margin: '10px 0 0', textAlign: 'center' }}>
-                  권장 크기 {rec.w}×{rec.h} 기준 미리보기예요
+                  {symbolList.length > MAX_PREVIEW_SYMBOLS && <>미리보기는 처음 {MAX_PREVIEW_SYMBOLS}개 카드만 표시해요 · </>}
+                  OBS 권장 크기 {recommendedDims(config.displayMode, symbolList.length).w}×{recommendedDims(config.displayMode, symbolList.length).h} (등록 종목 전체 기준)
                 </p>
               </>
             );

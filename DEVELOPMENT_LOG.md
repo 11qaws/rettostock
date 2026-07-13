@@ -1,5 +1,14 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.39 Compact configurator preview
+- **Before → after:** adding a sixth symbol made the settings preview create a card-frame scrollbar. The configurator now renders only the first five registered symbols in every preview, so it remains a quick, fully visible visual check with no card scrolling.
+- **Scope is explicit:** the copied OBS URL, its source-size recommendation, and the real broadcast widget still contain all registered symbols (up to ten). When more than five are registered, the preview caption says that it is showing the first five.
+
+## 2026-07-13: v1.0.38 Five-card preview fit and themed overflow
+- **Before → after:** the configurator measured its own sticky preview height, so five cards recursively shrank to roughly 58% at a 1080p viewport. It now measures the real visible browser space; the same five cards use about 89% while the complete frame and recommendation caption remain visible without preview scrolling.
+- **Overflow behaviour:** six or more cards keep their normal card size and scroll inside the card frame. Both that frame and the rare outer preview overflow use the selected widget theme colour rather than an unrelated grey scrollbar. The OBS recommendation and widget source dimensions are unchanged.
+- **Horizontal safety:** the preview now measures the frame's real usable width after a vertical scrollbar is allocated. The widget, preview column, and card frame never expose a horizontal scrollbar; an actual-size scene-placement view remains the one intentional exception because it is explicitly for panning across a screenshot.
+
 ## 2026-07-13: v1.0.37 Browser-compatible edge chart request
 - **Verified Yahoo requirement:** the same SPCX chart request succeeds with a normal browser User-Agent but is rejected as an anonymous server request on some edges. The Cloudflare chart reader now forwards the actual browser/OBS identifier while preserving the two-minute cache, so it is both accepted and bounded.
 
