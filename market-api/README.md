@@ -46,11 +46,13 @@ You do **not** need to find a special Cloudflare menu before starting. The dashb
 
    If the project name is already taken, use the name suggested by Cloudflare and remember the final `.pages.dev` address it shows.
 
-3. Store the two Finnhub keys as encrypted Cloudflare secrets. Run each command below; PowerShell will show `Enter secret value:`. Paste only the requested key, press Enter, and repeat for the second command. The pasted value is not printed back to the screen.
+3. Store the four Finnhub keys as encrypted Cloudflare secrets. Run each command below; PowerShell will show `Enter secret value:`. Paste only the requested key, press Enter, and repeat for the next commands. The pasted value is not printed back to the screen.
 
    ```powershell
    npx wrangler pages secret put FINNHUB_API_KEY_1 --project-name rettostock-market
    npx wrangler pages secret put FINNHUB_API_KEY_2 --project-name rettostock-market
+   npx wrangler pages secret put FINNHUB_API_KEY_3 --project-name rettostock-market
+   npx wrangler pages secret put FINNHUB_API_KEY_4 --project-name rettostock-market
    ```
 
    Do not paste keys into a chat, a source file, or `wrangler.toml`. The default allowed browser origins include the deployed site plus local Vite addresses (`localhost` and `127.0.0.1` on ports 5173/4173). An `ALLOWED_ORIGINS` Pages variable *adds* a future website address; it never replaces these safe defaults.
