@@ -164,6 +164,19 @@
   font-weight: normal;
 }
 
+/* Optional static theme detail: no animation, filter or layout change. */
+body.theme-detail-rich.theme-amore-cute .glass-card {
+  background-image:
+    radial-gradient(82% 66% at 100% 0%, rgba(255, 178, 205, 0.24), transparent 61%),
+    radial-gradient(62% 58% at 0% 100%, rgba(202, 183, 245, 0.18), transparent 66%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.48), rgba(255, 214, 224, 0.16));
+  box-shadow:
+    var(--box-glow-pink),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    inset 0 -12px 26px rgba(255, 182, 193, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.44);
+}
+
 /* ===== Theme: Aurora Starry Night — gold, teal and midnight navy ===== */
 .theme-eureka {
   --bg-rgb: 13, 22, 46;            /* #0D162E deep midnight navy */
@@ -228,6 +241,21 @@
 
 .theme-eureka .text-up { text-shadow: 0 0 8px var(--color-up-glow); }
 .theme-eureka .text-down { text-shadow: 0 0 8px var(--color-down-glow); }
+
+/* Aurora is the density benchmark: preserve its original sparse 52px starfield
+   exactly and add only still, low-opacity colour veils behind it. */
+body.theme-detail-rich.theme-eureka .glass-card {
+  background-image:
+    radial-gradient(90% 76% at 3% 0%, rgba(52, 224, 168, 0.11), transparent 62%),
+    radial-gradient(78% 72% at 100% 100%, rgba(78, 169, 240, 0.10), transparent 64%),
+    radial-gradient(rgba(234, 243, 255, 0.5) 1px, transparent 1px);
+  background-size: auto, auto, 52px 52px;
+  background-position: center, center, 0 0;
+  box-shadow:
+    0 6px 26px rgba(0, 0, 0, 0.5),
+    inset 0 0 24px rgba(52, 224, 168, 0.06),
+    inset 0 1px 0 rgba(52, 224, 168, 0.28);
+}
 
 /* ===== Theme: LED Board — brokerage ticker board ===== */
 .theme-led-board {
@@ -316,6 +344,16 @@
   text-shadow: 0 0 6px currentColor;
 }
 
+/* LED already owns a dot matrix and scanlines. Detail adds only dim segments
+   at the top and bottom, preserving the compact marquee's readability. */
+body.theme-detail-rich.theme-led-board .glass-card {
+  box-shadow:
+    inset 0 0 26px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 179, 0, 0.20),
+    inset 0 -1px 0 rgba(69, 170, 255, 0.14),
+    0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
 /* ===== Theme: Pastel Light — for bright scenes ===== */
 .theme-pastel-light {
   --bg-rgb: 255, 255, 255;
@@ -366,6 +404,60 @@
 
 .theme-pastel-light .text-up { text-shadow: none; }
 .theme-pastel-light .text-down { text-shadow: none; }
+
+/* Frosted-paper depth for bright scenes. It stays near-white so price text
+   remains the strongest visual element on a light broadcast background. */
+body.theme-detail-rich.theme-pastel-light .glass-card {
+  background-image:
+    radial-gradient(78% 65% at 100% 0%, rgba(213, 192, 241, 0.20), transparent 62%),
+    radial-gradient(58% 62% at 0% 100%, rgba(187, 225, 229, 0.16), transparent 64%),
+    linear-gradient(170deg, rgba(255, 255, 255, 0.64), rgba(227, 213, 236, 0.14));
+  box-shadow:
+    0 6px 20px rgba(205, 178, 218, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 0 0 1px rgba(226, 215, 238, 0.46);
+}
+
+/* Dark Glass has no theme body class, so explicitly exclude named themes.
+   Its Detail treatment needs a restrained outer edge as well as the internal
+   reflection; otherwise the dark base absorbs the subtle surface layers. */
+body.theme-detail-rich:not(.theme-cyber-neon):not(.theme-amore-cute):not(.theme-eureka):not(.theme-led-board):not(.theme-pastel-light) .glass-card {
+  background-image:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 30%),
+    radial-gradient(72% 68% at 100% 100%, rgba(168, 85, 247, 0.14), transparent 68%);
+  border-color: rgba(192, 132, 252, 0.34);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.37),
+    0 0 20px rgba(168, 85, 247, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 0 1px rgba(192, 132, 252, 0.12),
+    inset 0 -18px 30px rgba(88, 28, 135, 0.08);
+}
+
+/* Neon needs surface structure rather than more bloom. The grid is faint;
+   the small corner bar appears only on List/Rotate and cannot change height. */
+body.theme-detail-rich.theme-cyber-neon .glass-card {
+  background-image:
+    radial-gradient(88% 72% at 100% 0%, rgba(255, 42, 133, 0.14), transparent 62%),
+    linear-gradient(rgba(255, 255, 255, 0.042) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.042) 1px, transparent 1px);
+  background-size: auto, 28px 28px, 28px 28px;
+  background-position: center, 0 0, 0 0;
+}
+body.theme-detail-rich.theme-cyber-neon .tick-card::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 30px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 42, 133, 0.88));
+  box-shadow: 0 4px 0 rgba(85, 224, 255, 0.38);
+  border-radius: 999px;
+  opacity: 0.72;
+  pointer-events: none;
+  z-index: 0;
+}
 
 /* ===== Up/down color overrides (work with every theme) ===== */
 body.colors-red-blue {

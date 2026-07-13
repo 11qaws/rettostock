@@ -26,7 +26,9 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow-x: hidden;
+  /* A hidden x-axis otherwise computes the y-axis as auto. Any tiny card
+     overrun would create a vertical scrollbar and steal layout width. */
+  overflow: hidden;
 
   /* Caps sit at ~1.5x the 300px design so a 450px source renders a
      crisp, proportionally larger widget instead of maxing out early.
@@ -54,6 +56,21 @@ html, body, #root {
 
 .tick-card {
   margin-bottom: var(--card-gap);
+}
+
+/* Card shape is a geometry choice for List/Rotate. "Box" retains the original
+   Amore-style padding; "Card" trims only the vertical footprint a little.
+   Marquee has its own fixed compact sizing and is intentionally unaffected. */
+.widget-root.shape-card:not(.mode-scroll) {
+  --card-pad: clamp(9px, 4.3vw, 26px);
+  --card-gap: clamp(8px, 3.5vw, 20px);
+}
+
+/* Box preserves the pre-existing Amore Pink geometry. Only Card uses Aurora
+   Starry Night as its height reference: Amore's 2px dashed frame otherwise
+   makes that option visibly taller. Horizontal readout space stays untouched. */
+body.theme-amore-cute .widget-root.shape-card:not(.mode-scroll) .glass-card {
+  padding-block: calc(var(--card-pad) - clamp(1.61px, calc(0.219vw + 0.954px), 3.75px));
 }
 
 .neon-title {
@@ -527,6 +544,27 @@ html, body, #root {
 .fx-card .is-surge-down {
   animation: none;
   box-shadow: 0 0 calc(var(--surge-max) * 0.55) var(--surge-glow), 0 2px 10px rgba(0, 0, 0, 0.28);
+}
+/* Theme Detail also provides a static card shadow. This selector deliberately
+   outranks those theme shadows, so the Card-level ±5/10/15% glow remains
+   visible with either Basic or Detail selected. */
+.widget-root.fx-card .tick-card.is-surge-up,
+.widget-root.fx-card .tick-card.is-surge-down {
+  box-shadow:
+    0 0 calc(var(--surge-max) * 0.55) var(--surge-glow),
+    inset 0 0 calc(var(--surge-max) * 0.45) var(--surge-glow),
+    0 2px 10px rgba(0, 0, 0, 0.28);
+}
+/* Dark Glass is the only unclassed theme. Its Detail selector excludes every
+   named theme with :not(), which makes that static shadow more specific than
+   the generic rule above. Match that scope here so Detail cannot hide the
+   price-direction glow at the Card effect level. */
+body.theme-detail-rich:not(.theme-cyber-neon):not(.theme-amore-cute):not(.theme-eureka):not(.theme-led-board):not(.theme-pastel-light) .widget-root.fx-card .tick-card.is-surge-up,
+body.theme-detail-rich:not(.theme-cyber-neon):not(.theme-amore-cute):not(.theme-eureka):not(.theme-led-board):not(.theme-pastel-light) .widget-root.fx-card .tick-card.is-surge-down {
+  box-shadow:
+    0 0 calc(var(--surge-max) * 0.55) var(--surge-glow),
+    inset 0 0 calc(var(--surge-max) * 0.45) var(--surge-glow),
+    0 2px 10px rgba(0, 0, 0, 0.28);
 }
 .fx-card .surge-aura {
   animation: none;

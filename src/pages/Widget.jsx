@@ -27,6 +27,11 @@ const Widget = () => {
   const navigate = useNavigate();
   const symbolsParam = searchParams.get('symbols');
   const urlThemeParam = searchParams.get('theme') || '';
+  // No detail parameter means an existing OBS URL retains its original,
+  // undecorated rendering. New URLs opt into the static rich treatment.
+  const urlThemeDetailParam = searchParams.get('detail') === 'rich' ? 'rich' : 'basic';
+  // No shape parameter preserves the legacy, roomier card geometry.
+  const urlCardShapeParam = searchParams.get('shape') === 'card' ? 'card' : 'box';
   const urlColorsParam = normalizeColors(searchParams.get('colors'));
   const urlModeParam = searchParams.get('mode') || 'list';
   const roomParam = searchParams.get('room') || '';
@@ -51,6 +56,8 @@ const Widget = () => {
       if (message?.type !== 'RETTOSTOCK_PREVIEW_CONFIG') return;
       const fx = ['full', 'card', 'off'].includes(message.fx) ? message.fx : 'full';
       const mode = ['list', 'rotate', 'scroll'].includes(message.mode) ? message.mode : 'list';
+      const detail = message.detail === 'rich' ? 'rich' : 'basic';
+      const shape = message.shape === 'card' ? 'card' : 'box';
       const targets = {};
       if (message.targets && typeof message.targets === 'object') {
         for (const [symbol, value] of Object.entries(message.targets)) {
@@ -62,6 +69,8 @@ const Widget = () => {
       }
       setPreviewControl({
         theme: typeof message.theme === 'string' ? message.theme : '',
+        detail,
+        shape,
         colors: typeof message.colors === 'string' ? normalizeColors(message.colors) : '',
         mode,
         interval: clampNum(message.interval, 3, 120, 10),
@@ -112,6 +121,8 @@ const Widget = () => {
   }, [searchParams]);
 
   const themeParam = previewControl?.theme ?? urlThemeParam;
+  const themeDetailParam = previewControl?.detail ?? urlThemeDetailParam;
+  const cardShapeParam = previewControl?.shape ?? urlCardShapeParam;
   const colorsParam = previewControl?.colors ?? urlColorsParam;
   const modeParam = previewControl?.mode ?? urlModeParam;
   const intervalParam = previewControl?.interval ?? urlIntervalParam;
@@ -135,13 +146,16 @@ const Widget = () => {
 
   useEffect(() => {
     const themeClass = themeParam && themeParam !== 'default' ? themeParam : '';
+    const detailClass = themeDetailParam === 'rich' ? 'theme-detail-rich' : '';
     if (themeClass) document.body.classList.add(themeClass);
+    if (detailClass) document.body.classList.add(detailClass);
     if (colorsParam) document.body.classList.add(colorsParam);
     return () => {
       if (themeClass) document.body.classList.remove(themeClass);
+      if (detailClass) document.body.classList.remove(detailClass);
       if (colorsParam) document.body.classList.remove(colorsParam);
     };
-  }, [themeParam, colorsParam]);
+  }, [themeParam, themeDetailParam, colorsParam]);
 
   // Remote control sync: BroadcastChannel/localStorage (same browser),
   // dev API (localhost), ntfy relay (cross-device via room code)
@@ -239,7 +253,7 @@ const Widget = () => {
     setCurrentIndex(0);
   }, [symbols.length]);
 
-  const rootClass = `widget-root mode-${modeParam} fx-${fxParam}`;
+  const rootClass = `widget-root mode-${modeParam} fx-${fxParam} shape-${cardShapeParam}`;
   const rootStyle = { '--card-opacity': opacityParam };
 
   if (symbols.length === 0) {

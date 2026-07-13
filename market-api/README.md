@@ -53,7 +53,7 @@ You do **not** need to find a special Cloudflare menu before starting. The dashb
    npx wrangler pages secret put FINNHUB_API_KEY_2 --project-name rettostock-market
    ```
 
-   Do not paste keys into a chat, a source file, or `wrangler.toml`. The default allowed browser origin is `https://11qaws.github.io`; changing the website address later only requires adding an `ALLOWED_ORIGINS` Pages variable in Cloudflare.
+   Do not paste keys into a chat, a source file, or `wrangler.toml`. The default allowed browser origins include the deployed site plus local Vite addresses (`localhost` and `127.0.0.1` on ports 5173/4173). An `ALLOWED_ORIGINS` Pages variable *adds* a future website address; it never replaces these safe defaults.
 
 4. Deploy the cache service:
 

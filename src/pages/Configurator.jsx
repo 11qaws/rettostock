@@ -86,6 +86,20 @@ const FX_LEVELS = [
   { value: 'off', label: '끄기' },
 ];
 
+// Theme detail is deliberately separate from event effects. It changes only
+// static card ornament, never price movement, particles, or widget dimensions.
+const THEME_DETAILS = [
+  { value: 'basic', label: '기본' },
+  { value: 'rich', label: '디테일' },
+];
+
+// This controls card geometry only. It deliberately leaves Marquee alone:
+// a one-line ticker has its own compact, fixed broadcast-safe proportions.
+const CARD_SHAPES = [
+  { value: 'box', label: '상자형' },
+  { value: 'card', label: '카드형' },
+];
+
 const PREVIEW_BGS = [
   { value: 'dark', label: '어두운 방송', style: { background: 'linear-gradient(135deg, #1a1033 0%, #34175c 45%, #542b7a 100%)' } },
   { value: 'light', label: '밝은 화면', style: { background: 'linear-gradient(135deg, #fdf6fa 0%, #e8e0f5 100%)' } },
@@ -108,6 +122,12 @@ const SETTINGS_GENERATION = 1;
 const defaultConfig = {
   symbolsInput: 'KORU, MUU, SNXX, SOXL',
   theme: 'theme-amore-cute',
+  // New copied OBS URLs explicitly carry this. Parameter-less legacy URLs
+  // remain basic, so an already-running broadcast cannot change unexpectedly.
+  themeDetail: 'rich',
+  // New copied URLs use the slightly wider card treatment. Existing URLs that
+  // have no shape parameter retain the original, roomier box treatment.
+  cardShape: 'card',
   displayMode: 'list',
   colorStyle: 'theme',
 
@@ -153,6 +173,8 @@ const loadConfig = () => {
     // visual intent for all older saved configurations.
     if (merged.fx === 'calm') merged.fx = 'card';
     if (merged.fx === 'soft' || merged.fx === 'event') merged.fx = 'card';
+    if (!['basic', 'rich'].includes(merged.themeDetail)) merged.themeDetail = 'rich';
+    if (!['box', 'card'].includes(merged.cardShape)) merged.cardShape = 'card';
     merged.v = 3;
     merged.settingsGeneration = SETTINGS_GENERATION;
     merged.demo = false; // Always force demo off on initial load
@@ -464,6 +486,8 @@ const Configurator = () => {
     const params = new URLSearchParams();
     params.set('symbols', urlSymbolList.join(','));
     if (config.theme !== 'default') params.set('theme', config.theme);
+    if (config.themeDetail === 'rich') params.set('detail', 'rich');
+    if (config.cardShape === 'card') params.set('shape', 'card');
     if (config.displayMode !== 'list') params.set('mode', config.displayMode);
     if (config.colorStyle !== 'theme') params.set('colors', config.colorStyle);
 
@@ -519,6 +543,8 @@ const Configurator = () => {
     }
     return {
       theme: config.theme !== 'default' ? config.theme : '',
+      detail: config.themeDetail === 'rich' ? 'rich' : 'basic',
+      shape: config.cardShape === 'card' ? 'card' : 'box',
       colors: config.colorStyle !== 'theme' ? config.colorStyle : '',
       mode: config.displayMode,
       interval: config.interval,
@@ -920,6 +946,36 @@ const Configurator = () => {
                 ))}
               </div>
             </div>
+
+            <div className="advanced-row">
+              <label>✨ 테마 디테일 <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#8d6e63' }}>(테마별 카드 배경 장식)</span></label>
+              <div className="segmented small">
+                {THEME_DETAILS.map(detail => (
+                  <button
+                    key={detail.value}
+                    className={`segment ${config.themeDetail === detail.value ? 'selected' : ''}`}
+                    onClick={() => set('themeDetail', detail.value)}
+                    aria-pressed={config.themeDetail === detail.value}
+                  >{detail.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {config.displayMode !== 'scroll' && (
+              <div className="advanced-row">
+                <label>▭ 카드 비율 <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#8d6e63' }}>(상자형은 아모레 핑크, 카드형은 가로가 조금 더 긴 비율)</span></label>
+                <div className="segmented small">
+                  {CARD_SHAPES.map(shape => (
+                    <button
+                      key={shape.value}
+                      className={`segment ${config.cardShape === shape.value ? 'selected' : ''}`}
+                      onClick={() => set('cardShape', shape.value)}
+                      aria-pressed={config.cardShape === shape.value}
+                    >{shape.label}</button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="advanced-row">
               <label>💥 이벤트 이펙트 <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#8d6e63' }}>(선택 시 미리보기에서 3초 자동 재생)</span></label>

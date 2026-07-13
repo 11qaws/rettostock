@@ -2,6 +2,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'https://11qaws.github.io',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'http://localhost:4173',
   'http://127.0.0.1:4173',
 ];
 
@@ -9,8 +10,13 @@ const UPSTREAM_TIMEOUT_MS = 5000;
 const RETRY_AFTER_FAILURE_MS = 5000;
 const inFlightRefreshes = new Map();
 
-const allowedOrigins = (env) => (env.ALLOWED_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(','))
-  .split(',')
+// ALLOWED_ORIGINS adds a deployment-specific address; it must not replace the
+// safe defaults. A Pages variable created before a new local test address
+// existed otherwise silently masks that address and makes only local CORS fail.
+const allowedOrigins = (env) => [...new Set([
+  ...DEFAULT_ALLOWED_ORIGINS,
+  ...(env.ALLOWED_ORIGINS || '').split(','),
+])]
   .map((value) => value.trim())
   .filter(Boolean);
 
