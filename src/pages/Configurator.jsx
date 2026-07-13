@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Copy, Check, AlertCircle, ImagePlus } from 'lucide-react';
 import { getOrCreateRoom, publishSync, getOrCreateSigningKeys } from '../hooks/useRemoteSync';
 import { version as APP_VERSION } from '../../package.json';
@@ -216,8 +216,24 @@ const Configurator = () => {
   const previewBoxRef = useRef(null);
   const [previewAvailableHeight, setPreviewAvailableHeight] = useState(0);
   const [previewContentWidth, setPreviewContentWidth] = useState(332);
+  // The iframe applies a mode after it receives the preview message. Keep its
+  // parent viewport on the last rendered mode until that commit is confirmed,
+  // otherwise a List can briefly overflow a newly-small Rotate/Marquee frame.
+  const [previewViewportMode, setPreviewViewportMode] = useState(() => config.displayMode);
+  const pendingPreviewModeRef = useRef(null);
 
   const [showWipeToast, setShowWipeToast] = useState(false);
+
+  // A preset can change the display mode without using the selector below.
+  // Run before normal effects so the next postMessage acknowledgement is
+  // always checked against the most recently requested viewport mode.
+  useLayoutEffect(() => {
+    if (config.displayMode === previewViewportMode) {
+      pendingPreviewModeRef.current = null;
+      return;
+    }
+    pendingPreviewModeRef.current = config.displayMode;
+  }, [config.displayMode, previewViewportMode]);
 
   // 목표가 초기화 알림 표시
   useEffect(() => {
@@ -380,7 +396,7 @@ const Configurator = () => {
       observer.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [sceneMode, config.displayMode, symbolList.length]);
+  }, [sceneMode, previewViewportMode, symbolList.length]);
 
   // The compact five-card preview is a normal list size, not an overflow case.
   // Fit it only in the desktop sticky layout. In the narrow stacked layout,
@@ -388,7 +404,7 @@ const Configurator = () => {
   // user scrolls down to it, pushing its own bottom away like a treadmill.
   // The copied OBS size stays exact in either layout.
   useEffect(() => {
-    if (sceneMode || config.displayMode !== 'list') {
+    if (sceneMode || previewViewportMode !== 'list') {
       setPreviewAvailableHeight(0);
       return undefined;
     }
@@ -419,7 +435,7 @@ const Configurator = () => {
       observer.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [sceneMode, config.displayMode, symbolList.length, previewContentWidth, previewBg, sceneImage, matchResult]);
+  }, [sceneMode, previewViewportMode, symbolList.length, previewContentWidth, previewBg, sceneImage, matchResult]);
 
   // Only the free-text symbols field is debounced (for URL/preview): typing
   // "AAPL" one letter at a time must not make the preview widget subscribe to
@@ -553,6 +569,15 @@ const Configurator = () => {
         postPreviewControl(e.source);
         return;
       }
+      if (e.data?.type === 'RETTOSTOCK_PREVIEW_APPLIED') {
+        const mode = e.data.mode;
+        // Ignore acknowledgements for an earlier rapid click. The visible
+        // frame changes only once the current iframe has committed that mode.
+        if (mode === pendingPreviewModeRef.current) {
+          setPreviewViewportMode(mode);
+        }
+        return;
+      }
       if (e.data?.type === 'TARGET_REACHED' && e.data?.symbol) {
         setConfig(prev => {
           if (!prev.targets || !prev.targets[e.data.symbol]) return prev;
@@ -576,6 +601,12 @@ const Configurator = () => {
 
   const removeSymbol = (target) => {
     set('symbolsInput', symbolList.filter(s => s !== target).join(', '));
+  };
+
+  const setDisplayMode = (mode) => {
+    if (mode === config.displayMode) return;
+    pendingPreviewModeRef.current = mode;
+    set('displayMode', mode);
   };
 
   // Presets: save the whole current config under a name, switch with one click
@@ -767,7 +798,7 @@ const Configurator = () => {
                 <button
                   key={m.value}
                   className={`segment ${config.displayMode === m.value ? 'selected' : ''}`}
-                  onClick={() => set('displayMode', m.value)}
+                  onClick={() => setDisplayMode(m.value)}
                 >
                   <span>{m.label}</span>
                   <small>{m.desc}</small>
@@ -1064,7 +1095,7 @@ const Configurator = () => {
           </div>
 
           {sceneMode ? (() => {
-            const rec = recommendedDims(config.displayMode, previewSymbolCount);
+            const rec = recommendedDims(previewViewportMode, previewSymbolCount);
             const actualDims = customDims || rec;
             const k = sceneBoxW ? sceneBoxW / sceneDims.w : 0;
             const frac = { w: actualDims.w / sceneDims.w, h: actualDims.h / sceneDims.h };
@@ -1150,13 +1181,13 @@ const Configurator = () => {
             // Render the widget at the exact recommended OBS size,
             // then scale it down to fit the preview panel
             const PREVIEW_W = previewContentWidth;
-            const rec = recommendedDims(config.displayMode, previewSymbolCount);
-            const frameW = config.displayMode === 'scroll' ? PREVIEW_W : rec.w;
+            const rec = recommendedDims(previewViewportMode, previewSymbolCount);
+            const frameW = previewViewportMode === 'scroll' ? PREVIEW_W : rec.w;
             const frameH = rec.h;
             // The first five cards are fitted uniformly to the visible settings
             // panel. This never changes the OBS source dimensions; it only
             // prevents a normal five-card preview from becoming a scrollbar.
-            const fitHeightScale = config.displayMode === 'list' && previewAvailableHeight > 0
+            const fitHeightScale = previewViewportMode === 'list' && previewAvailableHeight > 0
               ? previewAvailableHeight / frameH
               : 1;
             const scale = Math.min(1, PREVIEW_W / frameW, fitHeightScale);

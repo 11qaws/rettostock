@@ -1,8 +1,11 @@
 # Retto Stock Widget - Development Log & Architecture
 
-## 2026-07-13: v1.0.45 No transient preview iframe scrollbar
-- **Root cause and fix:** changing List to Rotate changes the preview URL and intentionally remounts its iframe. For one paint the new frame is the browser's scrollable `about:blank` document, before the widget CSS can set `overflow: hidden`; that produced the distracting right-edge scrollbar. Both preview iframes now set `scrolling="no"`, which suppresses only that browser-default handoff scrollbar.
-- **Scope:** the configurator's outer preview and card frame remain non-scrollable as before; the OBS source URL and the live widget are unchanged.
+## 2026-07-13: v1.0.46 Preview mode-size handoff
+- **Before -> after:** visual settings already remain in the same preview iframe; List-to-Rotate or List-to-Marquee was not an iframe reload. Instead, the configurator parent reduced its preview frame to 200px or 100px immediately, while the iframe applied the new mode on the following message/render cycle. The old List layout could therefore overflow the newly-small frame for one paint and reveal a right-edge scrollbar. The parent now retains the previous frame size until the iframe confirms that it has rendered the selected mode, then resizes once.
+- **Rapid changes and scope:** acknowledgements for older clicks are ignored, so List -> Rotate -> Marquee settles directly on Marquee without a stale resize. This applies to the configurator preview only; OBS dimensions, copied URLs, quote recovery, and live WebSocket state are unchanged.
+
+## 2026-07-13: v1.0.45 Preview iframe handoff guard
+- **Scope:** both preview iframes set `scrolling="no"` to suppress a browser-default scrollbar only when a true data-source change replaces the iframe (for example symbols or demo data). Visual mode changes do not replace the iframe; their separate parent/child size synchronization is handled in v1.0.46.
 
 ## 2026-07-13: v1.0.44 One-time configurator settings generation
 - **Before → after:** each browser indefinitely merged its old configurator choices with new defaults, so a default change could not make the installed user base consistent. Configurator preferences now carry `settingsGeneration`. This release starts generation `1`, so every pre-existing saved configuration and preset is replaced with the current defaults once when its owner next opens the configurator.

@@ -40,6 +40,7 @@ const Widget = () => {
   const urlFxParam = ['calm', 'soft', 'event'].includes(rawFxParam) ? 'card'
     : ['off', 'card', 'full'].includes(rawFxParam) ? rawFxParam : 'full';
   const [previewControl, setPreviewControl] = useState(null);
+  const previewControlMode = previewControl?.mode;
 
   // Configurator previews update all presentation settings in place. OBS
   // sources never receive this message and continue to use only their URL.
@@ -83,6 +84,18 @@ const Widget = () => {
       window.parent.postMessage({ type: 'RETTOSTOCK_PREVIEW_READY' }, window.location.origin);
     }
   }, []);
+
+  // The configurator deliberately waits for this committed render before it
+  // shrinks the preview viewport. Without the acknowledgement, List can exist
+  // for one paint inside Rotate's 200px or Marquee's 100px frame.
+  useEffect(() => {
+    if (previewControlMode && window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'RETTOSTOCK_PREVIEW_APPLIED',
+        mode: previewControlMode,
+      }, window.location.origin);
+    }
+  }, [previewControlMode]);
 
   const urlIntervalParam = clampNum(searchParams.get('interval'), 3, 120, 10);
   const urlOpacityParam = clampNum(searchParams.get('opacity'), 0.1, 1, 1);
