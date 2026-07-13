@@ -24,10 +24,10 @@
   * `로테이트(Rotate)`: 한 번에 하나의 종목만 깔끔하게 보여주고, 일정 시간마다 다음 종목으로 넘어갑니다.
   * `마퀴(Marquee)`: 뉴스 속보처럼 우측에서 좌측으로 흘러갑니다. 화면 하단의 긴 띠 영역에 적합합니다.
 * **이벤트 애니메이션 (이펙트)**:
-  * 주가가 위아래로 크게 움직이거나, 양수/음수 전환이 일어날 때, 혹은 52주 신고가/신저가를 달성할 때 위젯이 화려한 애니메이션으로 반응합니다. (시청자의 주의가 분산된다면 '약하게' 또는 '끄기'로 변경할 수 있습니다.)
+  * 주가가 위아래로 크게 움직이거나, 양수/음수 전환이 일어날 때, 혹은 52주 신고가/신저가를 달성할 때 위젯이 화려한 애니메이션으로 반응합니다. 기본값은 방송을 방해하지 않는 **'약한 연출(Weak)'**이며, 취향에 따라 강하게(Full) 또는 끄기로 변경할 수 있습니다.
 * **카드 비율 (상자형 / 카드형)**: 
   * `상자형`: 아담하고 둥글둥글한 박스 모양입니다.
-  * `카드형`: 가로가 조금 더 긴 세련된 와이드 형태입니다. (두 형태 모두 세로 높이는 완벽하게 동일합니다.)
+  * `카드형`: 진짜 신용카드처럼 세로 비율이 적고 가로로 긴 세련된 와이드 형태입니다.
 
 #### ⚙️ 고급 설정
 * `디테일 (Detail)`: 기본값은 **단순하게**. '풍부하게'로 변경 시 카드 내부에 미세한 빛 반사나 장식 효과가 추가됩니다.
@@ -57,10 +57,10 @@ A real-time US Stock/ETF ticker widget and configurator built for OBS Studio str
   * `Rotate`: Shows one stock at a time and cycles through them automatically. Clean and compact.
   * `Marquee`: Scrolls horizontally like a news ticker. Best for the bottom or top of your stream.
 * **Event Effects**:
-  * The widget reacts to live market action! It shakes on sudden price drops/surges, bursts particles, and triggers celebratory banners on 52-week highs/lows. If this is too distracting, you can turn it down to 'Weak' or 'Off'.
+  * The widget reacts to live market action! It shakes on sudden price drops/surges, bursts particles, and triggers celebratory banners on 52-week highs/lows. The default is **'Weak'** to avoid distracting your viewers, but you can turn it up to 'Full' or completely 'Off'.
 * **Card Ratio (Box / Card)**:
   * `Box`: A compact, rounded square shape.
-  * `Card`: A slightly wider, modern card shape. (Both shapes maintain the exact same vertical height).
+  * `Card`: A sleek, wider format with a shorter vertical proportion, much like a real credit card.
 
 #### ⚙️ Advanced Settings
 * `Theme Detail`: Default is **Basic**. Setting to 'Rich' adds subtle light reflections and extra aesthetic depth inside the cards.
