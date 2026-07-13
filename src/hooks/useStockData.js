@@ -50,7 +50,7 @@ const LIVE_TRADE_GRACE_MS = 15000;
 // Per-symbol merge stagger, as a fraction of the poll interval: keeps updates
 // from landing in one frame while always staying well below the interval (so
 // cycles never overlap and per-symbol ordering is preserved).
-const JITTER_FRACTION = 0.25;
+const JITTER_FRACTION = 0.5;
 
 // Session by the New York clock — drives badges and baselines.
 // marketCalendar knows weekends, NYSE holidays (with substitute rules)
