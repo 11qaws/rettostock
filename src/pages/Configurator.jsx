@@ -97,6 +97,13 @@ const PREVIEW_BGS = [
 ];
 
 const CONFIG_KEY = 'obs-widget-config-v2';
+const PRESETS_KEY = 'obs-widget-presets';
+
+// Raise this only when every browser's old configurator choices must be
+// retired in favour of the current defaults. This deliberately affects only
+// visual/configuration preferences — never quote recovery or remote-control
+// identity data.
+const SETTINGS_GENERATION = 1;
 
 const defaultConfig = {
   symbolsInput: 'KORU, MUU, SNXX, SOXL',
@@ -119,11 +126,22 @@ const defaultConfig = {
   remote: false, // cross-device relay is opt-in (currently disabled in UI)
   useTargets: false,
   targets: {},   // per-symbol target prices (empty = off)
+  settingsGeneration: SETTINGS_GENERATION,
 };
 
 const loadConfig = () => {
   try {
     const saved = JSON.parse(localStorage.getItem(CONFIG_KEY));
+
+    // A generation change is an intentional, one-time global settings reset.
+    // Do not reset quote caches, room codes, or signing keys: they are runtime
+    // continuity/security data rather than configurator preferences.
+    if (saved?.settingsGeneration !== SETTINGS_GENERATION) {
+      localStorage.removeItem(CONFIG_KEY);
+      localStorage.removeItem(PRESETS_KEY);
+      return { ...defaultConfig, v: 3 };
+    }
+
     const merged = { ...defaultConfig, ...saved };
     // Opacity default history: 1 → 0.95 (v2) → 1 (v3). Now that each dark theme's
     // base --bg-a is raised for readability, 100% is the sensible default. v2
@@ -136,6 +154,7 @@ const loadConfig = () => {
     if (merged.fx === 'calm') merged.fx = 'card';
     if (merged.fx === 'soft' || merged.fx === 'event') merged.fx = 'card';
     merged.v = 3;
+    merged.settingsGeneration = SETTINGS_GENERATION;
     merged.demo = false; // Always force demo off on initial load
     
     // 목표가는 방송(세션)마다 초기화되어야 하는 데이터이므로 부팅 시 삭제
@@ -146,7 +165,7 @@ const loadConfig = () => {
     
     return merged;
   } catch {
-    return { ...defaultConfig, v: 2, demo: false };
+    return { ...defaultConfig, v: 3, demo: false };
   }
 };
 
@@ -560,7 +579,6 @@ const Configurator = () => {
   };
 
   // Presets: save the whole current config under a name, switch with one click
-  const PRESETS_KEY = 'obs-widget-presets';
   const [presets, setPresets] = useState(() => {
     try { return JSON.parse(localStorage.getItem(PRESETS_KEY)) || []; } catch { return []; }
   });
@@ -600,7 +618,12 @@ const Configurator = () => {
     setNamingPreset(false);
     setPresetName('');
   };
-  const applyPreset = (p) => setConfig({ ...defaultConfig, ...p.config, v: 2 });
+  const applyPreset = (p) => setConfig({
+    ...defaultConfig,
+    ...p.config,
+    v: 3,
+    settingsGeneration: SETTINGS_GENERATION,
+  });
   const deletePreset = (name) => persistPresets(presets.filter(p => p.name !== name));
 
   return (
@@ -1093,6 +1116,10 @@ const Configurator = () => {
                           key={previewWidgetUrl}
                           ref={previewFrameRef}
                           src={previewWidgetUrl}
+                          // The URL change intentionally remounts this frame. Suppress the
+                          // browser-default scrollbar in its brief about:blank handoff before
+                          // the widget's own overflow:hidden CSS has loaded.
+                          scrolling="no"
                           onLoad={(event) => postPreviewControl(event.currentTarget.contentWindow)}
                           style={{
                             width: `${actualDims.w}px`,
@@ -1170,6 +1197,9 @@ const Configurator = () => {
                       key={previewWidgetUrl}
                       ref={previewFrameRef}
                       src={previewWidgetUrl}
+                      // A new source starts as a browser-default blank document for one paint.
+                      // Keep that handoff from showing a transient inner scrollbar.
+                      scrolling="no"
                       onLoad={(event) => postPreviewControl(event.currentTarget.contentWindow)}
                       style={{
                         width: `${frameW}px`,

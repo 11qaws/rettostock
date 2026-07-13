@@ -1,5 +1,13 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.45 No transient preview iframe scrollbar
+- **Root cause and fix:** changing List to Rotate changes the preview URL and intentionally remounts its iframe. For one paint the new frame is the browser's scrollable `about:blank` document, before the widget CSS can set `overflow: hidden`; that produced the distracting right-edge scrollbar. Both preview iframes now set `scrolling="no"`, which suppresses only that browser-default handoff scrollbar.
+- **Scope:** the configurator's outer preview and card frame remain non-scrollable as before; the OBS source URL and the live widget are unchanged.
+
+## 2026-07-13: v1.0.44 One-time configurator settings generation
+- **Before → after:** each browser indefinitely merged its old configurator choices with new defaults, so a default change could not make the installed user base consistent. Configurator preferences now carry `settingsGeneration`. This release starts generation `1`, so every pre-existing saved configuration and preset is replaced with the current defaults once when its owner next opens the configurator.
+- **Future reset switch:** raise only `SETTINGS_GENERATION` to run the same one-time reset again. Quote-recovery caches, remote room codes, signing keys, and already-copied OBS URLs are intentionally untouched, so the reset cannot add quote delay, disconnect remote control, or alter an active broadcast source.
+
 ## 2026-07-13: v1.0.43 Narrow-screen preview scroll stability
 - **Before → after:** on a phone or narrow responsive viewport, the five-card preview recalculated its scale from its changing on-screen position for every scroll event. As the user approached the preview, it grew and pushed its own bottom farther down, creating a shaking/treadmill scroll. Narrow layouts now keep the preview at a fixed scale and let the one settings-page scroller reach it normally.
 - **Desktop unchanged:** the 1080p desktop sticky preview still fits up to five cards in the available viewport. OBS dimensions and the copied OBS URL are unchanged in both layouts.
