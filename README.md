@@ -19,21 +19,24 @@
 ### 🎨 화면 설정 가이드
 
 #### 📌 일반 설정
-* **레이아웃 모드**: 
-  * `리스트(List)`: 위에서 아래로 차곡차곡 쌓아서 보여줍니다. 세로로 긴 공간에 적합합니다.
-  * `로테이트(Rotate)`: 한 번에 하나의 종목만 깔끔하게 보여주고, 일정 시간마다 다음 종목으로 넘어갑니다.
-  * `마퀴(Marquee)`: 뉴스 속보처럼 우측에서 좌측으로 흘러갑니다. 화면 하단의 긴 띠 영역에 적합합니다.
-* **이벤트 애니메이션 (이펙트)**:
-  * 주가가 위아래로 크게 움직이거나, 양수/음수 전환이 일어날 때, 혹은 52주 신고가/신저가를 달성할 때 위젯이 화려한 애니메이션으로 반응합니다. 기본값은 방송을 방해하지 않는 **'약한 연출(Weak)'**이며, 취향에 따라 강하게(Full) 또는 끄기로 변경할 수 있습니다.
-* **카드 비율 (상자형 / 카드형)**: 
-  * `상자형`: 아담하고 둥글둥글한 박스 모양입니다.
-  * `카드형`: 진짜 신용카드처럼 세로 비율이 적고 가로로 긴 세련된 와이드 형태입니다.
+* **💖 테마**: 아모레 핑크, 오로라 별밤 등 6개의 고퀄리티 디자인 중 내 방송에 어울리는 테마를 고릅니다.
+* **✨ 디스플레이 모드**:
+  * `리스트`: 위에서 아래로 차곡차곡 쌓아서 보여줍니다. 세로로 긴 공간에 적합합니다.
+  * `로테이트`: 한 번에 하나의 종목만 깔끔하게 보여주고, 일정 시간마다 다음 종목으로 넘어갑니다.
+  * `마퀴`: 뉴스 속보처럼 우측에서 좌측으로 흘러갑니다. 화면 하단의 긴 띠 영역에 적합합니다.
 
 #### ⚙️ 고급 설정
-* `디테일 (Detail)`: 기본값은 **단순하게**. '풍부하게'로 변경 시 카드 내부에 미세한 빛 반사나 장식 효과가 추가됩니다.
-* `투명도 (Opacity)`: 기본값은 **100%**. 위젯 전체의 불투명도를 조절합니다. 단, 테마 디자인 자체에 이미 반투명한 유리 질감이 적용되어 있으므로 100%로 두어도 기본적으로 뒷 배경이 은은하게 비칩니다.
-* `재생 속도 (Speed)`: 기본값은 **1.0배**. 로테이트나 마퀴 모드에서 카드가 움직이는 애니메이션 속도를 조절합니다.
-* `재생 간격 (Interval)`: 기본값은 **10초**. 로테이트 모드에서 하나의 카드가 화면에 머무는 시간을 초 단위로 설정합니다.
+* **🎨 상승/하락 색상**: 한국식(빨강↑/파랑↓) 또는 미국식(초록↑/빨강↓) 색 조합을 선택합니다.
+* **✨ 테마 디테일**: 기본값은 **기본**. '디테일'로 변경 시 카드 내부에 미세한 빛 반사나 장식 효과가 추가됩니다.
+* **▭ 카드 비율**: (마퀴 모드 제외)
+  * `상자형`: 아담하고 둥글둥글한 박스 모양입니다.
+  * `카드형`: 진짜 신용카드처럼 세로 비율이 적고 가로로 긴 세련된 와이드 형태입니다.
+* **💥 이벤트 이펙트**: 주가가 크게 움직이거나 52주 신고가/신저가를 달성할 때 위젯이 애니메이션으로 반응합니다. 기본값은 방송을 방해하지 않는 **'약한 연출'**이며, '전체' 또는 '끄기'로 변경할 수 있습니다.
+* **⏱️ 종목 전환 간격**: (로테이트 모드 전용) 기본값은 **10초**. 하나의 카드가 화면에 머무는 시간을 초 단위로 설정합니다.
+* **⚡ 이벤트 포커스**: (로테이트 모드 전용) 켜두면 다른 카드가 돌아가고 있을 때 특정 종목에서 이벤트가 발생하면 즉시 해당 카드로 화면을 전환합니다.
+* **🎢 마퀴 속도**: (마퀴 모드 전용) 기본값은 **1.0배**. 카드가 이동하는 속도를 조절합니다.
+* **🫧 카드 불투명도**: 기본값은 **100%**. 위젯 전체의 불투명도를 조절합니다. 테마 디자인 자체에 이미 반투명한 유리 질감이 적용되어 있으므로 100%로 두어도 기본적으로 뒷 배경이 은은하게 비칩니다.
+* **🎯 목표가 알림 사용하기**: 켜둔 뒤 특정 종목의 목표가를 입력해 두면, 주가가 그 가격에 도달했을 때 폭죽이 터지는 특별한 축하 효과가 발생합니다.
 ---
 
 <h2 id="english">🇺🇸 English Manual</h2>
@@ -52,20 +55,23 @@ A real-time US Stock/ETF ticker widget and configurator built for OBS Studio str
 ### 🎨 Configuration Guide
 
 #### 📌 General Settings
-* **Display Mode**: 
+* **💖 Theme**: Choose from 6 premium designs like Amore Pink or Aurora Starry Night to match your stream.
+* **✨ Display Mode**:
   * `List`: Stacks cards vertically. Best for sidebars.
   * `Rotate`: Shows one stock at a time and cycles through them automatically. Clean and compact.
   * `Marquee`: Scrolls horizontally like a news ticker. Best for the bottom or top of your stream.
-* **Event Effects**:
-  * The widget reacts to live market action! It shakes on sudden price drops/surges, bursts particles, and triggers celebratory banners on 52-week highs/lows. The default is **'Weak'** to avoid distracting your viewers, but you can turn it up to 'Full' or completely 'Off'.
-* **Card Ratio (Box / Card)**:
-  * `Box`: A compact, rounded square shape.
-  * `Card`: A sleek, wider format with a shorter vertical proportion, much like a real credit card.
 
 #### ⚙️ Advanced Settings
-* `Theme Detail`: Default is **Basic**. Setting to 'Rich' adds subtle light reflections and extra aesthetic depth inside the cards.
-* `Opacity`: Default is **100%**. Adjusts the overall widget opacity. Note that all themes already feature built-in glassmorphism (semi-transparent backgrounds), so the widget is naturally translucent even at 100%.
-* `Animation Speed`: Default is **1.0x**. Controls the transition/scrolling speed for Rotate and Marquee modes.
-* `Rotate Interval`: Default is **10s**. Sets how long each card stays on screen in Rotate mode before moving to the next.
+* **🎨 Up/Down Colors**: Switch between color logics (e.g., Red Up / Blue Down vs. Green Up / Red Down).
+* **✨ Theme Detail**: Default is **Basic**. Setting to 'Rich' adds subtle light reflections and extra aesthetic depth inside the cards.
+* **▭ Card Ratio**: (Not applicable in Marquee mode)
+  * `Box`: A compact, rounded square shape.
+  * `Card`: A sleek, wider format with a shorter vertical proportion, much like a real credit card.
+* **💥 Event Effects**: The widget reacts to live market action! It shakes on sudden price drops/surges, bursts particles, and triggers celebratory banners on 52-week highs/lows. The default is **'Weak'** to avoid distracting your viewers, but you can turn it up to 'Full' or completely 'Off'.
+* **⏱️ Rotate Interval**: (Rotate mode only) Default is **10s**. Sets how long each card stays on screen before moving to the next.
+* **⚡ Event Focus**: (Rotate mode only) If an event occurs on a stock that isn't currently displayed, the widget will instantly skip to that card.
+* **🎢 Marquee Speed**: (Marquee mode only) Default is **1.0x**. Controls the scrolling speed.
+* **🫧 Opacity**: Default is **100%**. Adjusts the overall widget opacity. Note that all themes already feature built-in glassmorphism (semi-transparent backgrounds), so the widget is naturally translucent even at 100%.
+* **🎯 Target Price Alerts**: When enabled, you can set target prices for specific stocks. Hitting the target triggers a special celebration effect.
 ---
 *(For developers, data architecture and troubleshooting notes are kept in [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md))*
