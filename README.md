@@ -17,6 +17,8 @@
 > 💡 **Tip:** 위젯을 더 크게 표시하고 싶다면 OBS 화면에서 모서리를 마우스로 잡아당겨서 늘리지 마세요. 화면이 흐려질 수 있습니다. 대신 브라우저 소스 속성창에서 가로/세로 크기 숫자를 직접 비례해서(예: 1.5배) 키워주세요. 글자가 절대 깨지지 않고 선명하게 유지됩니다.
 
 ### 🎨 화면 설정 가이드
+
+#### 📌 일반 설정
 * **레이아웃 모드**: 
   * `리스트(List)`: 위에서 아래로 차곡차곡 쌓아서 보여줍니다. 세로로 긴 공간에 적합합니다.
   * `로테이트(Rotate)`: 한 번에 하나의 종목만 깔끔하게 보여주고, 일정 시간마다 다음 종목으로 넘어갑니다.
@@ -26,11 +28,12 @@
 * **카드 비율 (상자형 / 카드형)**: 
   * `상자형`: 아담하고 둥글둥글한 박스 모양입니다.
   * `카드형`: 가로가 조금 더 긴 세련된 와이드 형태입니다. (두 형태 모두 세로 높이는 완벽하게 동일합니다.)
-* **고급 설정**: 
-  * `디테일 (Detail)`: 기본값은 **단순하게**. '풍부하게'로 변경 시 카드 내부에 미세한 빛 반사나 장식 효과가 추가됩니다.
-  * `투명도 (Opacity)`: 기본값은 **100%**. 위젯 전체의 불투명도를 조절합니다. 단, 테마 디자인 자체에 이미 반투명한 유리 질감이 적용되어 있으므로 100%로 두어도 기본적으로 뒷 배경이 은은하게 비칩니다.
-  * `재생 속도 (Speed)`: 기본값은 **1.0배**. 로테이트나 마퀴 모드에서 카드가 움직이는 애니메이션 속도를 조절합니다.
-  * `재생 간격 (Interval)`: 기본값은 **10초**. 로테이트 모드에서 하나의 카드가 화면에 머무는 시간을 초 단위로 설정합니다.
+
+#### ⚙️ 고급 설정
+* `디테일 (Detail)`: 기본값은 **단순하게**. '풍부하게'로 변경 시 카드 내부에 미세한 빛 반사나 장식 효과가 추가됩니다.
+* `투명도 (Opacity)`: 기본값은 **100%**. 위젯 전체의 불투명도를 조절합니다. 단, 테마 디자인 자체에 이미 반투명한 유리 질감이 적용되어 있으므로 100%로 두어도 기본적으로 뒷 배경이 은은하게 비칩니다.
+* `재생 속도 (Speed)`: 기본값은 **1.0배**. 로테이트나 마퀴 모드에서 카드가 움직이는 애니메이션 속도를 조절합니다.
+* `재생 간격 (Interval)`: 기본값은 **10초**. 로테이트 모드에서 하나의 카드가 화면에 머무는 시간을 초 단위로 설정합니다.
 ---
 
 <h2 id="english">🇺🇸 English Manual</h2>
@@ -47,6 +50,8 @@ A real-time US Stock/ETF ticker widget and configurator built for OBS Studio str
 > 💡 **Tip:** If you want the widget to appear larger, do not stretch it by dragging the corners in OBS (it will become blurry). Instead, increase the Width and Height values directly in the Browser source properties by the same multiplier (e.g., 1.5x). The vector graphics will remain perfectly crisp.
 
 ### 🎨 Configuration Guide
+
+#### 📌 General Settings
 * **Display Mode**: 
   * `List`: Stacks cards vertically. Best for sidebars.
   * `Rotate`: Shows one stock at a time and cycles through them automatically. Clean and compact.
@@ -56,10 +61,11 @@ A real-time US Stock/ETF ticker widget and configurator built for OBS Studio str
 * **Card Ratio (Box / Card)**:
   * `Box`: A compact, rounded square shape.
   * `Card`: A slightly wider, modern card shape. (Both shapes maintain the exact same vertical height).
-* **Advanced Settings**:
-  * `Theme Detail`: Default is **Basic**. Setting to 'Rich' adds subtle light reflections and extra aesthetic depth inside the cards.
-  * `Opacity`: Default is **100%**. Adjusts the overall widget opacity. Note that all themes already feature built-in glassmorphism (semi-transparent backgrounds), so the widget is naturally translucent even at 100%.
-  * `Animation Speed`: Default is **1.0x**. Controls the transition/scrolling speed for Rotate and Marquee modes.
-  * `Rotate Interval`: Default is **10s**. Sets how long each card stays on screen in Rotate mode before moving to the next.
+
+#### ⚙️ Advanced Settings
+* `Theme Detail`: Default is **Basic**. Setting to 'Rich' adds subtle light reflections and extra aesthetic depth inside the cards.
+* `Opacity`: Default is **100%**. Adjusts the overall widget opacity. Note that all themes already feature built-in glassmorphism (semi-transparent backgrounds), so the widget is naturally translucent even at 100%.
+* `Animation Speed`: Default is **1.0x**. Controls the transition/scrolling speed for Rotate and Marquee modes.
+* `Rotate Interval`: Default is **10s**. Sets how long each card stays on screen in Rotate mode before moving to the next.
 ---
 *(For developers, data architecture and troubleshooting notes are kept in [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md))*
