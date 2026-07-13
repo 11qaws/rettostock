@@ -1,5 +1,9 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.35 Yahoo chart path removed
+- **Root-cause removal:** production widgets no longer call Yahoo Finance or public CORS proxies for charts. The Cloudflare Function serves both cached Finnhub five-minute candles and a separately cached Finnhub company profile, so a shared-proxy Yahoo 429 cannot occur or take away a mini chart.
+- **Honest failure mode:** if Finnhub has no two valid candle points yet (for example, immediately after a new listing) the line stays empty; the card price remains on its independent live path. The app never falls back to synthetic or unrelated historical values.
+
 ## 2026-07-13: v1.0.34 Reliable charts and viewport-safe five-card preview
 - **SPCX and newly listed symbols:** the optional Cloudflare market API now serves five-minute Finnhub candles through `/v1/charts`, cached for two minutes (up to 15 minutes only when its chart upstream is unavailable). This removes the chart's dependency on Yahoo/public CORS proxy availability; the displayed price and its WebSocket path are unchanged. Yahoo remains a non-critical fallback until the Function is redeployed.
 - **Five-card review in the configurator:** the sticky preview retains its viewport height and gains its own scrollbar whenever needed. Its fifth card no longer escapes below a 1080p browser window or requires scrolling the settings page to inspect it.

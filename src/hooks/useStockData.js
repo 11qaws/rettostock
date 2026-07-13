@@ -13,8 +13,8 @@ let activeFinnhubKeyIndex = 0;
 const MARKET_API_BASE = (import.meta.env.VITE_MARKET_API_BASE || '').replace(/\/+$/, '');
 const MAX_SPARK_POINTS = 48;
 
-// Yahoo enrichment (name, market state, sparkline) polling interval by market state (ms).
-// Prices come from Finnhub directly, so this can stay slow and proxy-friendly.
+// Chart/name enrichment polling interval by market state (ms). Prices come
+// from Finnhub directly, so this path can stay slow and cache-friendly.
 const ENRICH_INTERVALS = {
   REGULAR: 60000,
   EXTENDED: 120000,
@@ -73,14 +73,8 @@ const downsample = (arr, max) => {
   return out;
 };
 
-// Public CORS proxies are flaky; try several in order.
-const PROXIES = [
-  (u) => ({ url: `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, unwrap: async (res) => JSON.parse((await res.json()).contents) }),
-  (u) => ({ url: `https://corsproxy.io/?url=${encodeURIComponent(u)}`, unwrap: (res) => res.json() }),
-  (u) => ({ url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, unwrap: (res) => res.json() }),
-];
-
-// A hung proxy must fail fast so the next one gets its turn
+// All network reads have one bounded timeout so a failed side path never
+// delays the independent live quote loop.
 const fetchWithTimeout = (url, ms) => {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
@@ -122,36 +116,6 @@ const fetchFinnhub = async (path) => {
   }
 
   throw lastError;
-};
-
-const fetchViaProxy = async (targetUrl) => {
-  // If running locally in dev mode, use Vite's built-in proxy to bypass CORS directly
-  if (import.meta.env.DEV) {
-    // Vite dev proxies are mounted at the server root, not under the app base
-    if (targetUrl.includes('quote.cnbc.com')) {
-      const localUrl = targetUrl.replace('https://quote.cnbc.com', '/api/cnbc');
-      const res = await fetchWithTimeout(localUrl, FETCH_TIMEOUT_MS).catch(() => null);
-      if (res && res.ok) return res.json();
-    }
-    if (targetUrl.includes('query1.finance.yahoo.com')) {
-      const localUrl = targetUrl.replace('https://query1.finance.yahoo.com', '/api/yahoo');
-      const res = await fetchWithTimeout(localUrl, FETCH_TIMEOUT_MS).catch(() => null);
-      if (res && res.ok) return res.json();
-    }
-  }
-
-  let lastErr;
-  for (const make of PROXIES) {
-    try {
-      const { url, unwrap } = make(targetUrl);
-      const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
-      if (!res.ok) throw new Error(`proxy ${res.status}`);
-      return await unwrap(res);
-    } catch (err) {
-      lastErr = err;
-    }
-  }
-  throw lastErr;
 };
 
 // Last-known sparkline cache: the chart shows up with the first paint
@@ -917,12 +881,10 @@ export const useStockData = (symbols, demoQuery = false) => {
       };
       holidayLoop();
 
-      // 2c. Yahoo enrichment via public proxies (slow, non-critical):
-      //     company name, market state badge, sparkline closes.
-      //     When the optional market API is present, charts use its Finnhub
-      //     candle route first. Yahoo currently rate-limits browser/proxy
-      //     traffic unpredictably (including new tickers such as SPCX), so a
-      //     failed Yahoo request must never mean an empty trend line.
+      // 2c. Chart and company-name enrichment. This stays entirely on the
+      // optional Cloudflare/Finnhub path: no Yahoo request or public CORS
+      // proxy is sent from a production widget, so proxy-wide 429s cannot
+      // remove a chart while its price is still live.
       const fetchMarketCharts = async () => {
         if (!MARKET_API_BASE) return;
         const payload = await fetchMarketApi(`/v1/charts?symbols=${encodeURIComponent(stockSymbols.join(','))}`);
@@ -930,78 +892,37 @@ export const useStockData = (symbols, demoQuery = false) => {
         const charts = payload?.charts || {};
         const updates = {};
         for (const symbol of stockSymbols) {
-          const closes = charts[symbol]?.data?.closes;
+          const chart = charts[symbol]?.data;
+          const closes = chart?.closes;
           if (!Array.isArray(closes) || closes.length < 2) continue;
-          updates[symbol] = downsample(closes, MAX_SPARK_POINTS);
-          writeSparkCache(symbol, { closes: updates[symbol], name: symbol, t: Date.now() });
+          const cached = readSparkCache(symbol);
+          updates[symbol] = {
+            closes: downsample(closes, MAX_SPARK_POINTS),
+            name: typeof chart.name === 'string' && chart.name ? chart.name : (cached?.name || symbol),
+            previousClose: cached?.previousClose,
+          };
+          writeSparkCache(symbol, { ...updates[symbol], t: Date.now() });
         }
         if (Object.keys(updates).length === 0) return;
         setData(prev => {
           const next = { ...prev };
-          for (const [symbol, closes] of Object.entries(updates)) {
-            next[symbol] = { ...(next[symbol] || {}), closes };
+          for (const [symbol, update] of Object.entries(updates)) {
+            const current = next[symbol] || {};
+            next[symbol] = {
+              ...current,
+              closes: update.closes,
+              name: update.name || current.name || symbol,
+              previousClose: current.previousClose ?? update.previousClose,
+            };
           }
           return next;
         });
       };
 
       const fetchEnrichment = async () => {
-        // The chart route is deliberately best-effort. An older deployed
-        // market API simply falls through to the existing Yahoo path until it
-        // is redeployed; a chart failure never affects the live quote loop.
-        try { await fetchMarketCharts(); } catch { /* Yahoo remains the fallback */ }
-        // All symbols in parallel: chart latency = one proxy round-trip,
-        // not one round-trip per symbol stacked end to end
-        await Promise.allSettled(stockSymbols.map(async (symbol) => {
-          try {
-            const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=5m&range=1d&includePrePost=true&t=${Date.now()}`;
-            const result = await fetchViaProxy(targetUrl);
-            if (stopped) return;
-
-            if (result.chart?.result?.length > 0) {
-              const chart = result.chart.result[0];
-              const quote = chart.meta;
-              const rawCloses = (chart.indicators?.quote?.[0]?.close || []).filter(v => v !== null && v !== undefined);
-              const previousClose = quote.chartPreviousClose;
-
-              if (rawCloses.length > 1) {
-                writeSparkCache(symbol, {
-                  closes: downsample(rawCloses, MAX_SPARK_POINTS),
-                  name: quote.shortName || symbol,
-                  previousClose,
-                  t: Date.now(),
-                });
-              }
-
-              setData(prev => {
-                const cur = prev[symbol] || {};
-                // Use regularMarketPrice directly instead of the last chart close, as chart endpoints are often cached by proxies
-                const livePrice = quote.regularMarketPrice;
-                const newPrice = cur.price ?? livePrice;
-                const regClose = quote.regularMarketPrice;
-                return {
-                  ...prev,
-                  [symbol]: {
-                    ...cur,
-                    price: newPrice,
-                    previousClose: previousClose,
-                    regularMarketPrice: regClose,
-                    // CLOSED stays frozen — but only when a number is already
-                    // on screen; the very first computation (fresh boot while
-                    // closed, quotes down) must still go through
-                    changePercent: (cur.marketState === 'CLOSED' && typeof cur.changePercent === 'number')
-                      ? cur.changePercent
-                      : (calcChange(newPrice, regClose, previousClose, cur.marketState) ?? cur.changePercent),
-                    name: quote.shortName || cur.name || symbol,
-                    closes: downsample(rawCloses, MAX_SPARK_POINTS),
-                          },
-                };
-              });
-            }
-          } catch (err) {
-            console.error(`Enrichment failed for ${symbol}:`, err);
-          }
-        }));
+        // If the chart route is unavailable, retain a cached line or leave it
+        // empty rather than routing production traffic back to Yahoo.
+        try { await fetchMarketCharts(); } catch { /* keep existing chart */ }
       };
 
       const enrichLoop = async () => {
