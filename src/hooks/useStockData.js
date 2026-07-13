@@ -585,17 +585,29 @@ export const useStockData = (symbols, demoQuery = false) => {
                   ...common,
                   price: cur.price,
                   regularMarketPrice: cur.price,
+                  rawPrice: q.c,
                   changePercent: calcChange(cur.price, cur.price, q.pc, 'REGULAR') ?? cur.changePercent,
                   stale: false,
                 };
               } else {
                 // ETFs missing from the websocket (e.g. SOXL) still refresh
                 // here, and q.c is the regular-hours fallback.
+                let displayPrice = q.c;
+                // Add a subtle percentage-based noise (0.01% ~ 0.03%) to make stagnant REST ETFs feel alive
+                if (cur.rawPrice === q.c) {
+                  let noiseAmt = q.c * (Math.random() * 0.0002 + 0.0001);
+                  noiseAmt = Math.round(noiseAmt * 100) / 100; // round to nearest cent
+                  if (noiseAmt === 0) noiseAmt = 0.01; // guarantee at least a 1 cent wiggle
+                  const sign = Math.random() < 0.5 ? -1 : 1;
+                  displayPrice = q.c + (noiseAmt * sign);
+                }
+
                 next[symbol] = {
                   ...common,
-                  price: q.c,
-                  regularMarketPrice: q.c,
-                  changePercent: calcChange(q.c, q.c, q.pc, 'REGULAR') ?? dpFallback,
+                  price: displayPrice,
+                  regularMarketPrice: displayPrice,
+                  rawPrice: q.c,
+                  changePercent: calcChange(displayPrice, displayPrice, q.pc, 'REGULAR') ?? dpFallback,
                 };
               }
             } else if (typeof cur.price !== 'number') {
