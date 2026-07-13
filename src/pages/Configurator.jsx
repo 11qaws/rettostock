@@ -389,11 +389,14 @@ const Configurator = () => {
       const wrapper = previewWrapperRef.current;
       const box = previewBoxRef.current;
       if (!wrapper || !box) return;
-      // Caption + its margin stay below the frame without creating a second
-      // scrollbar on a typical 1080p browser viewport. getBoundingClientRect
-      // is deliberate: the sticky preview can move as the settings panel
-      // scrolls, while offsetTop cannot describe its visible position.
-      const available = Math.max(0, window.innerHeight - box.getBoundingClientRect().top - 42);
+      // The sticky preview reserves a 20px gutter at the bottom
+      // (top: 20px + max-height: 100vh - 40px). Include that same gutter in
+      // the fit calculation; otherwise a five-card preview can overrun the
+      // panel by a few pixels and create a needless vertical scrollbar.
+      // getBoundingClientRect is deliberate: the sticky preview can move as
+      // the settings panel scrolls, while offsetTop cannot describe its
+      // visible position.
+      const available = Math.max(0, window.innerHeight - 20 - box.getBoundingClientRect().top - 42);
       setPreviewAvailableHeight(prev => prev === available ? prev : available);
     };
     const frame = requestAnimationFrame(measure);

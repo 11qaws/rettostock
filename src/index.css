@@ -983,8 +983,8 @@ html, body, #root {
   align-self: flex-start;
   max-height: calc(100vh - 40px);
   overflow-y: auto;
-  /* Only the 6+ card frame may scroll vertically. Horizontal scrolling
-     signals a sizing defect, so the preview column never exposes it. */
+  /* A normal list preview is fitted without scrolling. Horizontal scrolling
+     always signals a sizing defect, so the preview column never exposes it. */
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: var(--sb-color, #ffb6c1) transparent;

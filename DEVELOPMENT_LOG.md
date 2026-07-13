@@ -1,5 +1,9 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.40 Exact five-card viewport fit
+- **Before → after:** the five-card scale was calculated to the browser's physical bottom, while the sticky preview panel deliberately ends 20px earlier. On some window sizes that small mismatch produced an unnecessary vertical scrollbar. The fit now reserves the panel's real bottom gutter, so a five-card list ends above it with no preview scrolling.
+- **Scope:** this changes only the configurator scale. The preview still shows at most five cards, and the copied OBS URL and source dimensions remain unchanged.
+
 ## 2026-07-13: v1.0.39 Compact configurator preview
 - **Before → after:** adding a sixth symbol made the settings preview create a card-frame scrollbar. The configurator now renders only the first five registered symbols in every preview, so it remains a quick, fully visible visual check with no card scrolling.
 - **Scope is explicit:** the copied OBS URL, its source-size recommendation, and the real broadcast widget still contain all registered symbols (up to ten). When more than five are registered, the preview caption says that it is showing the first five.
