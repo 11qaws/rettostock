@@ -8,6 +8,8 @@ const FINNHUB_API_KEYS = [
   'd99v221r01qh9urlud9gd99v221r01qh9urluda0',
   'd9aeap1r01qp54ej12u0d9aeap1r01qp54ej12ug',
   'd9aeb9hr01qp54ej14n0d9aeb9hr01qp54ej14ng',
+  'd9aef0pr01qp54ej1hh0d9aef0pr01qp54ej1hhg',
+  'd9aef8pr01qp54ej1ie0d9aef8pr01qp54ej1ieg',
 ];
 let activeFinnhubKeyIndex = 0;
 // Empty until the optional Cloudflare Pages Function is deployed. When set at

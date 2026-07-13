@@ -174,7 +174,7 @@ export const yahooChart = async (symbol, userAgent) => {
 // key. Authentication/authorization failures deliberately do not rotate: a
 // second key cannot fix a malformed or revoked credential.
 export const finnhub = async (path, env) => {
-  const keys = [env.FINNHUB_API_KEY_1, env.FINNHUB_API_KEY_2, env.FINNHUB_API_KEY_3, env.FINNHUB_API_KEY_4].filter(Boolean);
+  const keys = [env.FINNHUB_API_KEY_1, env.FINNHUB_API_KEY_2, env.FINNHUB_API_KEY_3, env.FINNHUB_API_KEY_4, env.FINNHUB_API_KEY_5, env.FINNHUB_API_KEY_6].filter(Boolean);
   if (!keys.length) throw new Error('Finnhub API keys are not configured');
 
   let lastError;
