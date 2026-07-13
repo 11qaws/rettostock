@@ -593,13 +593,20 @@ export const useStockData = (symbols, demoQuery = false) => {
                 // ETFs missing from the websocket (e.g. SOXL) still refresh
                 // here, and q.c is the regular-hours fallback.
                 let displayPrice = q.c;
-                // Add a subtle percentage-based noise (0.01% ~ 0.03%) to make stagnant REST ETFs feel alive
+                // Add a Gaussian noise (~ +/- 0.2%) to make stagnant REST ETFs feel alive
                 if (cur.rawPrice === q.c) {
-                  let noiseAmt = q.c * (Math.random() * 0.0002 + 0.0001);
+                  // Box-Muller transform for normal distribution
+                  const u = 1 - Math.random();
+                  const v = Math.random();
+                  const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+                  
+                  // standard deviation of 0.1% (so ~95% of ticks are within +/- 0.2%)
+                  let noiseAmt = q.c * z * 0.001;
                   noiseAmt = Math.round(noiseAmt * 100) / 100; // round to nearest cent
-                  if (noiseAmt === 0) noiseAmt = 0.01; // guarantee at least a 1 cent wiggle
-                  const sign = Math.random() < 0.5 ? -1 : 1;
-                  displayPrice = q.c + (noiseAmt * sign);
+                  if (noiseAmt === 0) {
+                    noiseAmt = (Math.random() < 0.5 ? -1 : 1) * 0.01; // guarantee at least a 1 cent wiggle
+                  }
+                  displayPrice = q.c + noiseAmt;
                 }
 
                 next[symbol] = {
