@@ -491,7 +491,10 @@ export const useStockData = (symbols, demoQuery = false) => {
           } catch { /* malformed frame: skip */ }
         };
         finnhubWs.onclose = () => {
-          if (!stopped) finnhubReconnectTimer = setTimeout(connectFinnhub, WS_RECONNECT_MS);
+          if (!stopped) {
+            activeFinnhubKeyIndex = (activeFinnhubKeyIndex + 1) % FINNHUB_API_KEYS.length;
+            finnhubReconnectTimer = setTimeout(connectFinnhub, WS_RECONNECT_MS);
+          }
         };
         finnhubWs.onerror = () => {
           try { finnhubWs.close(); } catch { /* ignore */ }
