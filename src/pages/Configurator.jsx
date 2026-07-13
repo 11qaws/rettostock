@@ -963,7 +963,7 @@ const Configurator = () => {
 
             {config.displayMode !== 'scroll' && (
               <div className="advanced-row">
-                <label>▭ 카드 비율 <span style={{ fontWeight: 'normal', fontSize: '12px', color: '#8d6e63' }}>(상자형은 아모레 핑크, 카드형은 가로가 조금 더 긴 비율)</span></label>
+                <label>▭ 카드 비율</label>
                 <div className="segmented small">
                   {CARD_SHAPES.map(shape => (
                     <button

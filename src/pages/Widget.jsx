@@ -86,6 +86,18 @@ const Widget = () => {
     return () => window.removeEventListener('message', onPreviewControl);
   }, []);
 
+  // Expire the preview token at the Widget level after 3 seconds.
+  // If we don't, Rotate mode will continually pass the stale token to new cards as they mount.
+  useEffect(() => {
+    const token = previewControl?.previewToken;
+    if (token) {
+      const timer = setTimeout(() => {
+        setPreviewControl(prev => prev ? { ...prev, previewToken: '' } : prev);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [previewControl?.previewToken]);
+
   // Handshake after the listener exists. This closes the small race where an
   // iframe's load event can precede its first React effect on a slow device.
   useEffect(() => {

@@ -714,6 +714,9 @@ export const useStockData = (symbols, demoQuery = false) => {
             [symbol]: {
               ...(prev[symbol] || {}),
               ...updateData,
+              // Do not let TradingView overwrite the Finnhub-enriched name.
+              // Keep the existing name if it's already enriched (longer than just the ticker symbol).
+              name: (prev[symbol]?.name && prev[symbol].name !== symbol) ? prev[symbol].name : updateData.name,
               recovering: false,
               quoteUpdatedAt: Date.now(),
             },
