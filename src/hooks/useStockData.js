@@ -210,7 +210,7 @@ const writeSparkCache = (symbol, entry) => {
 };
 
 
-export const useStockData = (symbols, demoQuery = false) => {
+export const useStockData = (symbols, demoQuery = false, isPreview = false) => {
   const [data, setData] = useState(() => {
     const initial = {};
     const recovered = symbols && Array.isArray(symbols) ? readQuoteRecovery(symbols) : {};
@@ -457,7 +457,7 @@ export const useStockData = (symbols, demoQuery = false) => {
       // 2a. Finnhub WebSocket for live trade ticks — self-reconnecting so a
       //     network blip during a long stream never kills the live feed
       const connectFinnhub = () => {
-        if (stopped) return;
+        if (stopped || isPreview) return;
         try {
           finnhubWs = new WebSocket(`wss://ws.finnhub.io?token=${FINNHUB_API_KEYS[activeFinnhubKeyIndex]}`);
         } catch {

@@ -528,6 +528,7 @@ const Configurator = () => {
     // A configurator preview stays intentionally compact. The copied OBS URL
     // above still contains every registered symbol (up to MAX_SYMBOLS).
     params.set('symbols', previewSymbolList.join(','));
+    params.set('preview', '1');
     for (const key of ['demo', 'demo_transition', 'demo_cross', 'demo_target', 'demo_surge']) {
       if (source.has(key)) params.set(key, source.get(key));
     }
@@ -571,14 +572,23 @@ const Configurator = () => {
     postPreviewControl();
   }, [previewControl]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const lastTargetsRef = useRef(null);
+
   // Persist settings + push to widget (same-browser channels + ntfy relay)
   useEffect(() => {
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch { /* ignore */ }
 
-    // Same-browser channels apply immediately; the ntfy network publish is
-    // debounced once inside publishSync (single source — no extra wrapper here,
-    // which previously double-debounced the relay at 500ms + 800ms).
-    publishSync({ url: widgetUrl, timestamp: Date.now() }, room, signingKeys?.privateKey);
+    // Only publish if the 'targets' query parameter actually changed.
+    // The widget ONLY syncs targets dynamically; syncing themes/styles
+    // wastes ntfy.sh rate limits and is disabled by design.
+    const urlObj = new URL(widgetUrl);
+    const params = new URLSearchParams(urlObj.hash.split('?')[1] || '');
+    const currentTargets = params.get('targets') || '';
+
+    if (currentTargets !== lastTargetsRef.current) {
+      publishSync({ url: widgetUrl, timestamp: Date.now() }, room, signingKeys?.privateKey);
+      lastTargetsRef.current = currentTargets;
+    }
 
     setJustApplied(true);
     setCustomDims(null); // Reset custom dims when config changes significantly

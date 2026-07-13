@@ -154,7 +154,8 @@ const Widget = () => {
   }, [symbolsParam]);
 
   const demoQuery = demoParam ? searchParams.toString() : false;
-  const { data } = useStockData(symbols, demoQuery);
+  const isPreview = searchParams.has('preview') || previewControl !== null;
+  const { data } = useStockData(symbols, demoQuery, isPreview);
 
   useEffect(() => {
     const themeClass = themeParam && themeParam !== 'default' ? themeParam : '';
