@@ -19,7 +19,7 @@ export const onRequestGet = async ({ request, env }) => {
       freshMs: METRIC_FRESH_MS,
       staleMs: METRIC_STALE_MS,
       load: async () => {
-        const metric = (await finnhub(`/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all`, env))?.metric;
+        const metric = (await finnhub(`/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all`, env, symbol))?.metric;
         const week52High = metric?.['52WeekHigh'];
         const week52Low = metric?.['52WeekLow'];
         if (typeof week52High !== 'number' && typeof week52Low !== 'number') throw new Error('invalid Finnhub metric');

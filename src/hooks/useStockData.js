@@ -34,7 +34,7 @@ const pickEnrichInterval = (state) => {
 // Finnhub REST cadence (free = 60 req/min; one request per symbol per cycle):
 // interval scales with symbol count to stay ≤ 50/min, floored at 5s (the
 // websocket already gives sub-second ticks, so faster REST just wastes calls).
-const quoteIntervalMs = (n) => Math.max(5000, Math.ceil(n * (1.2 / FINNHUB_API_KEYS.length)) * 1000);
+const quoteIntervalMs = (n) => Math.max(3000, Math.ceil(n * (1.2 / FINNHUB_API_KEYS.length)) * 1000);
 const PREMARKET_INTERVAL = 5000; // PRE/POST scanner poll (extended hours)
 // Abort guard for one-off enrichment fetches (name/sparkline via dev proxy or a
 // public CORS proxy). Both paths ultimately hit the same slow upstreams, so a
@@ -91,11 +91,19 @@ const fetchMarketApi = async (path) => {
   return response.json();
 };
 
+// Deterministic tiny hash for symbol distribution
+const hashCode = (str) => {
+  if (!str) return 0;
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+};
+
 // Retry the request immediately with the standby key when it times out or the
 // provider returns 429. Other HTTP responses stay on their current key and
 // are handled by the caller as ordinary errors.
-const fetchFinnhub = async (path) => {
-  let keyIndex = activeFinnhubKeyIndex;
+const fetchFinnhub = async (path, symbol) => {
+  let keyIndex = symbol ? hashCode(symbol) % FINNHUB_API_KEYS.length : activeFinnhubKeyIndex;
   let lastError;
 
   for (let attempt = 0; attempt < FINNHUB_API_KEYS.length; attempt++) {
@@ -105,17 +113,17 @@ const fetchFinnhub = async (path) => {
       const response = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
       if (response.status === 429 && attempt < FINNHUB_API_KEYS.length - 1) {
         keyIndex = (keyIndex + 1) % FINNHUB_API_KEYS.length;
-        activeFinnhubKeyIndex = keyIndex;
+        if (!symbol) activeFinnhubKeyIndex = keyIndex;
         continue;
       }
-      activeFinnhubKeyIndex = keyIndex;
+      if (!symbol) activeFinnhubKeyIndex = keyIndex;
       return response;
     } catch (error) {
       lastError = error;
       const timedOut = error?.name === 'AbortError';
       if (!timedOut || attempt === FINNHUB_API_KEYS.length - 1) throw error;
       keyIndex = (keyIndex + 1) % FINNHUB_API_KEYS.length;
-      activeFinnhubKeyIndex = keyIndex;
+      if (!symbol) activeFinnhubKeyIndex = keyIndex;
     }
   }
 
@@ -201,12 +209,6 @@ const writeSparkCache = (symbol, entry) => {
   try { localStorage.setItem(SPARK_CACHE_PREFIX + symbol, JSON.stringify(entry)); } catch { /* ignore */ }
 };
 
-// Deterministic tiny hash for demo prices
-const hashCode = (str) => {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
-  return Math.abs(h);
-};
 
 export const useStockData = (symbols, demoQuery = false) => {
   const [data, setData] = useState(() => {
@@ -526,7 +528,7 @@ export const useStockData = (symbols, demoQuery = false) => {
           });
         } else {
           results = await Promise.allSettled(stockSymbols.map(async (symbol) => {
-            const res = await fetchFinnhub(`/api/v1/quote?symbol=${encodeURIComponent(symbol)}`);
+            const res = await fetchFinnhub(`/api/v1/quote?symbol=${encodeURIComponent(symbol)}`, symbol);
             if (!res.ok) throw new Error(`quote ${res.status}`);
             return { symbol, q: await res.json(), stale: false, fetchedAt: Date.now() };
           }));
@@ -750,7 +752,7 @@ export const useStockData = (symbols, demoQuery = false) => {
           });
         } else {
           results = await Promise.allSettled(stockSymbols.map(async (symbol) => {
-            const res = await fetchFinnhub(`/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all`);
+            const res = await fetchFinnhub(`/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all`, symbol);
             if (!res.ok) throw new Error(`metric ${res.status}`);
             const metric = (await res.json())?.metric;
             return { symbol, high: metric?.['52WeekHigh'], low: metric?.['52WeekLow'] };

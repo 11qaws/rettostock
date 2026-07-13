@@ -1,6 +1,6 @@
 import { cached, finnhub, json, options, originIsAllowed, symbolsFrom } from '../_lib/market.js';
 
-const QUOTE_FRESH_MS = 5000;
+const QUOTE_FRESH_MS = 3000;
 const QUOTE_STALE_MS = 60000;
 
 export const onRequestOptions = ({ request, env }) => options(request, env);
@@ -19,7 +19,7 @@ export const onRequestGet = async ({ request, env }) => {
       freshMs: QUOTE_FRESH_MS,
       staleMs: QUOTE_STALE_MS,
       load: async () => {
-        const quote = await finnhub(`/api/v1/quote?symbol=${encodeURIComponent(symbol)}`, env);
+        const quote = await finnhub(`/api/v1/quote?symbol=${encodeURIComponent(symbol)}`, env, symbol);
         if (!quote || typeof quote.c !== 'number' || quote.c <= 0) throw new Error('invalid Finnhub quote');
         return quote;
       },

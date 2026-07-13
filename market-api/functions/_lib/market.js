@@ -170,25 +170,36 @@ export const yahooChart = async (symbol, userAgent) => {
   return { closes, ...(name ? { name } : {}) };
 };
 
+// Deterministic tiny hash for symbol distribution
+export const hashCode = (str) => {
+  if (!str) return 0;
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+};
+
 // Finnhub's 429 and a network timeout can be recovered by trying the standby
 // key. Authentication/authorization failures deliberately do not rotate: a
 // second key cannot fix a malformed or revoked credential.
-export const finnhub = async (path, env) => {
+export const finnhub = async (path, env, symbol) => {
   const keys = [env.FINNHUB_API_KEY_1, env.FINNHUB_API_KEY_2, env.FINNHUB_API_KEY_3, env.FINNHUB_API_KEY_4, env.FINNHUB_API_KEY_5, env.FINNHUB_API_KEY_6].filter(Boolean);
   if (!keys.length) throw new Error('Finnhub API keys are not configured');
 
   let lastError;
-  for (let index = 0; index < keys.length; index += 1) {
+  const startIndex = symbol ? hashCode(symbol) % keys.length : 0;
+
+  for (let attempt = 0; attempt < keys.length; attempt += 1) {
+    const keyIndex = (startIndex + attempt) % keys.length;
     const separator = path.includes('?') ? '&' : '?';
-    const url = `https://api.finnhub.io${path}${separator}token=${encodeURIComponent(keys[index])}`;
+    const url = `https://api.finnhub.io${path}${separator}token=${encodeURIComponent(keys[keyIndex])}`;
     try {
       const response = await fetchWithTimeout(url);
-      if (response.status === 429 && index < keys.length - 1) continue;
+      if (response.status === 429 && attempt < keys.length - 1) continue;
       if (!response.ok) throw new Error(`Finnhub returned ${response.status}`);
-      return response.json();
+      return await response.json();
     } catch (error) {
       lastError = error;
-      if (error?.name !== 'AbortError' || index === keys.length - 1) throw error;
+      if (error?.name !== 'AbortError' || attempt === keys.length - 1) throw error;
     }
   }
   throw lastError || new Error('Finnhub request failed');
