@@ -130,11 +130,11 @@ export const cached = async ({ request, namespace, key, freshMs, staleMs, load }
   }
 };
 
-const fetchWithTimeout = async (url) => {
+const fetchWithTimeout = async (url, init = {}) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
   try {
-    return await fetch(url, { signal: controller.signal });
+    return await fetch(url, { ...init, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
@@ -143,9 +143,15 @@ const fetchWithTimeout = async (url) => {
 // Yahoo is only used from this server-side, cached path. Browsers never call
 // it directly or through a public CORS proxy, which prevents shared-proxy
 // traffic from turning a chart refresh into a 429 storm.
-export const yahooChart = async (symbol) => {
+export const yahooChart = async (symbol, userAgent) => {
   const response = await fetchWithTimeout(
     `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=5m&range=1d&includePrePost=true`,
+    {
+      // Yahoo rejects anonymous server fetches from some Cloudflare edges.
+      // Forward the real browser/OBS identifier while the Function cache
+      // caps the request volume; no artificial identity is manufactured.
+      headers: userAgent ? { 'User-Agent': userAgent } : undefined,
+    },
   );
   if (!response.ok) throw new Error(`Yahoo chart returned ${response.status}`);
   const result = await response.json();

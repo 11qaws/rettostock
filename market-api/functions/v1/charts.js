@@ -20,7 +20,7 @@ export const onRequestGet = async ({ request, env }) => {
       key: symbol,
       freshMs: CHART_FRESH_MS,
       staleMs: CHART_STALE_MS,
-      load: () => yahooChart(symbol),
+      load: () => yahooChart(symbol, request.headers.get('User-Agent')),
     })),
   })));
 

@@ -1,5 +1,8 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.37 Browser-compatible edge chart request
+- **Verified Yahoo requirement:** the same SPCX chart request succeeds with a normal browser User-Agent but is rejected as an anonymous server request on some edges. The Cloudflare chart reader now forwards the actual browser/OBS identifier while preserving the two-minute cache, so it is both accepted and bounded.
+
 ## 2026-07-13: v1.0.36 Server-cached chart source
 - **Working free-plan route:** the current Finnhub plan returns 403 for its candle endpoint, so v1.0.35's server candle source could not draw a line. Charts now use Yahoo only inside the Cloudflare Function: one server-side request per symbol at most every two minutes per Cloudflare location, never a browser request and never a public CORS proxy request.
 - **What is actually prevented:** the shared public-proxy `429 Too Many Requests` failure is removed. Yahoo itself can still be unavailable, but the Function serves the last chart for up to 15 minutes and then leaves only the trend line empty; it never affects the live price card.
