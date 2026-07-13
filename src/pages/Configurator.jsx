@@ -189,11 +189,9 @@ const Configurator = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [matchedTheme, setMatchedTheme] = useState(null); // ping the auto-picked swatch
   const [placeHint, setPlaceHint] = useState(false);      // one-time "you can drag me" pulse
-  const [sceneZoom, setSceneZoom] = useState('fit');      // 'fit' | 'full' (1:1 pixels)
   const [guides, setGuides] = useState({ v: false, h: false });
   const fileInputRef = useRef(null);
   const sceneBoxRef = useRef(null);
-  const sceneScrollRef = useRef(null);
   const previewFrameRef = useRef(null);
   const previewWrapperRef = useRef(null);
   const previewBoxRef = useRef(null);
@@ -234,7 +232,6 @@ const Configurator = () => {
       });
       setSceneDims({ w: stats.width, h: stats.height });
       setPreviewBg('scene');
-      setSceneZoom('fit');
       setPlaceHint(true);
       setTimeout(() => setPlaceHint(false), 2600);
     } catch {
@@ -261,17 +258,7 @@ const Configurator = () => {
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
-  }, [sceneMode, sceneZoom]);
-
-  // Entering 1:1 view: scroll so the widget is in the middle of the viewport
-  useEffect(() => {
-    if (sceneZoom !== 'full' || !sceneDims) return;
-    const el = sceneScrollRef.current;
-    if (!el) return;
-    el.scrollLeft = widgetPos.x * sceneDims.w - el.clientWidth / 2 + 100;
-    el.scrollTop = widgetPos.y * sceneDims.h - el.clientHeight / 2 + 100;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sceneZoom]);
+  }, [sceneMode]);
 
   const startWidgetDrag = (e, frac) => {
     e.preventDefault();
@@ -984,7 +971,7 @@ const Configurator = () => {
         {/* Right Side: Preview */}
         <div
           ref={previewWrapperRef}
-          className="config-preview-wrapper"
+          className="config-preview-wrapper preview-static"
           style={{ '--sb-color': previewThemeAccent }}
         >
           <label className="preview-label">🖥️ 미리보기</label>
@@ -1054,8 +1041,7 @@ const Configurator = () => {
           {sceneMode ? (() => {
             const rec = recommendedDims(config.displayMode, previewSymbolCount);
             const actualDims = customDims || rec;
-            const isFull = sceneZoom === 'full';
-            const k = isFull ? 1 : (sceneBoxW ? sceneBoxW / sceneDims.w : 0);
+            const k = sceneBoxW ? sceneBoxW / sceneDims.w : 0;
             const frac = { w: actualDims.w / sceneDims.w, h: actualDims.h / sceneDims.h };
             return (
               <>
@@ -1064,33 +1050,23 @@ const Configurator = () => {
                     미리보기에는 처음 {MAX_PREVIEW_SYMBOLS}개 카드만 표시해요
                   </p>
                 )}
-                <div className="segmented small" style={{ width: '100%', marginBottom: '8px' }}>
-                  <button className={`segment ${!isFull ? 'selected' : ''}`} onClick={() => setSceneZoom('fit')}>
-                    화면 맞춤
-                  </button>
-                  <button className={`segment ${isFull ? 'selected' : ''}`} onClick={() => setSceneZoom('full')}>
-                    실제 크기 (100%)
-                  </button>
-                </div>
                 <div
-                  ref={sceneScrollRef}
                   style={{
                     width: '100%',
                     border: '4px solid #ffb6c1',
                     borderRadius: '12px',
                     boxSizing: 'content-box',
                     boxShadow: '0 8px 16px rgba(255,182,193,0.3)',
-                    overflow: isFull ? 'auto' : 'hidden',
-                    maxHeight: isFull ? '460px' : undefined,
+                    overflow: 'hidden',
                   }}
                 >
                   <div
                     ref={sceneBoxRef}
                     style={{
                       position: 'relative',
-                      ...(isFull
-                        ? { width: `${sceneDims.w}px`, height: `${sceneDims.h}px`, background: `url(${sceneImage}) 0 0 / 100% 100%` }
-                        : { width: '100%', aspectRatio: `${sceneDims.w} / ${sceneDims.h}`, background: `url(${sceneImage}) center / cover` }),
+                      width: '100%',
+                      aspectRatio: `${sceneDims.w} / ${sceneDims.h}`,
+                      background: `url(${sceneImage}) center / cover`,
                     }}
                   >
                     {guides.v && <span className="snap-guide guide-v" />}
@@ -1136,9 +1112,7 @@ const Configurator = () => {
                   </div>
                 </div>
                 <p style={{ fontSize: '13px', color: '#b5a39c', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.5 }}>
-                  {isFull
-                    ? '실제 크기 보기 — 스크롤로 이동하며 위젯을 100% 크기로 확인하세요'
-                    : '위젯을 드래그해서 배치하거나 우측 하단 핸들로 크기를 조절해 보세요'}<br />
+                  위젯을 드래그해서 배치하거나 우측 하단 핸들로 크기를 조절해 보세요<br />
                   OBS 배치 참고: X {Math.round(widgetPos.x * sceneDims.w)}, Y {Math.round(widgetPos.y * sceneDims.h)} · 크기 {Math.round(actualDims.w)}×{Math.round(actualDims.h)}
                 </p>
               </>

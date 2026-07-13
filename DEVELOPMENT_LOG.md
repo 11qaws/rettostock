@@ -1,5 +1,12 @@
 # Retto Stock Widget - Development Log & Architecture
 
+## 2026-07-13: v1.0.42 Single scene-placement view
+- **Before → after:** the scene preview offered both screen-fit and 100% actual-size modes. The latter needed its own panning scrollbar but did not help the normal OBS setup flow. The actual-size control and its scrolling canvas are removed; scene placement now has one screen-fit view with drag and resize only.
+
+## 2026-07-13: v1.0.41 Preview does not capture page scrolling
+- **Before → after:** even after the five cards fitted, the sticky preview wrapper remained an `overflow: auto` container. A wheel gesture over it could be treated as a second vertical scrolling surface while moving through the settings page. Normal widget previews are now explicitly non-scrollable, so the gesture always scrolls the settings page.
+- **Deliberate exception:** the screenshot scene at actual-size remains scrollable because panning across that canvas is its stated purpose. On narrow/mobile layouts the preview returns to normal document flow.
+
 ## 2026-07-13: v1.0.40 Exact five-card viewport fit
 - **Before → after:** the five-card scale was calculated to the browser's physical bottom, while the sticky preview panel deliberately ends 20px earlier. On some window sizes that small mismatch produced an unnecessary vertical scrollbar. The fit now reserves the panel's real bottom gutter, so a five-card list ends above it with no preview scrolling.
 - **Scope:** this changes only the configurator scale. The preview still shows at most five cards, and the copied OBS URL and source dimensions remain unchanged.

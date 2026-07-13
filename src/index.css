@@ -977,7 +977,7 @@ html, body, #root {
   /* Follow the scroll: stays in view while the sidebar (settings) scrolls,
      so preview changes are visible even from the advanced panel far down.
      align-self:flex-start un-stretches the flex child so sticky has travel
-     room; max-height + overflow keeps a tall preview fully on screen. */
+     room; the scene-placement mode alone may use vertical overflow. */
   position: sticky;
   top: 20px;
   align-self: flex-start;
@@ -989,6 +989,9 @@ html, body, #root {
   scrollbar-width: thin;
   scrollbar-color: var(--sb-color, #ffb6c1) transparent;
 }
+/* Every preview is a non-scrollable visual reference. This keeps a wheel
+   gesture on it attached to the settings page. */
+.config-preview-wrapper.preview-static { overflow-y: hidden; }
 .config-preview-wrapper::-webkit-scrollbar { width: 8px; }
 .config-preview-wrapper::-webkit-scrollbar-track { background: transparent; }
 .config-preview-wrapper::-webkit-scrollbar-thumb {
@@ -998,7 +1001,7 @@ html, body, #root {
   background-clip: content-box;
 }
 
-/* Preview box scrollbar (6+ symbols) tinted to the selected widget theme */
+/* Kept themed for intentional scrollable preview surfaces. */
 .preview-frame-box {
   scrollbar-width: thin;
   scrollbar-color: var(--sb-color, #ffb6c1) transparent;
@@ -1052,7 +1055,8 @@ html, body, #root {
     max-height: none;
     overflow: visible;
     align-self: auto;
-  }
+    }
+  .config-preview-wrapper.preview-static { overflow: visible; }
   .config-layout.scene-expanded .config-preview-wrapper {
     width: 100%;
   }
